@@ -2,10 +2,11 @@ import mongoose from 'mongoose';
 import { env } from '../config/env.config.js';
 import { logger } from '../common/logging/logger.js';
 
-export async function connectDatabase(): Promise<typeof mongoose> {
+export async function connectDatabase(uriOverride?: string): Promise<typeof mongoose> {
   try {
+    const targetUri = uriOverride || env.MONGODB_URI;
     logger.info(
-      { uri: env.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') },
+      { uri: targetUri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') },
       'Connecting to MongoDB...'
     );
 
@@ -21,7 +22,7 @@ export async function connectDatabase(): Promise<typeof mongoose> {
       logger.warn('MongoDB connection disconnected');
     });
 
-    const conn = await mongoose.connect(env.MONGODB_URI, {
+    const conn = await mongoose.connect(targetUri, {
       serverSelectionTimeoutMS: 5000,
     });
 

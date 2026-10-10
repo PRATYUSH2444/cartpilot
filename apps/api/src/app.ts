@@ -1,11 +1,15 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { env } from './config/env.config.js';
 import { requestIdMiddleware } from './common/middleware/request-id.js';
 import { errorHandler } from './common/middleware/error-handler.js';
 import { NotFoundError } from './common/errors/app-error.js';
 import { healthRouter } from './modules/health/health.routes.js';
+import { authRouter } from './modules/auth/auth.routes.js';
+import { merchantRouter } from './modules/merchants/merchant.routes.js';
+import { catalogRouter } from './modules/catalog/catalog.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -26,6 +30,9 @@ export function createApp(): Express {
   // Request ID Tracking
   app.use(requestIdMiddleware);
 
+  // Cookie Parser for HttpOnly Refresh Tokens
+  app.use(cookieParser());
+
   // Webhook raw-body handler (preserves unaltered buffer for HMAC verification)
   app.use(
     '/api/v1/webhooks/razorpay',
@@ -40,9 +47,14 @@ export function createApp(): Express {
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-  // Root & Versioned Diagnostic Routes
+  // Root Diagnostic Aliases
+  app.use(healthRouter);
+
+  // API v1 Namespace Routing
   app.use('/api/v1', healthRouter);
-  app.use(healthRouter); // Also expose at /health and /ready directly
+  app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/merchants', merchantRouter);
+  app.use('/api/v1/catalog', catalogRouter);
 
   // 404 Catch-All Handler
   app.use((req: Request, _res: Response, next: NextFunction) => {
