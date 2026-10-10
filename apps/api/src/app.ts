@@ -10,6 +10,10 @@ import { healthRouter } from './modules/health/health.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { merchantRouter } from './modules/merchants/merchant.routes.js';
 import { catalogRouter } from './modules/catalog/catalog.routes.js';
+import { cartRouter } from './modules/cart/cart.routes.js';
+import { checkoutRouter } from './modules/checkout/checkout.routes.js';
+import { paymentRouter, webhookRouter } from './modules/payments/payment.routes.js';
+import { orderRouter } from './modules/orders/order.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -55,6 +59,11 @@ export function createApp(): Express {
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/merchants', merchantRouter);
   app.use('/api/v1/catalog', catalogRouter);
+  app.use('/api/v1/cart', cartRouter);
+  app.use('/api/v1/checkout', checkoutRouter);
+  app.use('/api/v1/payments', paymentRouter);
+  app.use('/api/v1/webhooks', webhookRouter);
+  app.use('/api/v1/orders', orderRouter);
 
   // 404 Catch-All Handler
   app.use((req: Request, _res: Response, next: NextFunction) => {

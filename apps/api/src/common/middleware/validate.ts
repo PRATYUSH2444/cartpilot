@@ -39,3 +39,11 @@ export function validate(schema: RequestValidationSchema | AnyZodObject) {
     }
   };
 }
+
+export function validateBody(schema: AnyZodObject) {
+  return validate(schema);
+}
+
+export function validateParams(schema: AnyZodObject) {
+  return validate({ params: schema });
+}

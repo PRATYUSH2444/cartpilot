@@ -34,12 +34,24 @@ export interface AuthResult {
 }
 
 export class AuthService {
-  private static generateTokens(
-    user: IUser,
+  public static generateTokens(
+    user:
+      | IUser
+      | {
+          _id?: mongoose.Types.ObjectId | string;
+          userId?: string;
+          email: string;
+          role: UserRole;
+          tokenVersion: number;
+        },
     merchantId?: string
   ): { accessToken: string; refreshToken: string } {
+    const rawId =
+      '_id' in user && user._id ? user._id : 'userId' in user ? (user.userId as string) : '';
+    const userIdStr = typeof rawId === 'string' ? rawId : rawId?.toString() || '';
+
     const payload: TokenPayload = {
-      userId: user._id.toString(),
+      userId: userIdStr,
       email: user.email,
       role: user.role,
       tokenVersion: user.tokenVersion,
@@ -51,7 +63,7 @@ export class AuthService {
     });
 
     const refreshToken = jwt.sign(
-      { userId: user._id.toString(), tokenVersion: user.tokenVersion },
+      { userId: userIdStr, tokenVersion: user.tokenVersion },
       env.JWT_REFRESH_SECRET,
       {
         expiresIn: '7d',

@@ -7,6 +7,7 @@ import { TokenPayload } from '../../modules/auth/auth.service.js';
 
 export interface AuthenticatedUser {
   id: string;
+  userId: string;
   email: string;
   role: UserRole;
   merchantId?: string;
@@ -31,6 +32,7 @@ export function authenticate(req: AuthenticatedRequest, _res: Response, next: Ne
     const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as TokenPayload;
     req.user = {
       id: decoded.userId,
+      userId: decoded.userId,
       email: decoded.email,
       role: decoded.role,
       merchantId: decoded.merchantId,
@@ -43,6 +45,8 @@ export function authenticate(req: AuthenticatedRequest, _res: Response, next: Ne
     throw new UnauthorizedError('Invalid access token');
   }
 }
+
+export const requireAuth = authenticate;
 
 export function authorize(...allowedRoles: UserRole[]) {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {

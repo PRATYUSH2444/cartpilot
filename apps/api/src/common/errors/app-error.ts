@@ -4,12 +4,26 @@ export class AppError extends Error {
   public readonly details?: unknown;
   public readonly isOperational: boolean;
 
-  constructor(
-    message: string,
-    statusCode = 500,
-    code = 'INTERNAL_SERVER_ERROR',
-    details?: unknown
-  ) {
+  constructor(arg1: string, arg2?: number | string, arg3?: string | number, details?: unknown) {
+    let message = arg1;
+    let statusCode = 500;
+    let code = 'INTERNAL_SERVER_ERROR';
+
+    if (typeof arg2 === 'string' && typeof arg3 === 'number') {
+      // Called as: AppError(code, message, statusCode, details)
+      code = arg1;
+      message = arg2;
+      statusCode = arg3;
+    } else {
+      // Standard signature: AppError(message, statusCode, code, details)
+      if (typeof arg2 === 'number') {
+        statusCode = arg2;
+      }
+      if (typeof arg3 === 'string') {
+        code = arg3;
+      }
+    }
+
     super(message);
     this.name = this.constructor.name;
     this.statusCode = statusCode;
