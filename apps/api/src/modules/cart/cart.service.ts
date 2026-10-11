@@ -3,6 +3,7 @@ import { CartModel, ICart } from './cart.model.js';
 import { ProductModel, IProduct } from '../catalog/product.model.js';
 import { PricingService, CalculatedPricing } from '../pricing/pricing.service.js';
 import { AppError, NotFoundError } from '../../common/errors/app-error.js';
+import { approvalService } from '../approvals/approval.service.js';
 
 export interface PopulatedCartItem {
   productId: string;
@@ -108,6 +109,7 @@ export class CartService {
     // Monotonic version bump
     cart.version += 1;
     await cart.save();
+    await approvalService.invalidateApprovalsForCart(cart._id.toString());
 
     return this.buildCartResponse(cart);
   }
@@ -159,6 +161,7 @@ export class CartService {
 
     cart.version += 1;
     await cart.save();
+    await approvalService.invalidateApprovalsForCart(cart._id.toString());
 
     return this.buildCartResponse(cart);
   }
@@ -184,6 +187,7 @@ export class CartService {
 
     cart.version += 1;
     await cart.save();
+    await approvalService.invalidateApprovalsForCart(cart._id.toString());
 
     return this.buildCartResponse(cart);
   }
@@ -202,6 +206,7 @@ export class CartService {
     cart.items = [];
     cart.version += 1;
     await cart.save();
+    await approvalService.invalidateApprovalsForCart(cart._id.toString());
 
     return this.buildCartResponse(cart);
   }

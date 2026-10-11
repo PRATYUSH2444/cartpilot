@@ -14,6 +14,10 @@ import { cartRouter } from './modules/cart/cart.routes.js';
 import { checkoutRouter } from './modules/checkout/checkout.routes.js';
 import { paymentRouter, webhookRouter } from './modules/payments/payment.routes.js';
 import { orderRouter } from './modules/orders/order.routes.js';
+import { mandateRouter } from './modules/mandates/mandate.routes.js';
+import { policyRouter } from './modules/policy/policy.routes.js';
+import { approvalRouter } from './modules/approvals/approval.routes.js';
+import { auditRouter } from './modules/audit/audit.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -64,6 +68,10 @@ export function createApp(): Express {
   app.use('/api/v1/payments', paymentRouter);
   app.use('/api/v1/webhooks', webhookRouter);
   app.use('/api/v1/orders', orderRouter);
+  app.use('/api/v1/mandate', mandateRouter);
+  app.use('/api/v1/policy', policyRouter);
+  app.use('/api/v1/approvals', approvalRouter);
+  app.use('/api/v1/audit', auditRouter);
 
   // 404 Catch-All Handler
   app.use((req: Request, _res: Response, next: NextFunction) => {

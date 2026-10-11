@@ -47,3 +47,5 @@ export function validateBody(schema: AnyZodObject) {
 export function validateParams(schema: AnyZodObject) {
   return validate({ params: schema });
 }
+
+export const validateRequest = validate;

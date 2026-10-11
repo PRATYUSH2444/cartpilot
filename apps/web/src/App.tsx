@@ -9,7 +9,17 @@ import { ApprovalCard } from './components/cards/ApprovalCard';
 import { PaymentCard } from './components/cards/PaymentCard';
 import { OrderCard } from './components/cards/OrderCard';
 import { ProofCard } from './components/cards/ProofCard';
-import { Product, CartData, MandateRules, OrderData, ChatMessage, LampStatus } from './types';
+import {
+  Product,
+  CartData,
+  MandateData,
+  PolicyEvaluation,
+  OrderData,
+  ChatMessage,
+  LampStatus,
+  ChainVerification,
+  AuditEvent,
+} from './types';
 import { Bot, User, ShoppingBag, X, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5000/api/v1';
@@ -40,6 +50,11 @@ export function App() {
   const [catalog, setCatalog] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartData | null>(null);
   const [orders, setOrders] = useState<OrderData[]>([]);
+  const [mandate, setMandate] = useState<MandateData | null>(null);
+  const [policyEval, setPolicyEval] = useState<PolicyEvaluation | null>(null);
+  const [chainVerification, setChainVerification] = useState<ChainVerification | null>(null);
+  const [recentAuditEvents, setRecentAuditEvents] = useState<AuditEvent[]>([]);
+  const [isVerifyingChain, setIsVerifyingChain] = useState<boolean>(false);
   const [activePaymentOrder, setActivePaymentOrder] = useState<PaymentOrderState | null>(null);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -47,13 +62,6 @@ export function App() {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
-
-  // Mandate rules (default: ₹600 autonomous limit, ₹1500 daily budget)
-  const [mandateRules] = useState<MandateRules>({
-    maxOrderAmountPaise: 60000, // ₹600.00
-    dailyBudgetPaise: 150000, // ₹1,500.00
-    requireExplicitApproval: false,
-  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +74,11 @@ export function App() {
         'Welcome to CartPilot! I am your policy-controlled shopping assistant. I help you find strictly vegetarian groceries, plan meals, and assemble carts governed by deterministic spending mandates. The AI proposes, the policy engine decides, and you confirm payment.',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       cardType: 'rules',
-      cardData: mandateRules,
+      cardData: {
+        maxOrderAmountPaise: 60000,
+        dailyBudgetPaise: 150000,
+        requireExplicitApproval: false,
+      },
     },
   ]);
 
@@ -86,52 +98,100 @@ export function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Compute Decision Lamp status dynamically based on cart total
-  const computeLampStatus = (
-    cartTotalPaise: number = 0
-  ): {
+  // Derive current Decision Lamp state from backend policy evaluation
+  const deriveLampState = (): {
     status: LampStatus;
     reasonCode: string;
     reasonText: string;
   } => {
-    if (!cartTotalPaise || cartTotalPaise === 0) {
+    if (!cart || cart.items.length === 0) {
       return {
         status: 'none',
-        reasonCode: 'POLICY_IDLE',
+        reasonCode: 'EMPTY_CART',
         reasonText: 'Cart is empty. Add grocery items to evaluate spending policy.',
       };
     }
 
-    if (cartTotalPaise <= mandateRules.maxOrderAmountPaise) {
+    if (policyEval) {
+      if (policyEval.outcome === 'ALLOW') {
+        return {
+          status: 'go',
+          reasonCode: policyEval.reasonCode,
+          reasonText: policyEval.explanation,
+        };
+      }
+      if (policyEval.outcome === 'NEEDS_HUMAN_APPROVAL') {
+        return {
+          status: 'ask',
+          reasonCode: policyEval.reasonCode,
+          reasonText: policyEval.explanation,
+        };
+      }
       return {
-        status: 'go',
-        reasonCode: 'WITHIN_LIMIT',
-        reasonText: `Total ₹${(cartTotalPaise / 100).toFixed(2)} is within autonomous limit of ₹${(
-          mandateRules.maxOrderAmountPaise / 100
-        ).toFixed(2)}.`,
+        status: 'stop',
+        reasonCode: policyEval.reasonCode,
+        reasonText: policyEval.explanation,
       };
     }
 
-    if (cartTotalPaise <= mandateRules.dailyBudgetPaise) {
-      return {
-        status: 'ask',
-        reasonCode: 'ABOVE_AUTO_LIMIT',
-        reasonText: `Total ₹${(cartTotalPaise / 100).toFixed(2)} exceeds autonomous limit of ₹${(
-          mandateRules.maxOrderAmountPaise / 100
-        ).toFixed(2)}. Human confirmation required.`,
-      };
-    }
-
+    // Default fallback while evaluating
     return {
-      status: 'stop',
-      reasonCode: 'ABOVE_ORDER_CAP',
-      reasonText: `Total ₹${(cartTotalPaise / 100).toFixed(2)} violates daily spending ceiling of ₹${(
-        mandateRules.dailyBudgetPaise / 100
-      ).toFixed(2)}.`,
+      status: 'none',
+      reasonCode: 'EVALUATING',
+      reasonText: 'Evaluating mandate policies...',
     };
   };
 
-  const currentLamp = computeLampStatus(cart?.pricing.totalPaise || 0);
+  const currentLamp = deriveLampState();
+
+  // Show temporary banner
+  const showBanner = (type: 'success' | 'error', message: string) => {
+    setFeedbackBanner({ type, message });
+    setTimeout(() => setFeedbackBanner(null), 4500);
+  };
+
+  // Helper to re-evaluate backend policy
+  const evaluatePolicy = async (token: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/policy/evaluate`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPolicyEval(data.data);
+      }
+    } catch (err) {
+      console.warn('Failed to evaluate policy against backend:', err);
+    }
+  };
+
+  // Helper to fetch live audit verification
+  const fetchAuditVerification = async (token: string) => {
+    setIsVerifyingChain(true);
+    try {
+      const [verifyRes, eventsRes] = await Promise.all([
+        fetch(`${API_BASE}/audit/verify`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${API_BASE}/audit/events?limit=6`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (verifyRes.ok) {
+        const vData = await verifyRes.json();
+        setChainVerification(vData.data);
+      }
+      if (eventsRes.ok) {
+        const eData = await eventsRes.json();
+        setRecentAuditEvents(eData.data);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch audit verification:', err);
+    } finally {
+      setIsVerifyingChain(false);
+    }
+  };
 
   // 1. Initial login & data fetch
   useEffect(() => {
@@ -165,6 +225,15 @@ export function App() {
             setCart(cartData.data);
           }
 
+          // Fetch mandate rules
+          const mandateRes = await fetch(`${API_BASE}/mandate`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (mandateRes.ok) {
+            const mData = await mandateRes.json();
+            setMandate(mData.data.mandate);
+          }
+
           // Fetch order history
           const orderRes = await fetch(`${API_BASE}/orders`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -173,6 +242,10 @@ export function App() {
             const orderData = await orderRes.json();
             setOrders(orderData.data);
           }
+
+          // Initial policy & audit evaluations
+          await evaluatePolicy(token);
+          await fetchAuditVerification(token);
         }
       } catch (err) {
         console.warn('API server unreachable during initialization, using local state mode:', err);
@@ -181,12 +254,6 @@ export function App() {
 
     initializeSession();
   }, [currentRole]);
-
-  // Show temporary banner
-  const showBanner = (type: 'success' | 'error', message: string) => {
-    setFeedbackBanner({ type, message });
-    setTimeout(() => setFeedbackBanner(null), 4500);
-  };
 
   // Switch active user role
   const handleSwitchRole = (newRole: 'CUSTOMER' | 'MERCHANT' | 'ADMIN') => {
@@ -211,6 +278,7 @@ export function App() {
         if (res.ok) {
           const data = await res.json();
           setCart(data.data);
+          await evaluatePolicy(authToken);
           showBanner('success', 'Item added to cart with server-side pricing');
         } else {
           const errData = await res.json();
@@ -241,6 +309,7 @@ export function App() {
         if (res.ok) {
           const data = await res.json();
           setCart(data.data);
+          await evaluatePolicy(authToken);
         } else {
           const errData = await res.json();
           showBanner('error', errData.error?.message || 'Update failed');
@@ -266,6 +335,7 @@ export function App() {
         if (res.ok) {
           const data = await res.json();
           setCart(data.data);
+          await evaluatePolicy(authToken);
           showBanner('success', 'Item removed from cart');
         }
       }
@@ -289,11 +359,61 @@ export function App() {
         if (res.ok) {
           const data = await res.json();
           setCart(data.data);
+          await evaluatePolicy(authToken);
           showBanner('success', 'Cart cleared successfully');
         }
       }
     } catch {
       showBanner('error', 'Failed to clear cart');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Approve Pending Purchase Proposal
+  const handleApproveProposal = async (approvalId: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/approvals/${approvalId}/approve`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+
+      if (res.ok) {
+        await evaluatePolicy(authToken);
+        showBanner('success', 'Cryptographic approval recorded. Proceeding to checkout...');
+        // Auto-trigger checkout now that approval is locked
+        await handleInitiateCheckout();
+      } else {
+        const errData = await res.json();
+        showBanner('error', errData.error?.message || 'Approval recording failed');
+      }
+    } catch {
+      showBanner('error', 'Network error recording approval');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Reject Purchase Proposal
+  const handleRejectProposal = async (approvalId: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/approvals/${approvalId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ reason: 'Rejected by customer' }),
+      });
+
+      if (res.ok) {
+        await evaluatePolicy(authToken);
+        showBanner('error', 'Purchase proposal rejected');
+      }
+    } catch {
+      showBanner('error', 'Network error rejecting proposal');
     } finally {
       setIsLoading(false);
     }
@@ -345,7 +465,34 @@ export function App() {
         showBanner('success', 'Checkout initiated and inventory reserved');
       } else {
         const errData = await res.json();
-        showBanner('error', errData.error?.message || 'Checkout initiation failed');
+
+        // If approval is required, display the ApprovalCard
+        if (errData.error?.code === 'APPROVAL_REQUIRED' || policyEval?.requiresApproval) {
+          showBanner('error', errData.error?.message || 'Human approval required for this cart');
+          setIsCartDrawerOpen(false);
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `msg-approval-${Date.now()}`,
+              sender: 'agent',
+              content:
+                'Deterministic Policy Check: This cart total exceeds your autonomous spending limit. Please review the bound cart snapshot and grant approval:',
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              cardType: 'approval',
+              cardData: {
+                cartTotal: cart.pricing.formatted.total,
+                reason: policyEval?.explanation || errData.error?.message,
+                cartVersion: cart.version,
+                approvalId: policyEval?.approvalId,
+                approvalHash: policyEval?.approvalHash,
+                approvalStatus: policyEval?.approvalStatus || 'PENDING',
+              },
+            },
+          ]);
+        } else {
+          showBanner('error', errData.error?.message || 'Checkout initiation failed');
+        }
       }
     } catch {
       showBanner('error', 'Network error initiating checkout');
@@ -381,7 +528,7 @@ export function App() {
 
         setActivePaymentOrder(null);
 
-        // Refresh cart (now empty)
+        // Refresh cart & policy
         const cartRes = await fetch(`${API_BASE}/cart`, {
           headers: { Authorization: `Bearer ${authToken}` },
         });
@@ -389,6 +536,9 @@ export function App() {
           const cData = await cartRes.json();
           setCart(cData.data);
         }
+
+        await evaluatePolicy(authToken);
+        await fetchAuditVerification(authToken);
 
         // Add confirmed order to list
         setOrders((prev) => [confirmedOrder, ...prev]);
@@ -460,6 +610,8 @@ export function App() {
         );
 
         setActivePaymentOrder(null);
+        await evaluatePolicy(authToken);
+        await fetchAuditVerification(authToken);
 
         setMessages((prev) => [
           ...prev,
@@ -538,7 +690,32 @@ export function App() {
             content: 'Here are your active spending mandate rules and budget thresholds:',
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             cardType: 'rules',
-            cardData: mandateRules,
+            cardData: mandate || {
+              maxOrderAmountPaise: 60000,
+              dailyBudgetPaise: 150000,
+              requireExplicitApproval: false,
+            },
+          },
+        ]);
+      }, 350);
+      return;
+    }
+
+    if (lower.includes('audit') || lower.includes('proof') || lower.includes('chain')) {
+      await fetchAuditVerification(authToken);
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `agent-${Date.now()}`,
+            sender: 'agent',
+            content: 'Here is the live tamper-evident SHA-256 audit ledger verification:',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            cardType: 'proof',
+            cardData: {
+              cartVersion: cart?.version || 1,
+              totalPaise: cart?.pricing.totalPaise || 0,
+            },
           },
         ]);
       }, 350);
@@ -567,7 +744,6 @@ export function App() {
     }
 
     if (lower.includes('paneer') || lower.includes('chenna')) {
-      // Find paneer and add
       const paneer = catalog.find((p) => p.slug.includes('paneer'));
       if (paneer) {
         await handleAddToCart(paneer._id, 1);
@@ -744,7 +920,13 @@ export function App() {
                   {msg.cardType === 'rules' && (
                     <div className="w-full mt-1">
                       <RulesCard
-                        rules={mandateRules}
+                        rules={
+                          mandate || {
+                            maxOrderAmountPaise: 60000,
+                            dailyBudgetPaise: 150000,
+                            requireExplicitApproval: false,
+                          }
+                        }
                         currentCartTotalPaise={cart?.pricing.totalPaise || 0}
                       />
                     </div>
@@ -777,16 +959,36 @@ export function App() {
 
                   {msg.cardType === 'approval' && (
                     <div className="w-full mt-1">
-                      <ApprovalCard
-                        cartTotal={cart?.pricing.formatted.total || '₹0.00'}
-                        reason={currentLamp.reasonText}
-                        cartVersion={cart?.version || 1}
-                        onApprove={handleInitiateCheckout}
-                        onReject={() =>
-                          showBanner('error', 'Purchase proposal rejected by customer')
-                        }
-                        isLoading={isLoading}
-                      />
+                      {(() => {
+                        const aData = msg.cardData as {
+                          cartTotal?: string;
+                          reason?: string;
+                          cartVersion?: number;
+                          approvalId?: string;
+                          approvalHash?: string;
+                          approvalStatus?: string;
+                        };
+                        return (
+                          <ApprovalCard
+                            cartTotal={aData?.cartTotal || cart?.pricing.formatted.total || '₹0.00'}
+                            reason={aData?.reason || currentLamp.reasonText}
+                            cartVersion={aData?.cartVersion || cart?.version || 1}
+                            approvalHash={aData?.approvalHash}
+                            status={aData?.approvalStatus || 'PENDING'}
+                            onApprove={() =>
+                              handleApproveProposal(
+                                aData?.approvalId || policyEval?.approvalId || ''
+                              )
+                            }
+                            onReject={() =>
+                              handleRejectProposal(
+                                aData?.approvalId || policyEval?.approvalId || ''
+                              )
+                            }
+                            isLoading={isLoading}
+                          />
+                        );
+                      })()}
                     </div>
                   )}
 
@@ -831,9 +1033,13 @@ export function App() {
                         return (
                           <ProofCard
                             orderNumber={prData?.orderNumber}
-                            cartVersion={prData?.cartVersion}
-                            totalPaise={prData?.totalPaise}
+                            cartVersion={prData?.cartVersion || cart?.version}
+                            totalPaise={prData?.totalPaise || cart?.pricing.totalPaise}
                             gatewayOrderId={prData?.gatewayOrderId}
+                            chainVerification={chainVerification || undefined}
+                            recentEvents={recentAuditEvents}
+                            onVerify={() => fetchAuditVerification(authToken)}
+                            isVerifying={isVerifyingChain}
                           />
                         );
                       })()}

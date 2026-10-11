@@ -34,6 +34,22 @@ export class OrderService {
   }
 
   /**
+   * Calculates total spend in integer paise by the user today across confirmed orders.
+   */
+  public static async getDailySpendForUser(userId: string): Promise<number> {
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+
+    const orders = await OrderModel.find({
+      userId: new mongoose.Types.ObjectId(userId),
+      createdAt: { $gte: startOfDay },
+      status: { $in: ['PAID', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'] },
+    }).select('pricingSnapshot.totalPaise');
+
+    return orders.reduce((sum, order) => sum + (order.pricingSnapshot?.totalPaise || 0), 0);
+  }
+
+  /**
    * Simulates progressive fulfillment steps for testing and demo:
    * CONFIRMED -> PACKING -> OUT_FOR_DELIVERY -> DELIVERED
    */

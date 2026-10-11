@@ -7,8 +7,12 @@ import { OrderModel, IOrder, IOrderItemSnapshot } from '../orders/order.model.js
 import { PaymentModel } from '../payments/payment.model.js';
 import { PaymentService } from '../payments/payment.service.js';
 import { env } from '../../config/env.config.js';
-import { BadRequestError, NotFoundError } from '../../common/errors/app-error.js';
+import { AppError, BadRequestError, NotFoundError } from '../../common/errors/app-error.js';
 import { logger } from '../../common/logging/logger.js';
+import { policyService } from '../policy/policy.service.js';
+import { mandateService } from '../mandates/mandate.service.js';
+import { approvalService } from '../approvals/approval.service.js';
+import { auditService } from '../audit/audit.service.js';
 import { InitiateCheckoutInput } from './checkout.schema.js';
 
 export interface CheckoutResult {
@@ -97,6 +101,43 @@ export class CheckoutService {
     // 3. Authoritative server-side pricing
     const pricing = PricingService.calculate(pricingItems);
 
+    // 3.5. Evaluate Deterministic Policy & Mandates
+    const policyResult = await policyService.evaluateCart(userId);
+    if (policyResult.outcome === 'DENY') {
+      throw new AppError(policyResult.reasonCode, policyResult.explanation, 400, {
+        policyResult,
+      });
+    }
+
+    let approvalSnapshot: { approvalId: mongoose.Types.ObjectId; approvalHash: string } | undefined;
+
+    const mandate = await mandateService.getOrCreateMandate(userId);
+    const requiresSignOff =
+      mandate.requireExplicitApproval || pricing.totalPaise > mandate.maxOrderAmountPaise;
+
+    if (requiresSignOff) {
+      const validApproval = await approvalService.findValidApprovedRecord({
+        userId,
+        cartId: cart._id.toString(),
+        cartVersion: cart.version,
+        mandateVersion: mandate.version,
+        calculatedTotalPaise: pricing.totalPaise,
+      });
+
+      if (!validApproval) {
+        throw new AppError('APPROVAL_REQUIRED', policyResult.explanation, 400, {
+          approvalRequired: true,
+          reasonCode: policyResult.reasonCode,
+          policyResult,
+        });
+      }
+
+      approvalSnapshot = {
+        approvalId: validApproval._id,
+        approvalHash: validApproval.approvalHash,
+      };
+    }
+
     // 4. Concurrency-safe atomic inventory reservation (15-minute TTL)
     const reservation = await InventoryService.reserveStock(
       userObjectId,
@@ -126,6 +167,7 @@ export class CheckoutService {
         totalPaise: pricing.totalPaise,
       },
       shippingAddressSnapshot,
+      approvalSnapshot,
       reservationId: reservation._id,
       placedAt: new Date(),
     });
@@ -152,6 +194,22 @@ export class CheckoutService {
     // Link paymentId to order
     order.paymentId = payment._id;
     await order.save();
+
+    // Record audit event
+    await auditService.recordEvent({
+      eventType: 'PAYMENT_INITIATED',
+      actorId: userId,
+      actorRole: 'CUSTOMER',
+      resourceId: order._id.toString(),
+      resourceType: 'PAYMENT',
+      payload: {
+        orderId: order._id.toString(),
+        orderNumber,
+        gatewayOrderId: gatewayOrder.id,
+        amountPaise: pricing.totalPaise,
+        hasApproval: !!approvalSnapshot,
+      },
+    });
 
     logger.info(
       {

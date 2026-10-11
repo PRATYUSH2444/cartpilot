@@ -37,6 +37,11 @@ export interface IShippingAddressSnapshot {
   postalCode: string;
 }
 
+export interface IApprovalSnapshot {
+  approvalId: mongoose.Types.ObjectId;
+  approvalHash: string;
+}
+
 export interface IOrder extends Document {
   _id: mongoose.Types.ObjectId;
   orderNumber: string;
@@ -46,6 +51,7 @@ export interface IOrder extends Document {
   items: IOrderItemSnapshot[];
   pricingSnapshot: IPricingSnapshot;
   shippingAddressSnapshot: IShippingAddressSnapshot;
+  approvalSnapshot?: IApprovalSnapshot;
   reservationId?: mongoose.Types.ObjectId;
   paymentId?: mongoose.Types.ObjectId;
   placedAt: Date;
@@ -207,6 +213,16 @@ const OrderSchema = new Schema<IOrder>(
     shippingAddressSnapshot: {
       type: ShippingAddressSnapshotSchema,
       required: true,
+    },
+    approvalSnapshot: {
+      type: new Schema(
+        {
+          approvalId: { type: Schema.Types.ObjectId, ref: 'Approval' },
+          approvalHash: { type: String },
+        },
+        { _id: false }
+      ),
+      required: false,
     },
     reservationId: {
       type: Schema.Types.ObjectId,

@@ -47,6 +47,7 @@ export function authenticate(req: AuthenticatedRequest, _res: Response, next: Ne
 }
 
 export const requireAuth = authenticate;
+export const requireRole = authorize;
 
 export function authorize(...allowedRoles: UserRole[]) {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {

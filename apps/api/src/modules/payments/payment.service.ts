@@ -8,6 +8,7 @@ import { CartModel } from '../cart/cart.model.js';
 import { env } from '../../config/env.config.js';
 import { AppError, NotFoundError, BadRequestError } from '../../common/errors/app-error.js';
 import { logger } from '../../common/logging/logger.js';
+import { auditService } from '../audit/audit.service.js';
 
 export interface CreateGatewayOrderParams {
   amountPaise: number;
@@ -158,6 +159,19 @@ export class PaymentService {
       order.status = 'FAILED';
       await order.save();
 
+      await auditService.recordEvent({
+        eventType: 'PAYMENT_FAILED',
+        actorId: userId,
+        actorRole: 'CUSTOMER',
+        resourceId: order._id.toString(),
+        resourceType: 'PAYMENT',
+        payload: {
+          razorpayOrderId,
+          razorpayPaymentId,
+          reason: 'HMAC_SIGNATURE_MISMATCH',
+        },
+      });
+
       logger.warn(
         { orderId, razorpayOrderId, razorpayPaymentId },
         'Payment signature verification failed'
@@ -195,6 +209,34 @@ export class PaymentService {
       activeCart.version += 1;
       await activeCart.save();
     }
+
+    // Record audit events for verified payment and confirmed order
+    await auditService.recordEvent({
+      eventType: 'PAYMENT_VERIFIED',
+      actorId: order.userId.toString(),
+      actorRole: 'CUSTOMER',
+      resourceId: payment._id.toString(),
+      resourceType: 'PAYMENT',
+      payload: {
+        orderId: order._id.toString(),
+        orderNumber: order.orderNumber,
+        amountPaise: payment.amountPaise,
+        razorpayPaymentId,
+      },
+    });
+
+    await auditService.recordEvent({
+      eventType: 'ORDER_CONFIRMED',
+      actorId: order.userId.toString(),
+      actorRole: 'CUSTOMER',
+      resourceId: order._id.toString(),
+      resourceType: 'ORDER',
+      payload: {
+        orderId: order._id.toString(),
+        orderNumber: order.orderNumber,
+        totalPaise: order.pricingSnapshot.totalPaise,
+      },
+    });
 
     logger.info(
       { orderId: order._id, orderNumber: order.orderNumber },
