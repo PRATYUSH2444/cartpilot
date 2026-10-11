@@ -170,11 +170,28 @@ export interface OrderData {
   deliveredAt?: string;
 }
 
+export interface ToolCallItem {
+  toolName: string;
+  arguments: Record<string, unknown>;
+  result?: Record<string, unknown>;
+  error?: string;
+  durationMs?: number;
+}
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'agent' | 'system';
   content: string;
   timestamp: string;
+  toolCalls?: ToolCallItem[];
   cardType?: 'rules' | 'items' | 'cart' | 'approval' | 'payment' | 'order' | 'proof';
   cardData?: unknown;
+}
+
+export interface ChatSession {
+  _id: string;
+  userId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
 }

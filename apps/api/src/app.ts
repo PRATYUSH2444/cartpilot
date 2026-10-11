@@ -18,6 +18,8 @@ import { mandateRouter } from './modules/mandates/mandate.routes.js';
 import { policyRouter } from './modules/policy/policy.routes.js';
 import { approvalRouter } from './modules/approvals/approval.routes.js';
 import { auditRouter } from './modules/audit/audit.routes.js';
+import { recipeRouter } from './modules/recipe/recipe.routes.js';
+import { chatRouter } from './modules/chat/chat.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -72,6 +74,8 @@ export function createApp(): Express {
   app.use('/api/v1/policy', policyRouter);
   app.use('/api/v1/approvals', approvalRouter);
   app.use('/api/v1/audit', auditRouter);
+  app.use('/api/v1/recipe', recipeRouter);
+  app.use('/api/v1/chat', chatRouter);
 
   // 404 Catch-All Handler
   app.use((req: Request, _res: Response, next: NextFunction) => {

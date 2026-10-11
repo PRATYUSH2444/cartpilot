@@ -3,7 +3,7 @@ import { LivingBackground } from './components/LivingBackground';
 import { Header } from './components/Header';
 import { Composer } from './components/Composer';
 import { RulesCard } from './components/cards/RulesCard';
-import { ItemsCard } from './components/cards/ItemsCard';
+import { ItemsCard, ProposalPayload } from './components/cards/ItemsCard';
 import { CartCard } from './components/cards/CartCard';
 import { ApprovalCard } from './components/cards/ApprovalCard';
 import { PaymentCard } from './components/cards/PaymentCard';
@@ -19,10 +19,21 @@ import {
   LampStatus,
   ChainVerification,
   AuditEvent,
+  ToolCallItem,
 } from './types';
 import { Bot, User, ShoppingBag, X, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5000/api/v1';
+
+interface ServerChatMessage {
+  _id: string;
+  sender: string;
+  content: string;
+  createdAt: string;
+  toolCalls?: ToolCallItem[];
+  cardType?: 'rules' | 'items' | 'cart' | 'approval' | 'payment' | 'order' | 'proof';
+  cardData?: unknown;
+}
 
 // Seed demo credentials
 const DEMO_CREDENTIALS = {
@@ -62,6 +73,7 @@ export function App() {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [activeChatSessionId, setActiveChatSessionId] = useState<string>('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -246,6 +258,63 @@ export function App() {
           // Initial policy & audit evaluations
           await evaluatePolicy(token);
           await fetchAuditVerification(token);
+
+          // Fetch or initialize conversational chat session
+          if (currentRole === 'CUSTOMER') {
+            try {
+              const sessionRes = await fetch(`${API_BASE}/chat/sessions`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              let session = null;
+              if (sessionRes.ok) {
+                const sData = await sessionRes.json();
+                session = sData.data?.[0];
+              }
+
+              if (!session) {
+                const createRes = await fetch(`${API_BASE}/chat/sessions`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ title: 'CartPilot Grocery Shopping' }),
+                });
+                if (createRes.ok) {
+                  const cData = await createRes.json();
+                  session = cData.data;
+                }
+              }
+
+              if (session) {
+                setActiveChatSessionId(session._id);
+                const detailRes = await fetch(`${API_BASE}/chat/sessions/${session._id}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (detailRes.ok) {
+                  const dData = await detailRes.json();
+                  if (dData.data?.messages && dData.data.messages.length > 0) {
+                    setMessages(
+                      dData.data.messages.map((m: ServerChatMessage) => ({
+                        id: m._id,
+                        sender: m.sender.toLowerCase() as 'user' | 'agent' | 'system',
+                        content: m.content,
+                        timestamp: new Date(m.createdAt).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        }),
+                        toolCalls: m.toolCalls,
+                        cardType: m.cardType,
+                        cardData: m.cardData,
+                      }))
+                    );
+                  }
+                }
+              }
+            } catch (chatInitErr) {
+              console.warn('Chat session initialization fallback:', chatInitErr);
+            }
+          }
         }
       } catch (err) {
         console.warn('API server unreachable during initialization, using local state mode:', err);
@@ -287,6 +356,39 @@ export function App() {
       }
     } catch {
       showBanner('error', 'Network error connecting to cart service');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Add All Proposed Recipe Items to Cart
+  const handleAddAllToCart = async (itemsToAdd: Array<{ productId: string; quantity: number }>) => {
+    if (!authToken || itemsToAdd.length === 0) return;
+    setIsLoading(true);
+    try {
+      for (const item of itemsToAdd) {
+        await fetch(`${API_BASE}/cart/items`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(item),
+        });
+      }
+
+      const cartRes = await fetch(`${API_BASE}/cart`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (cartRes.ok) {
+        const cData = await cartRes.json();
+        setCart(cData.data);
+        await evaluatePolicy(authToken);
+      }
+
+      showBanner('success', `Added ${itemsToAdd.length} recipe ingredients to your cart!`);
+    } catch {
+      showBanner('error', 'Failed to add proposed items to cart');
     } finally {
       setIsLoading(false);
     }
@@ -679,158 +781,92 @@ export function App() {
 
     const lower = text.toLowerCase();
 
-    // Natural query intent detection
-    if (lower.includes('rule') || lower.includes('limit') || lower.includes('mandate')) {
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `agent-${Date.now()}`,
-            sender: 'agent',
-            content: 'Here are your active spending mandate rules and budget thresholds:',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            cardType: 'rules',
-            cardData: mandate || {
-              maxOrderAmountPaise: 60000,
-              dailyBudgetPaise: 150000,
-              requireExplicitApproval: false,
-            },
-          },
-        ]);
-      }, 350);
-      return;
-    }
-
-    if (lower.includes('audit') || lower.includes('proof') || lower.includes('chain')) {
-      await fetchAuditVerification(authToken);
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `agent-${Date.now()}`,
-            sender: 'agent',
-            content: 'Here is the live tamper-evident SHA-256 audit ledger verification:',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            cardType: 'proof',
-            cardData: {
-              cartVersion: cart?.version || 1,
-              totalPaise: cart?.pricing.totalPaise || 0,
-            },
-          },
-        ]);
-      }, 350);
-      return;
-    }
-
-    if (lower.includes('cart') || lower.includes('subtotal') || lower.includes('view cart')) {
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `agent-${Date.now()}`,
-            sender: 'agent',
-            content: 'Here is your active cart and authoritative server-side price breakdown:',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            cardType: 'cart',
-          },
-        ]);
-      }, 350);
-      return;
-    }
-
-    if (lower.includes('checkout') || lower.includes('pay') || lower.includes('proceed')) {
+    // Direct local shortcuts for checkout
+    if (lower === 'checkout' || lower === 'proceed to checkout' || lower === 'pay') {
       handleInitiateCheckout();
       return;
     }
 
-    if (lower.includes('paneer') || lower.includes('chenna')) {
-      const paneer = catalog.find((p) => p.slug.includes('paneer'));
-      if (paneer) {
-        await handleAddToCart(paneer._id, 1);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `agent-${Date.now()}`,
-            sender: 'agent',
-            content: `Added ${paneer.name} to your cart. Current cart state:`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            cardType: 'cart',
+    setIsLoading(true);
+
+    try {
+      let sessionId = activeChatSessionId;
+      if (!sessionId && authToken) {
+        const createRes = await fetch(`${API_BASE}/chat/sessions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
           },
-        ]);
-        return;
+          body: JSON.stringify({ title: 'CartPilot Shopping Session' }),
+        });
+        if (createRes.ok) {
+          const sData = await createRes.json();
+          sessionId = sData.data._id;
+          setActiveChatSessionId(sessionId);
+        }
       }
-    }
 
-    if (lower.includes('rice') || lower.includes('chawal') || lower.includes('basmati')) {
-      const rice = catalog.find((p) => p.slug.includes('basmati'));
-      if (rice) {
-        await handleAddToCart(rice._id, 1);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `agent-${Date.now()}`,
-            sender: 'agent',
-            content: `Added ${rice.name} to your cart:`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            cardType: 'cart',
+      if (sessionId && authToken) {
+        const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
           },
-        ]);
-        return;
-      }
-    }
+          body: JSON.stringify({ content: text }),
+        });
 
-    if (lower.includes('onion') || lower.includes('pyaz') || lower.includes('kanda')) {
-      const onion = catalog.find((p) => p.slug.includes('onion'));
-      if (onion) {
-        await handleAddToCart(onion._id, 1);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `agent-${Date.now()}`,
-            sender: 'agent',
-            content: `Found matching alias "pyaz" -> Added ${onion.name} to cart:`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            cardType: 'cart',
-          },
-        ]);
-        return;
-      }
-    }
+        if (res.ok) {
+          const data = await res.json();
+          const { agentMessage } = data.data;
 
-    // Default search or general response
-    setTimeout(() => {
-      const matching = catalog.filter(
-        (p) =>
-          p.name.toLowerCase().includes(lower) ||
-          p.aliases.some((a) => a.toLowerCase().includes(lower))
-      );
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: agentMessage._id || `agent-${Date.now()}`,
+              sender: 'agent',
+              content: agentMessage.content,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              toolCalls: agentMessage.toolCalls,
+              cardType: agentMessage.cardType,
+              cardData: agentMessage.cardData,
+            },
+          ]);
 
-      if (matching.length > 0) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `agent-${Date.now()}`,
-            sender: 'agent',
-            content: `I found ${matching.length} vegetarian grocery items matching your query:`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            cardType: 'items',
-            cardData: matching,
-          },
-        ]);
+          if (agentMessage.cardType === 'cart') {
+            const cartRes = await fetch(`${API_BASE}/cart`, {
+              headers: { Authorization: `Bearer ${authToken}` },
+            });
+            if (cartRes.ok) {
+              const cData = await cartRes.json();
+              setCart(cData.data);
+              await evaluatePolicy(authToken);
+            }
+          }
+        } else {
+          const errData = await res.json();
+          showBanner('error', errData.error?.message || 'Failed to get agent response');
+        }
       } else {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `agent-${Date.now()}`,
-            sender: 'agent',
-            content: `Here are popular fresh items from our certified vegetarian catalog:`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            cardType: 'items',
-            cardData: catalog.slice(0, 4),
-          },
-        ]);
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `agent-${Date.now()}`,
+              sender: 'agent',
+              content: 'Please ensure you are connected to the backend API to query the AI agent.',
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            },
+          ]);
+        }, 300);
       }
-    }, 400);
+    } catch (err) {
+      console.warn('Network error sending message to chat agent:', err);
+      showBanner('error', 'Network error connecting to AI agent');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -916,6 +952,24 @@ export function App() {
                     </div>
                   )}
 
+                  {/* Sandboxed Tool Execution Badges */}
+                  {msg.toolCalls && msg.toolCalls.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-0.5">
+                      {msg.toolCalls.map((tc, idx) => (
+                        <div
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-paper/90 border border-brd text-[11px] font-mono text-ink shadow-sm"
+                        >
+                          <span className="text-acc font-bold">⚡ tool:</span>
+                          <span className="font-semibold text-ink">{tc.toolName}</span>
+                          {tc.durationMs !== undefined && (
+                            <span className="text-mut text-[10px]">({tc.durationMs}ms)</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Embedded Interactive Card Registry */}
                   {msg.cardType === 'rules' && (
                     <div className="w-full mt-1">
@@ -935,8 +989,11 @@ export function App() {
                   {msg.cardType === 'items' && (
                     <div className="w-full mt-1">
                       <ItemsCard
-                        products={(msg.cardData as Product[]) || catalog.slice(0, 4)}
+                        cardData={
+                          (msg.cardData as Product[] | ProposalPayload) || catalog.slice(0, 4)
+                        }
                         onAddToCart={handleAddToCart}
+                        onAddAllToCart={handleAddAllToCart}
                       />
                     </div>
                   )}
