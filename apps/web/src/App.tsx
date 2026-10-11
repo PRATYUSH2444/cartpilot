@@ -9,6 +9,7 @@ import { ApprovalCard } from './components/cards/ApprovalCard';
 import { PaymentCard } from './components/cards/PaymentCard';
 import { OrderCard } from './components/cards/OrderCard';
 import { ProofCard } from './components/cards/ProofCard';
+import { CredentialsModal } from './components/CredentialsModal';
 import {
   Product,
   CartData,
@@ -35,11 +36,17 @@ interface ServerChatMessage {
   cardData?: unknown;
 }
 
-// Seed demo credentials
+// Seed demo credentials (primary and fallback aliases for zero-friction login)
 const DEMO_CREDENTIALS = {
   CUSTOMER: { email: 'customer@example.com', password: 'Customer1234!' },
   MERCHANT: { email: 'merchant@example.com', password: 'Merchant1234!' },
   ADMIN: { email: 'admin@example.com', password: 'Admin1234!' },
+};
+
+const FALLBACK_CREDENTIALS = {
+  CUSTOMER: { email: 'customer@cartpilot.com', password: 'Customer1234!' },
+  MERCHANT: { email: 'merchant@freshgrocers.com', password: 'Merchant1234!' },
+  ADMIN: { email: 'admin@cartpilot.com', password: 'Admin1234!' },
 };
 
 interface PaymentOrderState {
@@ -74,6 +81,7 @@ export function App() {
     message: string;
   } | null>(null);
   const [activeChatSessionId, setActiveChatSessionId] = useState<string>('');
+  const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -209,6 +217,7 @@ export function App() {
   useEffect(() => {
     const initializeSession = async () => {
       try {
+        let token = '';
         const creds = DEMO_CREDENTIALS[currentRole];
         const res = await fetch(`${API_BASE}/auth/login`, {
           method: 'POST',
@@ -218,7 +227,22 @@ export function App() {
 
         if (res.ok) {
           const data = await res.json();
-          const token = data.data.accessToken;
+          token = data.data.accessToken;
+        } else {
+          // Attempt fallback alias
+          const fbCreds = FALLBACK_CREDENTIALS[currentRole];
+          const fbRes = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fbCreds),
+          });
+          if (fbRes.ok) {
+            const fbData = await fbRes.json();
+            token = fbData.data.accessToken;
+          }
+        }
+
+        if (token) {
           setAuthToken(token);
 
           // Fetch catalog
@@ -883,6 +907,7 @@ export function App() {
         isDark={isDark}
         onToggleTheme={toggleTheme}
         lampStatus={currentLamp.status}
+        onOpenCredentials={() => setIsCredentialsModalOpen(true)}
       />
 
       {/* Temporary Feedback Banner */}
@@ -1159,6 +1184,14 @@ export function App() {
           </div>
         </div>
       )}
+
+      {/* Credentials Quick Reference Modal */}
+      <CredentialsModal
+        isOpen={isCredentialsModalOpen}
+        onClose={() => setIsCredentialsModalOpen(false)}
+        currentRole={currentRole}
+        onSelectRole={handleSwitchRole}
+      />
     </div>
   );
 }

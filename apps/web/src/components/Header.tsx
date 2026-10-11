@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, Sun, Moon, ShieldCheck, User } from 'lucide-react';
+import { ShoppingBag, Sun, Moon, ShieldCheck, User, Key } from 'lucide-react';
 import { DecisionLamp } from './DecisionLamp';
 import { LampStatus, CartData } from '../types';
 
@@ -11,6 +11,7 @@ interface HeaderProps {
   isDark: boolean;
   onToggleTheme: () => void;
   lampStatus: LampStatus;
+  onOpenCredentials?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   isDark,
   onToggleTheme,
   lampStatus,
+  onOpenCredentials,
 }) => {
   const itemCount = cart?.itemCount || 0;
   const formattedTotal = cart?.pricing.formatted.total || '₹0.00';
@@ -93,6 +95,18 @@ export const Header: React.FC<HeaderProps> = ({
               Admin
             </button>
           </div>
+
+          {/* Credentials quick view button */}
+          {onOpenCredentials && (
+            <button
+              onClick={onOpenCredentials}
+              className="px-2.5 py-1.5 rounded-lg border border-brd text-mut hover:text-ink hover:bg-paper/80 transition-all flex items-center gap-1.5 text-xs font-medium"
+              title="View all seeded login credentials and roles"
+            >
+              <Key className="w-3.5 h-3.5 text-amber-500" />
+              <span className="hidden sm:inline">Credentials</span>
+            </button>
+          )}
 
           {/* Theme toggle */}
           <button

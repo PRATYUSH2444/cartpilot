@@ -9,6 +9,10 @@ async function bootstrap(): Promise<void> {
   // Attempt database connection
   try {
     await connectDatabase();
+    if (env.NODE_ENV !== 'production') {
+      const { runSeed } = await import('./database/seed.js');
+      await runSeed(false);
+    }
   } catch (error) {
     logger.warn(
       { error },

@@ -27,7 +27,7 @@ export async function runSeed(dropExisting = false): Promise<void> {
     await UserModel.deleteMany({});
   }
 
-  // 1. Seed Users
+  // 1. Seed Users (Admin, Merchant, Customer with both @cartpilot.com/@freshgrocers.com and @example.com aliases)
   const salt = await bcrypt.genSalt(10);
   const adminPasswordHash = await bcrypt.hash('Admin1234!', salt);
   const merchantPasswordHash = await bcrypt.hash('Merchant1234!', salt);
@@ -46,11 +46,37 @@ export async function runSeed(dropExisting = false): Promise<void> {
     { upsert: true, new: true }
   );
 
-  const merchantUser = await UserModel.findOneAndUpdate(
+  await UserModel.findOneAndUpdate(
+    { email: 'admin@example.com' },
+    {
+      name: 'System Administrator',
+      email: 'admin@example.com',
+      passwordHash: adminPasswordHash,
+      role: 'ADMIN',
+      isActive: true,
+      tokenVersion: 0,
+    },
+    { upsert: true, new: true }
+  );
+
+  const merchantUserPrimary = await UserModel.findOneAndUpdate(
     { email: 'merchant@freshgrocers.com' },
     {
       name: 'Ramesh Patel (Merchant)',
       email: 'merchant@freshgrocers.com',
+      passwordHash: merchantPasswordHash,
+      role: 'MERCHANT',
+      isActive: true,
+      tokenVersion: 0,
+    },
+    { upsert: true, new: true }
+  );
+
+  const merchantUserSecondary = await UserModel.findOneAndUpdate(
+    { email: 'merchant@example.com' },
+    {
+      name: 'Ramesh Patel (Merchant)',
+      email: 'merchant@example.com',
       passwordHash: merchantPasswordHash,
       role: 'MERCHANT',
       isActive: true,
@@ -72,7 +98,20 @@ export async function runSeed(dropExisting = false): Promise<void> {
     { upsert: true, new: true }
   );
 
-  logger.info('✅ Seeded 3 Core Users (Admin, Merchant, Customer)');
+  await UserModel.findOneAndUpdate(
+    { email: 'customer@cartpilot.com' },
+    {
+      name: 'Priya Sharma (Shopper)',
+      email: 'customer@cartpilot.com',
+      passwordHash: customerPasswordHash,
+      role: 'CUSTOMER',
+      isActive: true,
+      tokenVersion: 0,
+    },
+    { upsert: true, new: true }
+  );
+
+  logger.info('✅ Seeded Core Users across all role aliases');
 
   // 2. Seed Merchants
   const createdMerchants: Record<string, mongoose.Types.ObjectId> = {};
@@ -88,11 +127,16 @@ export async function runSeed(dropExisting = false): Promise<void> {
 
   logger.info({ count: Object.keys(createdMerchants).length }, '✅ Seeded Active Merchants');
 
-  // 3. Link Merchant User to Merchant
+  // 3. Link Merchant Users to Merchant
   const freshGreensId = createdMerchants['fresh-greens-organics'];
   if (freshGreensId) {
     await MerchantUserModel.findOneAndUpdate(
-      { userId: merchantUser._id, merchantId: freshGreensId },
+      { userId: merchantUserPrimary._id, merchantId: freshGreensId },
+      { role: 'OWNER' },
+      { upsert: true, new: true }
+    );
+    await MerchantUserModel.findOneAndUpdate(
+      { userId: merchantUserSecondary._id, merchantId: freshGreensId },
       { role: 'OWNER' },
       { upsert: true, new: true }
     );

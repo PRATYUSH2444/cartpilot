@@ -28,8 +28,28 @@ export async function connectDatabase(uriOverride?: string): Promise<typeof mong
 
     return conn;
   } catch (error) {
-    logger.error({ error }, 'Failed to initialize MongoDB connection');
-    // In dev mode, don't necessarily crash immediately if local mongo isn't up, but log clearly
+    // In dev mode, if local mongo isn't up, seamlessly auto-start embedded MongoDB server and seed data
+    if (env.NODE_ENV !== 'production') {
+      try {
+        logger.info(
+          'Local MongoDB (27017) not active; launching embedded MongoDB development instance...'
+        );
+        const { MongoMemoryServer } = await import('mongodb-memory-server');
+        const embeddedServer = await MongoMemoryServer.create();
+        const embeddedUri = embeddedServer.getUri();
+        const conn = await mongoose.connect(embeddedUri);
+        logger.info({ uri: embeddedUri }, '✅ Connected to embedded development MongoDB server');
+
+        // Auto-seed initial credentials and catalog
+        const { runSeed } = await import('./seed.js');
+        await runSeed(false);
+
+        return conn;
+      } catch (embeddedErr) {
+        logger.warn({ embeddedErr }, 'Could not initialize embedded MongoDB fallback');
+      }
+    }
+
     if (env.NODE_ENV === 'production') {
       process.exit(1);
     }
