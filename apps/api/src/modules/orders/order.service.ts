@@ -14,6 +14,15 @@ export class OrderService {
   }
 
   /**
+   * Retrieves all orders across the platform (for Admin and Merchant dashboards), newest first.
+   */
+  public static async listAllOrders(): Promise<IOrder[]> {
+    return OrderModel.find({}).sort({
+      createdAt: -1,
+    });
+  }
+
+  /**
    * Retrieves an order by ID with ownership enforcement.
    */
   public static async getOrderById(

@@ -10,7 +10,11 @@ export class OrderController {
   ): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const orders = await OrderService.listUserOrders(userId);
+      const role = req.user!.role;
+      const orders =
+        role === 'ADMIN' || role === 'MERCHANT'
+          ? await OrderService.listAllOrders()
+          : await OrderService.listUserOrders(userId);
 
       res.status(200).json({
         success: true,
