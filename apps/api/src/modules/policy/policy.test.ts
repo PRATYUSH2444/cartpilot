@@ -84,7 +84,7 @@ describe('Phase 04 — Deterministic Policy Engine Integration Tests', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.outcome).toBe('NEEDS_HUMAN_APPROVAL');
+    expect(res.body.data.outcome).toBe('NEEDS_APPROVAL');
     expect(res.body.data.reasonCode).toBe('THRESHOLD_EXCEEDED');
     expect(res.body.data.requiresApproval).toBe(true);
     expect(res.body.data.approvalId).toBeDefined();
@@ -129,5 +129,39 @@ describe('Phase 04 — Deterministic Policy Engine Integration Tests', () => {
 
     // Restore daily budget to default
     await MandateModel.updateOne({ userId: customerId }, { $set: { dailyBudgetPaise: 150000 } });
+  });
+
+  it('POST /api/v1/policy/simulate — should simulate hypothetical amount without modifying any state', async () => {
+    // 1. Simulate ₹200 (20,000 paise) -> ALLOW
+    const resLow = await request(app)
+      .post('/api/v1/policy/simulate')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({ amountPaise: 20000 });
+
+    expect(resLow.status).toBe(200);
+    expect(resLow.body.data.outcome).toBe('ALLOW');
+    expect(resLow.body.data.reasonCode).toBe('WITHIN_LIMIT');
+
+    // 2. Simulate ₹1,200 (120,000 paise) -> DENY (exceeds default order cap of ₹1,000)
+    const resHigh = await request(app)
+      .post('/api/v1/policy/simulate')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({ amountPaise: 120000 });
+
+    expect(resHigh.status).toBe(200);
+    expect(resHigh.body.data.outcome).toBe('DENY');
+    expect(resHigh.body.data.reasonCode).toBe('ABOVE_ORDER_CAP');
+    expect(resHigh.body.data.remedies.length).toBeGreaterThan(0);
+  });
+
+  it('POST /api/v1/policy/apply-remedy — should apply RAISE_CAP remedy and update mandate', async () => {
+    const res = await request(app)
+      .post('/api/v1/policy/apply-remedy')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({ action: 'RAISE_CAP', requiredCapPaise: 250000 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.perOrderCapPaise).toBe(250000);
   });
 });

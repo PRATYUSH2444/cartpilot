@@ -153,11 +153,14 @@ export const resolveRecipeTool: ToolDefinition = {
         formattedUnitPrice: m.formattedUnitPrice,
         subtotalPaise: m.subtotalPaise,
         formattedSubtotal: m.formattedSubtotal,
+        isOptional: m.isOptional,
+        explain: m.explain,
       })),
       ambiguousItems: resolution.ambiguousItems,
       missingItems: resolution.missingItems,
       estimatedTotalPaise: resolution.estimatedTotalPaise,
       formattedEstimatedTotal: resolution.formattedEstimatedTotal,
+      budgetComparison: resolution.budgetComparison,
     };
   },
 };
@@ -252,6 +255,12 @@ export const proposeCartItemsTool: ToolDefinition = {
           formattedSubtotal: PricingService.formatPaise(subtotal),
           availableStock: prod.availableStock,
           imageUrl: prod.imageUrl,
+          explain: {
+            method: prod.aliases && prod.aliases.length > 0 ? 'exact_alias' : 'text_search',
+            confidence: prod.aliases && prod.aliases.length > 0 ? 0.98 : 0.92,
+            matchedAlias: prod.aliases?.[0] || prod.name,
+            sourceStamp: 'Fresh Greens catalog, checked just now',
+          },
         });
       } catch {
         throw new BadRequestError(

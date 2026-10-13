@@ -15,6 +15,16 @@ export interface ProposedItem {
   subtotalPaise?: number;
   availableStock?: number;
   imageUrl?: string;
+  isOptional?: boolean;
+  explain?: {
+    matchMethod: 'DIRECT_EXACT' | 'DIRECT_ALIAS' | 'NORMALIZED_KEYWORD' | 'CATEGORY_FALLBACK';
+    confidenceScore: number;
+    matchedAlias?: string;
+    leftoverPackGrams?: number;
+    leftoverPackCostPaise?: number;
+    ingredientSource: 'FRESH_GREENS' | 'DESI_KIRANA' | 'STANDARD_CATALOG';
+    fssaiCertified: boolean;
+  };
 }
 
 export interface ProposalPayload {
@@ -26,6 +36,13 @@ export interface ProposalPayload {
   pricing?: {
     totalPaise?: number;
     formatted?: { total?: string };
+  };
+  budgetComparison?: {
+    budgetPaise: number;
+    subtotalPaise: number;
+    totalPaise: number;
+    isOverBudget: boolean;
+    differencePaise: number;
   };
 }
 
@@ -44,6 +61,7 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
 }) => {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [isAddingAll, setIsAddingAll] = useState(false);
+  const [expandedExplainId, setExpandedExplainId] = useState<string | null>(null);
 
   // Normalize input data
   const isProposal =
@@ -87,6 +105,8 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
     ? `Curated Ingredients for ${proposal.dishName} (${proposal.servings || 4} Servings)`
     : proposal?.rationale || title;
 
+  const budgetComp = proposal?.budgetComparison;
+
   return (
     <div className="w-full rounded-2xl border border-brd bg-card/85 dark:bg-card-top/85 backdrop-blur-xl p-5 shadow-lg shadow-black/5 transition-all">
       {/* Header */}
@@ -105,9 +125,24 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
             )}
           </div>
         </div>
-        <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
-          100% Certified Vegetarian
-        </span>
+        <div className="flex items-center gap-2">
+          {budgetComp && (
+            <span
+              className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${
+                budgetComp.isOverBudget
+                  ? 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                  : 'bg-blue-500/10 text-acc border-blue-500/20'
+              }`}
+            >
+              {budgetComp.isOverBudget
+                ? `+₹${(budgetComp.differencePaise / 100).toFixed(0)} Over Budget`
+                : `₹${(budgetComp.totalPaise / 100).toFixed(0)} of ₹${(budgetComp.budgetPaise / 100).toFixed(0)} Budget`}
+            </span>
+          )}
+          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
+            100% Certified Vegetarian
+          </span>
+        </div>
       </div>
 
       {/* Products list */}
@@ -117,6 +152,8 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
           const qty = item.quantity || item.packCount || 1;
           const itemSubtotal = (unitPrice * qty).toFixed(2);
           const isAdding = addingId === item.productId;
+          const isExplainOpen = expandedExplainId === item.productId;
+          const explain = item.explain;
 
           return (
             <div
@@ -133,6 +170,11 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
                       {item.category && (
                         <span className="text-[10px] font-mono text-mut uppercase">
                           {item.category}
+                        </span>
+                      )}
+                      {item.isOptional && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-600 font-semibold">
+                          Optional
                         </span>
                       )}
                     </div>
@@ -154,7 +196,49 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
                       Required: {qty} packs (₹{itemSubtotal})
                     </span>
                   )}
+                  {explain && (
+                    <button
+                      onClick={() => setExpandedExplainId(isExplainOpen ? null : item.productId)}
+                      className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 font-medium transition-all"
+                    >
+                      {isExplainOpen ? 'Hide reasoning' : 'Why this item?'}
+                    </button>
+                  )}
                 </div>
+
+                {/* Novelty N8: Explain reasoning drawer */}
+                {explain && isExplainOpen && (
+                  <div className="mt-2.5 p-2 rounded-lg bg-purple-500/5 border border-purple-500/20 text-[10px] space-y-1 font-mono text-mut">
+                    <div className="flex justify-between text-ink font-semibold">
+                      <span>Match Method:</span>
+                      <span className="text-purple-600 dark:text-purple-400">
+                        {explain.matchMethod} ({Math.round(explain.confidenceScore * 100)}% match)
+                      </span>
+                    </div>
+                    {explain.matchedAlias && (
+                      <div className="flex justify-between">
+                        <span>Matched Alias:</span>
+                        <span className="text-ink">"{explain.matchedAlias}"</span>
+                      </div>
+                    )}
+                    {explain.leftoverPackGrams !== undefined && explain.leftoverPackGrams > 0 && (
+                      <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                        <span>Leftover Saved:</span>
+                        <span>
+                          {explain.leftoverPackGrams}g (₹
+                          {((explain.leftoverPackCostPaise || 0) / 100).toFixed(0)} saved)
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>Source / Safety:</span>
+                      <span className="text-ink">
+                        {explain.ingredientSource.replace('_', ' ')} ·{' '}
+                        {explain.fssaiCertified ? 'FSSAI Certified' : 'Verified'}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Action footer */}

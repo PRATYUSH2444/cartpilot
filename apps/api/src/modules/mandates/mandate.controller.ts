@@ -27,6 +27,26 @@ export class MandateController {
       data: updated,
     });
   }
+
+  async getPresets(_req: AuthenticatedRequest, res: Response): Promise<void> {
+    const data = mandateService.getPresets();
+    res.status(200).json({
+      success: true,
+      data,
+    });
+  }
+
+  async applyPreset(req: AuthenticatedRequest, res: Response): Promise<void> {
+    const userId = req.user!.id;
+    const key = (req.params.key as string) || '';
+    const result = await mandateService.applyPreset(userId, key);
+
+    res.status(200).json({
+      success: true,
+      message: `Preset "${key}" applied successfully`,
+      data: result,
+    });
+  }
 }
 
 export const mandateController = new MandateController();

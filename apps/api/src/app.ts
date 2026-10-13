@@ -71,6 +71,7 @@ export function createApp(): Express {
   app.use('/api/v1/webhooks', webhookRouter);
   app.use('/api/v1/orders', orderRouter);
   app.use('/api/v1/mandate', mandateRouter);
+  app.use('/api/v1/mandates', mandateRouter);
   app.use('/api/v1/policy', policyRouter);
   app.use('/api/v1/approvals', approvalRouter);
   app.use('/api/v1/audit', auditRouter);

@@ -11,18 +11,46 @@ import {
 
 export const GENESIS_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
 
-export function canonicalJsonStringify(obj: unknown): string {
+export function canonicalJsonStringify(obj: unknown, visited = new WeakSet()): string {
   if (obj === null || typeof obj !== 'object') {
     return JSON.stringify(obj);
   }
-  if (Array.isArray(obj)) {
-    return `[${obj.map((item) => canonicalJsonStringify(item)).join(',')}]`;
+  if (obj instanceof Date) {
+    return JSON.stringify(obj.toISOString());
   }
-  const keys = Object.keys(obj as Record<string, unknown>).sort();
-  const entries = keys.map(
-    (key) =>
-      `${JSON.stringify(key)}:${canonicalJsonStringify((obj as Record<string, unknown>)[key])}`
-  );
+  if (visited.has(obj)) {
+    return '"{CIRCULAR}"';
+  }
+  visited.add(obj);
+
+  // If object has toObject or toJSON, extract plain representation
+  let plain: unknown = obj;
+  if (typeof (obj as { toObject?: () => unknown }).toObject === 'function') {
+    plain = (obj as { toObject: () => unknown }).toObject();
+  } else if (typeof (obj as { toJSON?: () => unknown }).toJSON === 'function') {
+    plain = (obj as { toJSON: () => unknown }).toJSON();
+  }
+
+  if (plain === null || typeof plain !== 'object') {
+    return JSON.stringify(plain);
+  }
+
+  if (Array.isArray(plain)) {
+    return `[${plain.map((item) => canonicalJsonStringify(item, visited)).join(',')}]`;
+  }
+
+  const keys = Object.keys(plain as Record<string, unknown>).sort();
+  const entries = keys
+    .filter(
+      (key) =>
+        !key.startsWith('$') &&
+        key !== '_doc' &&
+        (plain as Record<string, unknown>)[key] !== undefined
+    )
+    .map(
+      (key) =>
+        `${JSON.stringify(key)}:${canonicalJsonStringify((plain as Record<string, unknown>)[key], visited)}`
+    );
   return `{${entries.join(',')}}`;
 }
 

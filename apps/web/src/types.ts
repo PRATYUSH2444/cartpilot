@@ -60,10 +60,32 @@ export interface MandateData {
   version: number;
   maxOrderAmountPaise: number; // e.g. 60,000 paise (₹600)
   dailyBudgetPaise: number; // e.g. 150,000 paise (₹1,500)
+  autoApproveUpToPaise?: number;
+  perOrderCapPaise?: number;
+  dailyCapPaise?: number;
   allowedMerchantIds?: string[];
   blockedCategories: string[];
   requireExplicitApproval: boolean;
   isActive: boolean;
+}
+
+export interface MandatePreset {
+  key: string;
+  name: string;
+  tagline: string;
+  description: string;
+  autoApproveUpToPaise: number;
+  perOrderCapPaise: number;
+  dailyCapPaise: number;
+  icon: string;
+  isDefault?: boolean;
+}
+
+export interface PolicyRemedy {
+  id: string;
+  label: string;
+  effect: string;
+  action: 'RAISE_CAP' | 'ENABLE_AGENT' | 'REMOVE_OPTIONAL_ITEMS' | 'ORDER_LATER' | 'REDUCE_QTY';
 }
 
 export type MandateRules = Partial<MandateData> & {
@@ -73,17 +95,21 @@ export type MandateRules = Partial<MandateData> & {
 };
 
 export interface PolicyEvaluation {
-  outcome: 'ALLOW' | 'NEEDS_HUMAN_APPROVAL' | 'DENY';
+  outcome: 'ALLOW' | 'NEEDS_HUMAN_APPROVAL' | 'NEEDS_APPROVAL' | 'DENY';
   reasonCode: string;
   explanation: string;
   dailyBudgetPaise: number;
   todaySpentPaise: number;
   cartTotalPaise: number;
   maxOrderAmountPaise: number;
+  dailyCapPaise?: number;
+  perOrderCapPaise?: number;
+  autoApproveUpToPaise?: number;
   requiresApproval: boolean;
   approvalId?: string;
   approvalHash?: string;
   approvalStatus?: string;
+  remedies?: PolicyRemedy[];
 }
 
 export interface ApprovalData {
@@ -195,3 +221,84 @@ export interface ChatSession {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface RecipeItemExplain {
+  matchMethod: 'DIRECT_EXACT' | 'DIRECT_ALIAS' | 'NORMALIZED_KEYWORD' | 'CATEGORY_FALLBACK';
+  confidenceScore: number;
+  matchedAlias?: string;
+  leftoverPackGrams?: number;
+  leftoverPackCostPaise?: number;
+  ingredientSource: 'FRESH_GREENS' | 'DESI_KIRANA' | 'STANDARD_CATALOG';
+  fssaiCertified: boolean;
+}
+
+export interface RecipeBudgetComparison {
+  budgetPaise: number;
+  subtotalPaise: number;
+  totalPaise: number;
+  isOverBudget: boolean;
+  differencePaise: number;
+}
+
+export interface OrderProofBundle {
+  orderId: string;
+  orderNumber: string;
+  status: string;
+  placedAt: string;
+  canonicalSnapshotHash: string;
+  policyDecision: string;
+  reasonCode: string;
+  mandateVersion: number;
+  approvalSnapshot?: { approvalId: string; approvalHash: string } | null;
+  pricingSnapshot: {
+    subtotalPaise: number;
+    deliveryFeePaise: number;
+    taxPaise: number;
+    discountPaise: number;
+    totalPaise: number;
+  };
+  shippingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+  };
+  auditSequenceRange: {
+    start: number;
+    end: number;
+    eventCount: number;
+  };
+  auditEvents: Array<{
+    sequenceNumber: number;
+    eventType: string;
+    currentHash: string;
+    previousHash: string;
+    timestamp: string;
+  }>;
+}
+
+export interface ProofVerificationResult {
+  valid: boolean;
+  orderNumber: string;
+  checks: {
+    orderContentsMatch: {
+      passed: boolean;
+      label: string;
+      description: string;
+    };
+    approvalBinding: {
+      passed: boolean;
+      label: string;
+      description: string;
+    };
+    auditChainIntact: {
+      passed: boolean;
+      label: string;
+      description: string;
+    };
+  };
+  canonicalSnapshotHash: string;
+  totalAuditEventsVerified: number;
+  message: string;
+}
+

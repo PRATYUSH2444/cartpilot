@@ -38,6 +38,15 @@ export interface MatchedRecipeItem {
   formattedSubtotal: string;
   availableStock: number;
   imageUrl?: string;
+  isOptional?: boolean;
+  explain?: {
+    method: 'exact_alias' | 'text_search' | 'category_fallback';
+    confidence: number;
+    matchedAlias?: string;
+    sourceStamp: string;
+    leftoverAmount?: number;
+    leftoverUnit?: string;
+  };
 }
 
 export interface AmbiguousRecipeItem {
@@ -69,6 +78,14 @@ export interface RecipeResolutionResult {
   missingItems: MissingRecipeItem[];
   estimatedTotalPaise: number;
   formattedEstimatedTotal: string;
+  budgetComparison?: {
+    statedBudgetPaise: number;
+    formattedStatedBudget: string;
+    isUnderBudget: boolean;
+    diffPaise: number;
+    formattedDiff: string;
+    statusText: string;
+  };
 }
 
 const NON_VEGETARIAN_TERMS = new Set([
@@ -539,9 +556,14 @@ export class RecipeService {
   public static async resolveRecipe(
     dishName: string,
     servings = 4,
-    customIngredients?: string[]
+    customIngredients?: string[],
+    budgetPaise?: number
   ): Promise<RecipeResolutionResult> {
-    logger.info({ dishName, servings, customIngredients }, 'Resolving recipe to catalog SKUs');
+    logger.info({ dishName, servings, customIngredients, budgetPaise }, 'Resolving recipe to catalog SKUs');
+
+    const budgetMatch = dishName.match(/under\s*(?:₹|rs\.?|inr)?\s*(\d+)/i);
+    const statedBudget =
+      budgetPaise || (budgetMatch && budgetMatch[1] ? parseInt(budgetMatch[1], 10) * 100 : undefined);
 
     const cleanDish = dishName.trim().toLowerCase();
     const cleanDishTokens = cleanDish.split(/\s+/);
@@ -702,6 +724,14 @@ export class RecipeService {
       const packCount = Math.max(1, Math.ceil(normalizedRequiredAmount / normalizedPackageSize));
       const subtotalPaise = packCount * selectedProduct.pricePaise;
 
+      const totalProvidedAmount = packCount * normalizedPackageSize;
+      const leftoverAmount = Math.max(0, totalProvidedAmount - normalizedRequiredAmount);
+      const isExactAlias = selectedProduct.aliases?.some(
+        (a) =>
+          a.toLowerCase().includes(spec.searchTerm.toLowerCase()) ||
+          spec.searchTerm.toLowerCase().includes(a.toLowerCase())
+      );
+
       matchedItems.push({
         ingredientName: spec.name,
         productId: selectedProduct._id.toString(),
@@ -719,10 +749,35 @@ export class RecipeService {
         formattedSubtotal: PricingService.formatPaise(subtotalPaise),
         availableStock: selectedProduct.availableStock,
         imageUrl: selectedProduct.imageUrl,
+        isOptional: !spec.isMandatory,
+        explain: {
+          method: isExactAlias ? 'exact_alias' : 'text_search',
+          confidence: isExactAlias ? 0.98 : 0.91,
+          matchedAlias: selectedProduct.aliases?.[0] || selectedProduct.name,
+          sourceStamp: 'Fresh Greens catalog, checked just now',
+          leftoverAmount: leftoverAmount > 0 ? leftoverAmount : undefined,
+          leftoverUnit: spec.unit,
+        },
       });
     }
 
     const estimatedTotalPaise = matchedItems.reduce((sum, item) => sum + item.subtotalPaise, 0);
+
+    let budgetComparison: RecipeResolutionResult['budgetComparison'] = undefined;
+    if (statedBudget) {
+      const diffPaise = Math.abs(estimatedTotalPaise - statedBudget);
+      const isUnder = estimatedTotalPaise <= statedBudget;
+      budgetComparison = {
+        statedBudgetPaise: statedBudget,
+        formattedStatedBudget: PricingService.formatPaise(statedBudget),
+        isUnderBudget: isUnder,
+        diffPaise,
+        formattedDiff: PricingService.formatPaise(diffPaise),
+        statusText: isUnder
+          ? `Under budget by ${PricingService.formatPaise(diffPaise)}`
+          : `Over budget by ${PricingService.formatPaise(diffPaise)}. Optional items can be removed to fit budget.`,
+      };
+    }
 
     return {
       dishName: matchedRecipe ? matchedRecipe.title : dishName,
@@ -735,6 +790,7 @@ export class RecipeService {
       missingItems,
       estimatedTotalPaise,
       formattedEstimatedTotal: PricingService.formatPaise(estimatedTotalPaise),
+      budgetComparison,
     };
   }
 

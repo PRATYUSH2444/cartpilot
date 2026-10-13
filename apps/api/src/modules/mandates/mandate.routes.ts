@@ -10,6 +10,17 @@ mandateRouter.get('/', authenticate, requireRole('CUSTOMER', 'ADMIN'), (req, res
   mandateController.getMandate(req, res).catch(next)
 );
 
+mandateRouter.get('/presets', authenticate, (req, res, next) =>
+  mandateController.getPresets(req, res).catch(next)
+);
+
+mandateRouter.post(
+  '/preset/:key',
+  authenticate,
+  requireRole('CUSTOMER', 'ADMIN'),
+  (req, res, next) => mandateController.applyPreset(req, res).catch(next)
+);
+
 mandateRouter.put(
   '/',
   authenticate,

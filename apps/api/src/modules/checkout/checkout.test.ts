@@ -164,6 +164,33 @@ describe('Phase 03 — Checkout & Order Orchestration Integration Tests', () => 
     expect(res.body.data.deliveredAt).toBeDefined();
   });
 
+  it('GET /api/v1/orders/:id/proof — should return cryptographic proof bundle', async () => {
+    const res = await request(app)
+      .get(`/api/v1/orders/${createdOrderId}/proof`)
+      .set('Authorization', `Bearer ${customerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.canonicalSnapshotHash).toBeDefined();
+    expect(res.body.data.canonicalSnapshotHash).toHaveLength(64); // SHA-256 hex length
+    expect(res.body.data.orderNumber).toBeDefined();
+    expect(res.body.data.policyDecision).toBe('ALLOW');
+  });
+
+  it('POST /api/v1/orders/:id/proof/verify — should verify cryptographic proof and hash chain integrity', async () => {
+    const res = await request(app)
+      .post(`/api/v1/orders/${createdOrderId}/proof/verify`)
+      .set('Authorization', `Bearer ${customerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.valid).toBe(true);
+    expect(res.body.data.checks.orderContentsMatch.passed).toBe(true);
+    expect(res.body.data.checks.approvalBinding.passed).toBe(true);
+    expect(res.body.data.checks.auditChainIntact.passed).toBe(true);
+    expect(res.body.data.message).toContain('Tamper-evident verification passed');
+  });
+
   afterAll(async () => {
     await teardownTestDatabase();
   });

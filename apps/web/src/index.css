@@ -1,64 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Light Theme Tokens */
-  --paper: #EEF2F6;
-  --card: #FFFFFF;
-  --card-top: #F9FAFB;
-  --ink: #0F172A;
-  --mut: #64748B;
-  --sub: #94A3B8;
-  --brd: #E2E8F0;
-  --brd-h: #CBD5E1;
-  --acc: #2563EB;
-  --go: #059669;
-  --ask: #D97706;
-  --stop: #DC2626;
-  --glass: rgba(255, 255, 255, 0.82);
-  --glass-brd: rgba(226, 232, 240, 0.9);
+  --bg: #F6F4EC;
+  --surface: #FFFFFF;
+  --surface-2: #EFEDE3;
+  --ink: #14201A;
+  --mut: #5E6B63;
+  --line: #E4E0D3;
+  --brand: #0C5C34;
+  --brand-soft: #E1F2E7;
+  --go: #168A57;
+  --ask: #C98A14;
+  --stop: #D23F36;
 
-  --m1: radial-gradient(circle at 15% 20%, rgba(37, 99, 235, 0.12) 0%, transparent 50%);
-  --m2: radial-gradient(circle at 85% 25%, rgba(5, 150, 105, 0.11) 0%, transparent 45%);
-  --m3: radial-gradient(circle at 50% 85%, rgba(217, 119, 6, 0.09) 0%, transparent 50%);
+  --radius-card: 20px;
+  --radius-bubble: 18px;
+  --radius-input: 14px;
+  --radius-chip: 99px;
+
+  --shadow-card: 0 2px 12px rgba(14,20,17,0.07), 0 1px 3px rgba(14,20,17,0.05);
+  --font-heading: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body: 'Instrument Sans', system-ui, sans-serif;
 }
 
 .dark {
-  /* Dark Theme Tokens */
-  --paper: #080C12;
-  --card: #0E141D;
-  --card-top: #131B26;
-  --ink: #F1F5F9;
-  --mut: #94A3B8;
-  --sub: #64748B;
-  --brd: #1E293B;
-  --brd-h: #334155;
-  --acc: #3B82F6;
-  --go: #10B981;
-  --ask: #F59E0B;
-  --stop: #EF4444;
-  --glass: rgba(14, 20, 29, 0.82);
-  --glass-brd: rgba(255, 255, 255, 0.08);
-
-  --m1: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.20) 0%, transparent 50%);
-  --m2: radial-gradient(circle at 80% 30%, rgba(16, 185, 129, 0.15) 0%, transparent 48%);
-  --m3: radial-gradient(circle at 50% 80%, rgba(245, 158, 11, 0.13) 0%, transparent 52%);
+  --bg: #0E1411;
+  --surface: #17201B;
+  --surface-2: #1F2A24;
+  --ink: #EAF1EC;
+  --mut: #9AAAA0;
+  --line: #2A372F;
+  --brand: #43C07D;
+  --brand-soft: #173826;
+  --go: #43C07D;
+  --ask: #F0B94E;
+  --stop: #FF7B73;
 }
 
 body {
-  background-color: var(--paper);
+  background-color: var(--bg);
   color: var(--ink);
-  font-family: 'Instrument Sans', sans-serif;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-/* Glass panel utility */
+h1, h2, h3, h4, .font-heading {
+  font-family: var(--font-heading);
+}
+
+.glass {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(246, 244, 236, 0.85);
+}
+
+.dark .glass {
+  background: rgba(14, 20, 17, 0.85);
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--mut); }
+
+/* Legacy class aliases for older components */
 .glass-panel {
-  background: var(--glass);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border: 1px solid var(--glass-brd);
+  background: rgba(246, 244, 236, 0.82);
+  border: 1px solid var(--line);
+}
+.dark .glass-panel {
+  background: rgba(14, 20, 17, 0.82);
 }
 
 /* Decision lamp glowing orb effects */
@@ -66,27 +85,20 @@ body {
   box-shadow: 0 0 10px rgba(148, 163, 184, 0.35);
 }
 .lamp-glow-go {
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.8), 0 0 32px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 16px rgba(22, 138, 87, 0.8), 0 0 32px rgba(22, 138, 87, 0.4);
 }
 .lamp-glow-ask {
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.8), 0 0 32px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 16px rgba(201, 138, 20, 0.8), 0 0 32px rgba(201, 138, 20, 0.4);
 }
 .lamp-glow-stop {
-  box-shadow: 0 0 16px rgba(239, 68, 68, 0.8), 0 0 32px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 16px rgba(210, 63, 54, 0.8), 0 0 32px rgba(210, 63, 54, 0.4);
 }
 
-/* Custom Scrollbar for Chat */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Sidebar slide-over transition */
+.sidebar-slide-enter {
+  transform: translateX(-100%);
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--brd-h);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--mut);
+.sidebar-slide-enter-active {
+  transform: translateX(0);
+  transition: transform 0.25s ease;
 }

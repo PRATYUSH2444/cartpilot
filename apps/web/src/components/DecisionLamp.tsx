@@ -1,11 +1,14 @@
 import React from 'react';
-import { LampStatus } from '../types';
+import { LampStatus, PolicyRemedy } from '../types';
+import { ArrowUpRight, Power, Clock, ShoppingCart } from 'lucide-react';
 
 interface DecisionLampProps {
   status: LampStatus;
   reasonCode?: string;
   reasonText?: string;
   compact?: boolean;
+  remedies?: PolicyRemedy[];
+  onApplyRemedy?: (action: string, requiredCapPaise?: number) => void;
 }
 
 export const DecisionLamp: React.FC<DecisionLampProps> = ({
@@ -13,6 +16,8 @@ export const DecisionLamp: React.FC<DecisionLampProps> = ({
   reasonCode,
   reasonText,
   compact = false,
+  remedies = [],
+  onApplyRemedy,
 }) => {
   const getStatusConfig = () => {
     switch (status) {
@@ -78,28 +83,52 @@ export const DecisionLamp: React.FC<DecisionLampProps> = ({
   }
 
   return (
-    <div className="p-3.5 rounded-xl border border-brd bg-card/60 dark:bg-card-top/60 backdrop-blur-md flex items-start gap-3.5 transition-all">
-      {/* Glowing Orb */}
-      <div className="relative flex-shrink-0 mt-0.5">
-        <div
-          className={`w-4 h-4 rounded-full ${config.colorClass} ${config.glowClass} animate-pulse-subtle transition-all duration-300`}
-        />
+    <div className="p-3.5 rounded-xl border border-brd bg-card/60 dark:bg-card-top/60 backdrop-blur-md flex flex-col gap-2.5 transition-all">
+      <div className="flex items-start gap-3.5">
+        {/* Glowing Orb */}
+        <div className="relative flex-shrink-0 mt-0.5">
+          <div
+            className={`w-4 h-4 rounded-full ${config.colorClass} ${config.glowClass} animate-pulse-subtle transition-all duration-300`}
+          />
+        </div>
+
+        {/* Decision Details */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <span className="text-xs font-semibold text-ink font-display tracking-wide uppercase">
+              Policy Decision Lamp
+            </span>
+            <span
+              className={`text-[10px] font-mono tracking-wider font-semibold px-2 py-0.5 rounded-md border ${config.badgeBg}`}
+            >
+              {displayCode}
+            </span>
+          </div>
+          <p className="text-xs text-mut leading-relaxed font-sans">{displayText}</p>
+        </div>
       </div>
 
-      {/* Decision Details */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap mb-1">
-          <span className="text-xs font-semibold text-ink font-display tracking-wide uppercase">
-            Policy Decision Lamp
-          </span>
-          <span
-            className={`text-[10px] font-mono tracking-wider font-semibold px-2 py-0.5 rounded-md border ${config.badgeBg}`}
-          >
-            {displayCode}
-          </span>
+      {/* Novelty N2: 1-Tap Counterfactual Remedies */}
+      {remedies && remedies.length > 0 && onApplyRemedy && (
+        <div className="pt-2 border-t border-brd/60 mt-0.5 flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-mono text-mut uppercase">1-Tap Remedy:</span>
+          {remedies.map((remedy) => (
+            <button
+              key={remedy.id}
+              onClick={() => onApplyRemedy(remedy.action)}
+              className="px-2.5 py-1 rounded-lg bg-acc/10 hover:bg-acc hover:text-white text-acc border border-acc/25 text-[11px] font-semibold transition-all flex items-center gap-1.5 shadow-sm"
+              title={remedy.effect}
+            >
+              {remedy.action === 'RAISE_CAP' && <ArrowUpRight className="w-3 h-3" />}
+              {remedy.action === 'ENABLE_AGENT' && <Power className="w-3 h-3" />}
+              {remedy.action === 'ORDER_LATER' && <Clock className="w-3 h-3" />}
+              {remedy.action === 'REDUCE_QTY' && <ShoppingCart className="w-3 h-3" />}
+              <span>{remedy.label}</span>
+            </button>
+          ))}
         </div>
-        <p className="text-xs text-mut leading-relaxed font-sans">{displayText}</p>
-      </div>
+      )}
     </div>
   );
 };
+

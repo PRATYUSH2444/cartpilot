@@ -70,4 +70,46 @@ export class OrderController {
       next(err);
     }
   }
+
+  public static async getOrderProof(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const role = req.user!.role;
+      const id = req.params.id as string;
+
+      const proof = await OrderService.getOrderProof(id, userId, role);
+
+      res.status(200).json({
+        success: true,
+        data: proof,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async verifyOrderProof(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const role = req.user!.role;
+      const id = req.params.id as string;
+
+      const verification = await OrderService.verifyOrderProof(id, userId, role);
+
+      res.status(200).json({
+        success: true,
+        data: verification,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }

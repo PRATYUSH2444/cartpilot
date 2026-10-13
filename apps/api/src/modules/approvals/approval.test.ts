@@ -51,7 +51,7 @@ describe('Phase 04 — Cryptographic Human Approval Protocol Integration Tests',
       .get('/api/v1/policy/evaluate')
       .set('Authorization', `Bearer ${customerToken}`);
 
-    expect(policyRes.body.data.outcome).toBe('NEEDS_HUMAN_APPROVAL');
+    expect(policyRes.body.data.outcome).toBe('NEEDS_APPROVAL');
     expect(policyRes.body.data.approvalId).toBeDefined();
 
     // 3. Attempting checkout without approval should fail with 400 APPROVAL_REQUIRED

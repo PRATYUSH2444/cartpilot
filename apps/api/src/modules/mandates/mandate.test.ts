@@ -74,4 +74,41 @@ describe('Phase 04 — Mandate & Spending Rules Integration Tests', () => {
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
   });
+
+  it('GET /api/v1/mandates/presets — should return 3 starter presets with expected caps', async () => {
+    const res = await request(app)
+      .get('/api/v1/mandates/presets')
+      .set('Authorization', `Bearer ${customerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.presets).toHaveLength(3);
+
+    const keys = res.body.data.presets.map((p: any) => p.key);
+    expect(keys).toContain('careful');
+    expect(keys).toContain('everyday');
+    expect(keys).toContain('family');
+  });
+
+  it('POST /api/v1/mandates/preset/:key — should apply Everyday preset and bump version', async () => {
+    const res = await request(app)
+      .post('/api/v1/mandates/preset/everyday')
+      .set('Authorization', `Bearer ${customerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.mandate.autoApproveUpToPaise).toBe(80000); // ₹800
+    expect(res.body.data.mandate.maxOrderAmountPaise).toBe(200000); // ₹2,000
+    expect(res.body.data.mandate.dailyBudgetPaise).toBe(300000); // ₹3,000
+    expect(res.body.data.activePresetKey).toBe('everyday');
+  });
+
+  it('POST /api/v1/mandates/preset/:key — should reject invalid preset key with 400', async () => {
+    const res = await request(app)
+      .post('/api/v1/mandates/preset/invalid-preset')
+      .set('Authorization', `Bearer ${customerToken}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
 });
