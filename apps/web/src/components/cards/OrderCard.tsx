@@ -278,4 +278,3 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     </div>
   );
 };
-

@@ -95,4 +95,3 @@ const mandateSchema = new Schema<MandateDocument>(
 );
 
 export const MandateModel = mongoose.model<MandateDocument>('Mandate', mandateSchema);
-

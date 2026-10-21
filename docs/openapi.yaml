@@ -1,0 +1,464 @@
+openapi: 3.1.0
+info:
+  title: CartPilot API — Agent Commerce Gateway
+  description: >-
+    Policy-controlled conversational commerce gateway for autonomous shopping agents.
+    Enforces deterministic spending policies, cryptographic human approvals,
+    authoritative pricing in integer paise, and append-only tamper-evident audit trails.
+  version: 0.1.0
+  contact:
+    name: CartPilot Engineering Team
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local Development Gateway
+  - url: https://api.cartpilot.internal/api/v1
+    description: Production Environment
+paths:
+  /health:
+    get:
+      summary: Liveness Probe
+      description: Returns service operational status and process uptime.
+      responses:
+        '200':
+          description: Service is healthy and responsive.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /ready:
+    get:
+      summary: Readiness Probe
+      description: Verifies active connectivity to MongoDB cluster and external dependencies.
+      responses:
+        '200':
+          description: Service dependencies are fully connected and ready to accept traffic.
+        '503':
+          description: Service dependencies are unavailable or disconnected.
+
+  /auth/register:
+    post:
+      summary: Customer Registration
+      description: Registers a new shopper or merchant applicant. Self-registration as admin is forbidden.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created successfully.
+        '400':
+          description: Validation failure or invalid payload.
+        '409':
+          description: Email already registered.
+        '429':
+          description: Rate limit exceeded.
+
+  /auth/login:
+    post:
+      summary: User Authentication
+      description: Authenticates user credentials and issues access JWT in body and refresh token in HttpOnly cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated successfully.
+        '401':
+          description: Invalid email or password.
+        '429':
+          description: Too many authentication attempts.
+
+  /auth/refresh:
+    post:
+      summary: Session Token Rotation
+      description: Rotates access and refresh tokens using HttpOnly cookie or body token.
+      responses:
+        '200':
+          description: Session refreshed with new access token.
+        '401':
+          description: Revoked or expired refresh token.
+
+  /auth/logout:
+    post:
+      summary: Session Invalidation
+      security:
+        - BearerAuth: []
+      description: Invalidates active refresh token and increments user token version.
+      responses:
+        '200':
+          description: Session revoked.
+
+  /auth/me:
+    get:
+      summary: Current User Profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Authenticated user details.
+        '401':
+          description: Unauthorized.
+
+  /auth/forgot-password:
+    post:
+      summary: Request Password Reset
+      description: Generates a single-use 30-minute reset token. Returns generic success to prevent enumeration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Generic confirmation message.
+        '429':
+          description: Rate limit exceeded.
+
+  /auth/reset-password:
+    post:
+      summary: Complete Password Reset
+      description: Consumes valid reset token, updates password, and revokes all existing active sessions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Password updated and sessions revoked.
+        '400':
+          description: Invalid or expired reset token.
+
+  /catalog:
+    get:
+      summary: Search Vegetarian Catalog
+      description: Searches 100% vegetarian products by keyword, category, or dietary aliases.
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Matching catalog products with prices in integer paise.
+
+  /catalog/{id}:
+    get:
+      summary: Product Details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product details.
+        '404':
+          description: Product not found.
+
+  /cart:
+    get:
+      summary: Active Shopping Cart
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Cart contents with calculated integer paise totals.
+    delete:
+      summary: Clear Cart
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Cart cleared.
+
+  /cart/items:
+    post:
+      summary: Add Item to Cart
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId, quantity]
+              properties:
+                productId:
+                  type: string
+                quantity:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Item added.
+
+  /mandate:
+    get:
+      summary: Shopper Spending Mandate
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Active spending rules and caps.
+    put:
+      summary: Update Spending Mandate
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Mandate updated.
+
+  /policy/evaluate:
+    get:
+      summary: Deterministic Policy Evaluation
+      security:
+        - BearerAuth: []
+      description: Evaluates active cart against spending mandate, per-order caps, daily budget, and category blocks.
+      responses:
+        '200':
+          description: Policy evaluation decision (ALLOW, NEEDS_APPROVAL, DENY) with explainable remedies.
+
+  /approvals/active:
+    get:
+      summary: Active Pending Approval
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Pending approval details with composite cryptographic fingerprint.
+
+  /approvals/{id}/approve:
+    post:
+      summary: Grant Cryptographic Approval
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Approval granted and bound to current cart snapshot.
+        '409':
+          description: Cart or mandate was modified after approval was requested.
+
+  /checkout/initiate:
+    post:
+      summary: Initiate Order Checkout
+      security:
+        - BearerAuth: []
+      description: Atomic 15-minute stock reservation, authoritative pricing verification, and Razorpay payment order initiation.
+      responses:
+        '201':
+          description: Checkout initiated; payment gateway order returned.
+        '400':
+          description: Stock shortage, empty cart, or policy violation without required approval.
+
+  /payments/verify:
+    post:
+      summary: Verify Payment Signature
+      security:
+        - BearerAuth: []
+      description: Cryptographically verifies Razorpay HMAC-SHA256 signature and confirms order.
+      responses:
+        '200':
+          description: Payment verified and order confirmed.
+        '400':
+          description: Cryptographic signature mismatch.
+
+  /webhooks/razorpay:
+    post:
+      summary: Payment Gateway Webhook
+      description: Idempotent processing of Razorpay webhook notifications using raw body HMAC signature.
+      responses:
+        '200':
+          description: Webhook processed or duplicate ignored.
+        '400':
+          description: Invalid webhook signature.
+
+  /orders:
+    get:
+      summary: List Orders
+      security:
+        - BearerAuth: []
+      description: Returns orders scoped by tenant/user (Customer views own; Merchant views store orders; Admin views all).
+      responses:
+        '200':
+          description: Orders list.
+
+  /orders/{id}:
+    get:
+      summary: Order Details
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order details.
+        '403':
+          description: Tenant isolation violation.
+        '404':
+          description: Order not found.
+
+  /orders/{id}/proof:
+    get:
+      summary: Verifiable Order Proof Bundle
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Canonical snapshot hashes, approval binding, and audit trail proof.
+
+  /chat/sessions:
+    post:
+      summary: Create Chat Session
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Chat session created.
+    get:
+      summary: List Chat Sessions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User chat sessions.
+
+  /chat/sessions/{id}/messages:
+    post:
+      summary: Send Message to AI Agent
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: AI agent turn response with proposals or executed tools.
+
+  /audit/verify:
+    get:
+      summary: Verify Cryptographic Audit Chain
+      security:
+        - BearerAuth: []
+      description: Traverses rolling SHA-256 ledger from Genesis block to head, mathematically validating sequence and payload integrity.
+      responses:
+        '200':
+          description: Audit chain status (valid, brokenAtSequence, totalEvents).
+
+  /audit/events:
+    get:
+      summary: Explore Audit Events
+      security:
+        - BearerAuth: []
+      description: Restricted to Admin. Returns paginated audit ledger events.
+      responses:
+        '200':
+          description: Audit event logs.
+        '403':
+          description: Forbidden - Admin role required.
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              example: UP
+            uptimeSeconds:
+              type: number
+            timestamp:
+              type: string
+              format: date-time
+            service:
+              type: string
+            version:
+              type: string
+
+    RegisterRequest:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        name:
+          type: string
+        role:
+          type: string
+          enum: [CUSTOMER, MERCHANT]
+          default: CUSTOMER
+        phone:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string

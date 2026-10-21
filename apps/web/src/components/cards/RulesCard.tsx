@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Shield,
-  CheckCircle2,
-  AlertTriangle,
-  Sliders,
-  Sparkles,
-  Play,
-  Zap,
-} from 'lucide-react';
+import { Shield, CheckCircle2, AlertTriangle, Sliders, Sparkles, Play, Zap } from 'lucide-react';
 import { MandateRules, PolicyEvaluation } from '../../types';
 
 interface RulesCardProps {
@@ -66,53 +58,56 @@ export const RulesCard: React.FC<RulesCardProps> = ({
   const [isApplyingPreset, setIsApplyingPreset] = useState<string | null>(null);
 
   // Run simulation against backend
-  const runSimulation = React.useCallback(async (rupees: number) => {
-    setIsSimulating(true);
-    try {
-      const res = await fetch('http://localhost:5000/api/v1/policy/simulate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amountPaise: Math.round(rupees * 100) }),
-      });
-      if (res.ok) {
-        const body = await res.json();
-        setSimResult(body.data);
-      }
-    } catch {
-      // Offline fallback evaluation
-      const amountPaise = rupees * 100;
-      let outcome: PolicyEvaluation['outcome'] = 'ALLOW';
-      let reasonCode = 'WITHIN_LIMIT';
-      let explanation = `₹${rupees.toFixed(2)} is within autonomous limit.`;
+  const runSimulation = React.useCallback(
+    async (rupees: number) => {
+      setIsSimulating(true);
+      try {
+        const res = await fetch('http://localhost:5000/api/v1/policy/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amountPaise: Math.round(rupees * 100) }),
+        });
+        if (res.ok) {
+          const body = await res.json();
+          setSimResult(body.data);
+        }
+      } catch {
+        // Offline fallback evaluation
+        const amountPaise = rupees * 100;
+        let outcome: PolicyEvaluation['outcome'] = 'ALLOW';
+        let reasonCode = 'WITHIN_LIMIT';
+        let explanation = `₹${rupees.toFixed(2)} is within autonomous limit.`;
 
-      if (amountPaise > rules.dailyBudgetPaise) {
-        outcome = 'DENY';
-        reasonCode = 'DAILY_BUDGET_EXCEEDED';
-        explanation = `Exceeds daily budget of ₹${(rules.dailyBudgetPaise / 100).toFixed(2)}`;
-      } else if (amountPaise > (rules.perOrderCapPaise || 100000)) {
-        outcome = 'DENY';
-        reasonCode = 'ABOVE_ORDER_CAP';
-        explanation = `Exceeds per-order cap of ₹${((rules.perOrderCapPaise || 100000) / 100).toFixed(2)}`;
-      } else if (amountPaise > rules.maxOrderAmountPaise) {
-        outcome = 'NEEDS_APPROVAL';
-        reasonCode = 'THRESHOLD_EXCEEDED';
-        explanation = `Exceeds autonomous auto-approve limit of ₹${(rules.maxOrderAmountPaise / 100).toFixed(2)}`;
-      }
+        if (amountPaise > rules.dailyBudgetPaise) {
+          outcome = 'DENY';
+          reasonCode = 'DAILY_BUDGET_EXCEEDED';
+          explanation = `Exceeds daily budget of ₹${(rules.dailyBudgetPaise / 100).toFixed(2)}`;
+        } else if (amountPaise > (rules.perOrderCapPaise || 100000)) {
+          outcome = 'DENY';
+          reasonCode = 'ABOVE_ORDER_CAP';
+          explanation = `Exceeds per-order cap of ₹${((rules.perOrderCapPaise || 100000) / 100).toFixed(2)}`;
+        } else if (amountPaise > rules.maxOrderAmountPaise) {
+          outcome = 'NEEDS_APPROVAL';
+          reasonCode = 'THRESHOLD_EXCEEDED';
+          explanation = `Exceeds autonomous auto-approve limit of ₹${(rules.maxOrderAmountPaise / 100).toFixed(2)}`;
+        }
 
-      setSimResult({
-        outcome,
-        reasonCode,
-        explanation,
-        dailyBudgetPaise: rules.dailyBudgetPaise,
-        todaySpentPaise: 0,
-        cartTotalPaise: amountPaise,
-        maxOrderAmountPaise: rules.maxOrderAmountPaise,
-        requiresApproval: outcome === 'NEEDS_APPROVAL',
-      });
-    } finally {
-      setIsSimulating(false);
-    }
-  }, [rules.dailyBudgetPaise, rules.perOrderCapPaise, rules.maxOrderAmountPaise]);
+        setSimResult({
+          outcome,
+          reasonCode,
+          explanation,
+          dailyBudgetPaise: rules.dailyBudgetPaise,
+          todaySpentPaise: 0,
+          cartTotalPaise: amountPaise,
+          maxOrderAmountPaise: rules.maxOrderAmountPaise,
+          requiresApproval: outcome === 'NEEDS_APPROVAL',
+        });
+      } finally {
+        setIsSimulating(false);
+      }
+    },
+    [rules.dailyBudgetPaise, rules.perOrderCapPaise, rules.maxOrderAmountPaise]
+  );
 
   useEffect(() => {
     if (showPlayground) {
@@ -343,4 +338,3 @@ export const RulesCard: React.FC<RulesCardProps> = ({
     </div>
   );
 };
-

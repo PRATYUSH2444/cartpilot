@@ -21,6 +21,8 @@ export interface AgentMessage {
 export interface LLMResponse {
   text: string;
   toolCalls?: AgentToolCall[];
+  isSimulated?: boolean;
+  provider?: string;
 }
 
 export interface LLMProvider {

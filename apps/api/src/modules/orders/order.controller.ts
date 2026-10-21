@@ -11,10 +11,13 @@ export class OrderController {
     try {
       const userId = req.user!.userId;
       const role = req.user!.role;
+      const merchantId = req.user!.merchantId;
       const orders =
-        role === 'ADMIN' || role === 'MERCHANT'
+        role === 'ADMIN'
           ? await OrderService.listAllOrders()
-          : await OrderService.listUserOrders(userId);
+          : role === 'MERCHANT' && merchantId
+            ? await OrderService.listMerchantOrders(merchantId)
+            : await OrderService.listUserOrders(userId);
 
       res.status(200).json({
         success: true,
@@ -36,9 +39,10 @@ export class OrderController {
     try {
       const userId = req.user!.userId;
       const role = req.user!.role;
+      const merchantId = req.user!.merchantId;
       const id = req.params.id as string;
 
-      const order = await OrderService.getOrderById(id, userId, role);
+      const order = await OrderService.getOrderById(id, userId, role, merchantId);
 
       res.status(200).json({
         success: true,
@@ -57,9 +61,10 @@ export class OrderController {
     try {
       const userId = req.user!.userId;
       const role = req.user!.role;
+      const merchantId = req.user!.merchantId;
       const id = req.params.id as string;
 
-      const order = await OrderService.simulateStep(id, userId, role);
+      const order = await OrderService.simulateStep(id, userId, role, merchantId);
 
       res.status(200).json({
         success: true,

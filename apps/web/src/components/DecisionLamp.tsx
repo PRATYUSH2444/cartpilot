@@ -131,4 +131,3 @@ export const DecisionLamp: React.FC<DecisionLampProps> = ({
     </div>
   );
 };
-

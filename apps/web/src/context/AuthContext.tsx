@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { DEMO_CREDENTIALS } from '../config/demo-credentials';
+import { API_BASE } from '../config/api';
 
 export type UserRole = 'CUSTOMER' | 'MERCHANT' | 'ADMIN';
 
@@ -8,16 +10,21 @@ export interface UserProfile {
   name: string;
   role: UserRole;
   merchantId?: string;
+  isStaff?: boolean;
+  staffPermissions?: string[];
+  mustChangePassword?: boolean;
 }
 
 interface AuthContextType {
   user: UserProfile | null;
   token: string | null;
   isLoading: boolean;
+  isSessionExpired: boolean;
+  dismissSessionExpired: () => void;
   login: (
     email: string,
     password: string
-  ) => Promise<{ success: boolean; role?: UserRole; error?: string }>;
+  ) => Promise<{ success: boolean; role?: UserRole; error?: string; mustChangePassword?: boolean }>;
   register: (
     name: string,
     email: string,
@@ -25,77 +32,76 @@ interface AuthContextType {
     phone?: string
   ) => Promise<{ success: boolean; role?: UserRole; error?: string }>;
   logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
+  refreshSession: () => Promise<boolean>;
   switchRoleQuick: (role: UserRole) => Promise<boolean>;
+  setUserProfile: (user: UserProfile) => void;
+  setSession: (token: string, user: UserProfile) => void;
 }
-
-const API_BASE = 'http://localhost:5000/api/v1';
-const TOKEN_KEY = 'cartpilot_auth_token';
-const USER_KEY = 'cartpilot_user';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    try {
-      const savedUser = localStorage.getItem(USER_KEY);
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem(TOKEN_KEY);
-  });
+  // Pure in-memory token state — NO access or refresh tokens stored in localStorage (XSS-safe)
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSessionExpired, setIsSessionExpired] = useState<boolean>(false);
 
-  // Validate session on mount
-  useEffect(() => {
-    const verifySession = async () => {
-      const storedToken = localStorage.getItem(TOKEN_KEY);
-      if (!storedToken) {
-        setIsLoading(false);
-        return;
+  // Silent session refresh via httpOnly, secure cookie on app startup
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({}),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const profile: UserProfile = {
+          id: data.data.user.id || data.data.user.userId,
+          email: data.data.user.email,
+          name: data.data.user.name,
+          role: data.data.user.role,
+          merchantId: data.data.user.merchantId,
+          isStaff: data.data.user.isStaff,
+          staffPermissions: data.data.user.staffPermissions,
+          mustChangePassword: data.data.user.mustChangePassword,
+        };
+
+        setToken(data.data.accessToken);
+        setUser(profile);
+        setIsSessionExpired(false);
+        return true;
+      } else {
+        setToken(null);
+        setUser(null);
+        return false;
       }
-
-      try {
-        const res = await fetch(`${API_BASE}/auth/me`, {
-          headers: { Authorization: `Bearer ${storedToken}` },
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          const profile: UserProfile = {
-            id: data.data.id || data.data.userId,
-            email: data.data.email,
-            name: data.data.name,
-            role: data.data.role,
-            merchantId: data.data.merchantId,
-          };
-          setUser(profile);
-          setToken(storedToken);
-          localStorage.setItem(USER_KEY, JSON.stringify(profile));
-        } else {
-          // Token invalid or expired
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(USER_KEY);
-          setUser(null);
-          setToken(null);
-        }
-      } catch {
-        // Network error during startup, preserve existing cached session if any
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    verifySession();
+    } catch {
+      setToken(null);
+      setUser(null);
+      return false;
+    }
   }, []);
+
+  // Validate or silently re-authenticate session on mount
+  useEffect(() => {
+    const initAuth = async () => {
+      await refreshSession();
+      setIsLoading(false);
+    };
+    initAuth();
+  }, [refreshSession]);
 
   const login = async (email: string, password: string) => {
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
@@ -108,21 +114,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: data.data.user.name,
           role: data.data.user.role,
           merchantId: data.data.user.merchantId,
+          isStaff: data.data.user.isStaff,
+          staffPermissions: data.data.user.staffPermissions,
+          mustChangePassword: data.data.user.mustChangePassword,
         };
 
         setToken(accessToken);
         setUser(profile);
-        localStorage.setItem(TOKEN_KEY, accessToken);
-        localStorage.setItem(USER_KEY, JSON.stringify(profile));
+        setIsSessionExpired(false);
 
-        return { success: true, role: profile.role };
+        return {
+          success: true,
+          role: profile.role,
+          mustChangePassword: profile.mustChangePassword,
+        };
       } else {
-        return { success: false, error: data.error?.message || 'Invalid credentials' };
+        return { success: false, error: data.error?.message || 'Invalid email or password' };
       }
     } catch {
       return {
         success: false,
-        error: 'Cannot reach backend server. Please verify API is running.',
+        error: 'Cannot reach backend server. Please verify connection.',
       };
     }
   };
@@ -132,6 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ name, email, password, phone, role: 'CUSTOMER' }),
       });
 
@@ -147,8 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setToken(accessToken);
         setUser(profile);
-        localStorage.setItem(TOKEN_KEY, accessToken);
-        localStorage.setItem(USER_KEY, JSON.stringify(profile));
+        setIsSessionExpired(false);
 
         return { success: true, role: profile.role };
       } else {
@@ -157,7 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       return {
         success: false,
-        error: 'Cannot reach backend server. Please verify API is running.',
+        error: 'Cannot reach backend server. Please verify connection.',
       };
     }
   };
@@ -168,29 +180,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetch(`${API_BASE}/auth/logout`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include',
         });
       }
     } catch {
-      // Ignore network errors on logout
+      // Ignored during client teardown
     } finally {
       setToken(null);
       setUser(null);
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
+      setIsSessionExpired(false);
     }
   };
 
-  // Development-mode quick login helper
-  const switchRoleQuick = async (role: UserRole): Promise<boolean> => {
-    const roleCreds = {
-      CUSTOMER: { email: 'customer@example.com', password: 'Customer1234!' },
-      MERCHANT: { email: 'merchant@example.com', password: 'Merchant1234!' },
-      ADMIN: { email: 'admin@example.com', password: 'Admin1234!' },
-    };
+  const logoutAll = async () => {
+    try {
+      if (token) {
+        await fetch(`${API_BASE}/auth/logout-all`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include',
+        });
+      }
+    } catch {
+      // Ignored
+    } finally {
+      setToken(null);
+      setUser(null);
+      setIsSessionExpired(false);
+    }
+  };
 
-    const creds = roleCreds[role];
-    const result = await login(creds.email, creds.password);
-    return result.success;
+  const switchRoleQuick = async (role: UserRole): Promise<boolean> => {
+    if (DEMO_CREDENTIALS) {
+      const creds = DEMO_CREDENTIALS[role];
+      const result = await login(creds.email, creds.password);
+      return result.success;
+    }
+    throw new Error('Quick role switcher is disabled in production environments.');
+  };
+
+  const dismissSessionExpired = () => {
+    setIsSessionExpired(false);
+  };
+
+  const setSession = (accessToken: string, userProfile: UserProfile) => {
+    setToken(accessToken);
+    setUser(userProfile);
+    setIsSessionExpired(false);
   };
 
   return (
@@ -199,10 +235,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         token,
         isLoading,
+        isSessionExpired,
+        dismissSessionExpired,
         login,
         register,
         logout,
+        logoutAll,
+        refreshSession,
         switchRoleQuick,
+        setUserProfile: setUser,
+        setSession,
       }}
     >
       {children}
@@ -210,10 +252,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export function useAuth(): AuthContextType {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};

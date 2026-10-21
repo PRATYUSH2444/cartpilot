@@ -1,13 +1,63 @@
 import { Router } from 'express';
-import { register, login, refresh, logout, getMe } from './auth.controller.js';
+import {
+  register,
+  login,
+  refresh,
+  logout,
+  logoutAll,
+  getSessions,
+  revokeSession,
+  changePassword,
+  forceChangePassword,
+  createAdmin,
+  getMe,
+  forgotPassword,
+  resetPassword,
+} from './auth.controller.js';
 import { validate } from '../../common/middleware/validate.js';
-import { authenticate } from '../../common/middleware/auth.js';
-import { registerSchema, loginSchema, refreshSchema } from './auth.schema.js';
+import { authenticate, requireRole } from '../../common/middleware/auth.js';
+import { authRateLimiter } from '../../common/middleware/rate-limiter.js';
+import {
+  registerSchema,
+  loginSchema,
+  refreshSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  changePasswordSchema,
+  forceChangePasswordSchema,
+  createAdminSchema,
+} from './auth.schema.js';
 
 export const authRouter = Router();
 
-authRouter.post('/register', validate(registerSchema), register);
-authRouter.post('/login', validate(loginSchema), login);
+// Public Authentication Flow
+authRouter.post('/register', authRateLimiter, validate(registerSchema), register);
+authRouter.post('/login', authRateLimiter, validate(loginSchema), login);
 authRouter.post('/refresh', validate(refreshSchema), refresh);
+authRouter.post('/forgot-password', authRateLimiter, validate(forgotPasswordSchema), forgotPassword);
+authRouter.post('/reset-password', authRateLimiter, validate(resetPasswordSchema), resetPassword);
+
+// Authenticated Session & Account Management
 authRouter.post('/logout', authenticate, logout);
+authRouter.post('/logout-all', authenticate, logoutAll);
 authRouter.get('/me', authenticate, getMe);
+authRouter.get('/sessions', authenticate, getSessions);
+authRouter.delete('/sessions/:sessionId', authenticate, revokeSession);
+authRouter.post('/change-password', authenticate, validate(changePasswordSchema), changePassword);
+authRouter.post('/force-change-password', authenticate, validate(forceChangePasswordSchema), forceChangePassword);
+
+// Protected Admin Provisioning with Re-authentication
+authRouter.post(
+  '/admin/provision',
+  authenticate,
+  requireRole('ADMIN'),
+  validate(createAdminSchema),
+  createAdmin
+);
+authRouter.post(
+  '/admin/create-admin',
+  authenticate,
+  requireRole('ADMIN'),
+  validate(createAdminSchema),
+  createAdmin
+);

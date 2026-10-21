@@ -138,6 +138,8 @@ export interface AuditEvent {
   payloadHash: string;
   previousHash: string;
   currentHash: string;
+  _id?: string;
+  hash?: string;
 }
 
 export interface ChainVerification {
@@ -301,4 +303,3 @@ export interface ProofVerificationResult {
   totalAuditEventsVerified: number;
   message: string;
 }
-

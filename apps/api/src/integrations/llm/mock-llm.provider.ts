@@ -8,6 +8,19 @@ import {
 export class MockLLMProvider implements LLMProvider {
   public async generateResponse(
     messages: AgentMessage[],
+    tools: AgentToolDeclaration[],
+    systemPrompt: string
+  ): Promise<LLMResponse> {
+    const response = await this.evaluate(messages, tools, systemPrompt);
+    return {
+      ...response,
+      isSimulated: true,
+      provider: 'mock',
+    };
+  }
+
+  private async evaluate(
+    messages: AgentMessage[],
     _tools: AgentToolDeclaration[],
     _systemPrompt: string
   ): Promise<LLMResponse> {

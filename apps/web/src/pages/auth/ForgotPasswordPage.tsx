@@ -1,14 +1,41 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Mail, ArrowLeft, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { API_BASE } from '../../config/api';
 
 export const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [devResetLink, setDevResetLink] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Failed to dispatch reset instructions.');
+      }
+
+      setIsSubmitted(true);
+      if (data.data?.devResetLink) {
+        setDevResetLink(data.data.devResetLink);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -32,6 +59,13 @@ export const ForgotPasswordPage: React.FC = () => {
           </p>
         </div>
 
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         {isSubmitted ? (
           <div className="text-center py-4 space-y-4">
             <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 mx-auto flex items-center justify-center">
@@ -44,6 +78,20 @@ export const ForgotPasswordPage: React.FC = () => {
                 reset token has been issued.
               </p>
             </div>
+
+            {devResetLink && import.meta.env.DEV && (
+              <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-left text-xs space-y-1">
+                <span className="font-semibold block">[Development Simulator]</span>
+                <p className="text-[11px] text-mut">Console email link simulated:</p>
+                <Link
+                  to={devResetLink}
+                  className="font-mono text-[11px] text-acc underline break-all block"
+                >
+                  {window.location.origin + devResetLink}
+                </Link>
+              </div>
+            )}
+
             <Link
               to="/login"
               className="inline-flex items-center gap-1.5 text-xs text-acc font-semibold hover:underline mt-2"
@@ -64,6 +112,7 @@ export const ForgotPasswordPage: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
                   required
+                  disabled={isLoading}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-brd bg-paper/60 text-xs text-ink placeholder:text-mut focus:outline-none focus:ring-2 focus:ring-acc/20 focus:border-acc transition-all"
                 />
               </div>
@@ -71,9 +120,17 @@ export const ForgotPasswordPage: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full py-2.5 px-4 rounded-xl bg-acc text-white font-semibold text-xs hover:bg-blue-600 active:scale-[0.99] transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 mt-2"
+              disabled={isLoading}
+              className="w-full py-2.5 px-4 rounded-xl bg-acc text-white font-semibold text-xs hover:bg-blue-600 active:scale-[0.99] transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
             >
-              Send Password Reset Link
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Dispatching...</span>
+                </>
+              ) : (
+                <span>Send Password Reset Link</span>
+              )}
             </button>
 
             <div className="text-center pt-3">

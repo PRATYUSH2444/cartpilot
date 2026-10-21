@@ -15,9 +15,15 @@ import {
   Database,
   Check,
   X,
+  Store,
+  UserCheck,
+  UserX,
+  PauseCircle,
+  PlayCircle,
+  UserPlus,
+  KeyRound,
 } from 'lucide-react';
-
-const API_BASE = 'http://localhost:5000/api/v1';
+import { API_BASE } from '../../config/api';
 
 interface PendingApprovalData {
   _id: string;
@@ -27,6 +33,26 @@ interface PendingApprovalData {
   cartSnapshotHash: string;
   reason: string;
   status: string;
+  createdAt: string;
+}
+
+interface AdminMerchantData {
+  _id: string;
+  businessName: string;
+  slug: string;
+  email: string;
+  phone: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+  };
+  serviceAreaPincodes?: string[];
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+  rejectionReason?: string;
+  suspensionReason?: string;
+  isVegetarianCertified?: boolean;
   createdAt: string;
 }
 
@@ -40,10 +66,18 @@ export const AdminWorkspace: React.FC = () => {
   const [chainVerification, setChainVerification] = useState<ChainVerification | null>(null);
   const [isVerifyingChain, setIsVerifyingChain] = useState<boolean>(false);
   const [pendingApprovals, setPendingApprovals] = useState<PendingApprovalData[]>([]);
+  const [merchantsList, setMerchantsList] = useState<AdminMerchantData[]>([]);
   const [systemHealth, setSystemHealth] = useState<{ status: string; uptime: number } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'audit' | 'policy' | 'approvals'>('audit');
+  const [activeTab, setActiveTab] = useState<'audit' | 'policy' | 'approvals' | 'merchants'>('audit');
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Admin Provisioning state
+  const [adminName, setAdminName] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [currentAdminPassword, setCurrentAdminPassword] = useState('');
+  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
 
   const toggleTheme = () => {
     const newDark = !isDark;
@@ -88,6 +122,15 @@ export const AdminWorkspace: React.FC = () => {
       if (healthRes.ok) {
         const hData = await healthRes.json();
         setSystemHealth(hData.data);
+      }
+
+      // 4. Fetch merchants for governance
+      const merchRes = await fetch(`${API_BASE}/merchants/admin/all`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (merchRes.ok) {
+        const mData = await merchRes.json();
+        setMerchantsList(mData.data || []);
       }
     } catch {
       showBanner('error', 'Error refreshing governance data');
@@ -147,6 +190,78 @@ export const AdminWorkspace: React.FC = () => {
     }
   };
 
+  const handleMerchantAction = async (
+    merchantId: string,
+    action: 'approve' | 'reject' | 'suspend' | 'restore'
+  ) => {
+    if (!token) return;
+    let reason: string | undefined;
+
+    if (action === 'reject' || action === 'suspend') {
+      const promptText = prompt(`Please specify the reason for ${action}ing this merchant:`);
+      if (promptText === null) return; // User cancelled
+      reason = promptText || undefined;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/merchants/admin/${merchantId}/status/${action}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showBanner('success', `Merchant status updated to ${action.toUpperCase()}`);
+        fetchAdminData();
+      } else {
+        showBanner('error', data.error?.message || `Failed to ${action} merchant`);
+      }
+    } catch {
+      showBanner('error', `Network error during merchant ${action}`);
+    }
+  };
+
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    setIsCreatingAdmin(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/admin/create-admin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: adminName,
+          email: adminEmail,
+          password: adminPassword,
+          currentAdminPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showBanner('success', `New administrator ${adminEmail} provisioned successfully!`);
+        setAdminName('');
+        setAdminEmail('');
+        setAdminPassword('');
+        setCurrentAdminPassword('');
+      } else {
+        showBanner('error', data.error?.message || 'Failed to provision admin');
+      }
+    } catch {
+      showBanner('error', 'Network error during admin provisioning');
+    } finally {
+      setIsCreatingAdmin(false);
+    }
+  };
+
   return (
     <div className="relative min-h-screen flex flex-col font-sans selection:bg-acc selection:text-white bg-paper text-ink">
       <LivingBackground />
@@ -183,14 +298,14 @@ export const AdminWorkspace: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-display font-extrabold text-xl text-ink">
-                  Security & Policy Governance Center
+                  Security & GRC Governance Hub
                 </h1>
                 <span className="text-[10px] font-mono uppercase bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold px-2 py-0.5 rounded-full border border-purple-500/20">
-                  Compliance Authority
+                  Zero-Trust
                 </span>
               </div>
               <p className="text-xs text-mut mt-0.5">
-                Deterministic Policy Gateway • SHA-256 Hash Chaining • Zero-Trust AI Containment
+                CartPilot Policy Enforcement, Cryptographic Ledger & Merchant Lifecycle Governance
               </p>
             </div>
           </div>
@@ -268,11 +383,13 @@ export const AdminWorkspace: React.FC = () => {
 
           <div className="p-4 rounded-xl bg-card border border-brd">
             <div className="flex items-center justify-between text-mut text-xs mb-1">
-              <span>Autonomous Limit</span>
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              <span>Merchants Governed</span>
+              <Store className="w-4 h-4 text-blue-500" />
             </div>
-            <div className="font-display font-extrabold text-xl text-ink">₹500.00</div>
-            <span className="text-[10px] text-mut font-medium">Deterministic threshold</span>
+            <div className="font-display font-extrabold text-xl text-ink">{merchantsList.length}</div>
+            <span className="text-[10px] text-emerald-500 font-medium">
+              {merchantsList.filter((m) => m.status === 'PENDING').length} Pending
+            </span>
           </div>
 
           <div className="p-4 rounded-xl bg-card border border-brd">
@@ -301,6 +418,17 @@ export const AdminWorkspace: React.FC = () => {
             <span>Cryptographic Audit Ledger ({auditEvents.length})</span>
           </button>
           <button
+            onClick={() => setActiveTab('merchants')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === 'merchants'
+                ? 'bg-acc text-white shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-paper'
+            }`}
+          >
+            <Store className="w-4 h-4" />
+            <span>Merchants & Stores ({merchantsList.length})</span>
+          </button>
+          <button
             onClick={() => setActiveTab('policy')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'policy'
@@ -308,8 +436,8 @@ export const AdminWorkspace: React.FC = () => {
                 : 'text-mut hover:text-ink hover:bg-paper'
             }`}
           >
-            <Lock className="w-4 h-4" />
-            <span>Deterministic Policy Controls</span>
+            <ShieldCheck className="w-4 h-4" />
+            <span>Active Policy Engine</span>
           </button>
           <button
             onClick={() => setActiveTab('approvals')}
@@ -319,68 +447,54 @@ export const AdminWorkspace: React.FC = () => {
                 : 'text-mut hover:text-ink hover:bg-paper'
             }`}
           >
-            <ShieldAlert className="w-4 h-4" />
-            <span>Pending Approvals ({pendingApprovals.length})</span>
+            <Lock className="w-4 h-4" />
+            <span>Approvals Queue ({pendingApprovals.length})</span>
           </button>
         </div>
 
-        {/* Tab 1: Audit Log Table */}
+        {/* Tab 1: Audit Ledger */}
         {activeTab === 'audit' && (
           <div className="bg-card border border-brd rounded-2xl overflow-hidden shadow-sm">
             <div className="p-4 border-b border-brd flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-sm text-ink">Tamper-Evident SHA-256 Audit Trail</h3>
+                <h3 className="font-bold text-sm text-ink">SHA-256 Chained Event Stream</h3>
                 <p className="text-xs text-mut">
-                  Every commerce mutation is linked by previousHash to construct an unalterable
-                  ledger
+                  Append-only immutable record verifying state transitions and zero-trust policy decisions
                 </p>
               </div>
+              <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-paper border border-brd text-ink">
+                Page Size: 25 Events
+              </span>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-paper/80 border-b border-brd text-mut uppercase font-semibold text-[10px]">
-                  <tr>
-                    <th className="py-3 px-4">Seq</th>
-                    <th className="py-3 px-4">Event Type</th>
-                    <th className="py-3 px-4">Resource</th>
-                    <th className="py-3 px-4">Current Hash (SHA-256)</th>
-                    <th className="py-3 px-4">Previous Hash</th>
-                    <th className="py-3 px-4">Timestamp</th>
+                <thead>
+                  <tr className="border-b border-brd bg-paper/50 text-mut uppercase font-mono text-[10px]">
+                    <th className="py-2.5 px-4">Event Type</th>
+                    <th className="py-2.5 px-4">Resource</th>
+                    <th className="py-2.5 px-4">Timestamp</th>
+                    <th className="py-2.5 px-4">SHA-256 Hash Block</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-brd/60">
-                  {auditEvents.map((ev) => (
-                    <tr key={ev.sequenceNumber} className="hover:bg-paper/40 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-ink">
-                        #{ev.sequenceNumber}
+                <tbody className="divide-y divide-brd font-mono">
+                  {auditEvents.map((event) => (
+                    <tr key={event._id || event.sequenceNumber} className="hover:bg-paper/30 transition-colors">
+                      <td className="py-2.5 px-4">
+                        <span className="font-semibold text-ink">{event.eventType}</span>
                       </td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded bg-paper border border-brd font-semibold text-[10px] text-acc">
-                          {ev.eventType}
-                        </span>
+                      <td className="py-2.5 px-4 text-mut">
+                        {event.resourceType}:{event.resourceId.substring(0, 8)}
                       </td>
-                      <td className="py-3 px-4 font-mono text-mut text-[11px]">{ev.resourceId}</td>
-                      <td
-                        className="py-3 px-4 font-mono text-[10px] text-ink truncate max-w-[140px]"
-                        title={ev.currentHash}
-                      >
-                        {ev.currentHash.substring(0, 16)}...
+                      <td className="py-2.5 px-4 text-mut text-[11px]">
+                        {new Date(event.timestamp).toLocaleTimeString()}
                       </td>
-                      <td
-                        className="py-3 px-4 font-mono text-[10px] text-mut truncate max-w-[140px]"
-                        title={ev.previousHash}
-                      >
-                        {ev.previousHash
-                          ? `${ev.previousHash.substring(0, 16)}...`
-                          : '0000000000000000 (GENESIS)'}
-                      </td>
-                      <td className="py-3 px-4 text-mut font-mono text-[11px]">
-                        {new Date(ev.timestamp).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })}
+                      <td className="py-2.5 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-acc truncate max-w-[180px]">
+                            {event.hash || event.currentHash}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -390,13 +504,211 @@ export const AdminWorkspace: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 2: Policy Controls Configuration */}
+        {/* Tab 2: Merchants & Governance */}
+        {activeTab === 'merchants' && (
+          <div className="space-y-6">
+            {/* Merchant Stores Table */}
+            <div className="bg-card border border-brd rounded-2xl overflow-hidden shadow-sm">
+              <div className="p-4 border-b border-brd flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm text-ink">Merchant Application & Store Governance</h3>
+                  <p className="text-xs text-mut">
+                    Verify vegetarian compliance, manage approvals, and enforce tenant access
+                  </p>
+                </div>
+                <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-paper border border-brd text-ink">
+                  {merchantsList.length} Stores Registered
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-brd bg-paper/50 text-mut uppercase font-mono text-[10px]">
+                      <th className="py-2.5 px-4">Store Name</th>
+                      <th className="py-2.5 px-4">Contact</th>
+                      <th className="py-2.5 px-4">Location</th>
+                      <th className="py-2.5 px-4">Vegetarian Certified</th>
+                      <th className="py-2.5 px-4">Status</th>
+                      <th className="py-2.5 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brd">
+                    {merchantsList.map((m) => (
+                      <tr key={m._id} className="hover:bg-paper/30 transition-colors">
+                        <td className="py-3 px-4">
+                          <span className="font-semibold text-ink block">{m.businessName}</span>
+                          <span className="text-[10px] text-mut font-mono">ID: {m._id.substring(0, 8)}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-ink block">{m.email}</span>
+                          <span className="text-[10px] text-mut">{m.phone}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-ink block">{m.address.city}, {m.address.state}</span>
+                          <span className="text-[10px] text-mut font-mono">PIN: {m.address.postalCode}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            100% Certified
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                              m.status === 'APPROVED'
+                                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500'
+                                : m.status === 'PENDING'
+                                  ? 'bg-amber-500/15 border-amber-500/30 text-amber-500'
+                                  : 'bg-rose-500/15 border-rose-500/30 text-rose-500'
+                            }`}
+                          >
+                            {m.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {m.status === 'PENDING' && (
+                              <>
+                                <button
+                                  onClick={() => handleMerchantAction(m._id, 'approve')}
+                                  className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                                  title="Approve Store Application"
+                                >
+                                  <UserCheck className="w-3 h-3" />
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  onClick={() => handleMerchantAction(m._id, 'reject')}
+                                  className="px-2 py-1 rounded border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                                  title="Reject Store Application"
+                                >
+                                  <UserX className="w-3 h-3" />
+                                  <span>Reject</span>
+                                </button>
+                              </>
+                            )}
+
+                            {m.status === 'APPROVED' && (
+                              <button
+                                onClick={() => handleMerchantAction(m._id, 'suspend')}
+                                className="px-2 py-1 rounded border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                                title="Suspend Store Access"
+                              >
+                                <PauseCircle className="w-3 h-3" />
+                                <span>Suspend</span>
+                              </button>
+                            )}
+
+                            {m.status === 'SUSPENDED' && (
+                              <button
+                                onClick={() => handleMerchantAction(m._id, 'restore')}
+                                className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                                title="Restore Store Access"
+                              >
+                                <PlayCircle className="w-3 h-3" />
+                                <span>Restore</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Admin Provisioning Section (Requires Re-Authentication) */}
+            <div className="bg-card border border-brd rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <UserPlus className="w-5 h-5 text-purple-500" />
+                <h3 className="font-bold text-sm text-ink">Provision New Administrator</h3>
+              </div>
+              <p className="text-xs text-mut mb-4">
+                Administrators possess full platform governance. Creating a new administrator
+                requires re-authenticating your current administrator credentials.
+              </p>
+
+              <form onSubmit={handleCreateAdmin} className="space-y-4 max-w-xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      value={adminName}
+                      onChange={(e) => setAdminName(e.target.value)}
+                      placeholder="Vikram Rao"
+                      required
+                      className="w-full px-3 py-2 rounded-xl border border-brd bg-paper/60 text-xs text-ink placeholder:text-mut focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      value={adminEmail}
+                      onChange={(e) => setAdminEmail(e.target.value)}
+                      placeholder="vikram@cartpilot.in"
+                      required
+                      className="w-full px-3 py-2 rounded-xl border border-brd bg-paper/60 text-xs text-ink placeholder:text-mut focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">Temporary Password</label>
+                  <input
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    placeholder="Min 8 chars, 1 uppercase, 1 digit"
+                    required
+                    className="w-full px-3 py-2 rounded-xl border border-brd bg-paper/60 text-xs text-ink placeholder:text-mut focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                  />
+                  <span className="text-[10px] text-mut mt-0.5 block">
+                    The user will be required to change this password on their first login.
+                  </span>
+                </div>
+
+                <div className="pt-2 border-t border-brd">
+                  <label className="block text-xs font-semibold text-ink mb-1">
+                    Confirm YOUR Current Administrator Password (Re-authentication)
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 text-purple-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="password"
+                      value={currentAdminPassword}
+                      onChange={(e) => setCurrentAdminPassword(e.target.value)}
+                      placeholder="Your current admin password"
+                      required
+                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-purple-500/40 bg-purple-500/5 text-xs text-ink placeholder:text-mut focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isCreatingAdmin}
+                  className="px-4 py-2.5 rounded-xl bg-purple-600 text-white font-semibold text-xs hover:bg-purple-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>{isCreatingAdmin ? 'Verifying & Provisioning...' : 'Provision Administrator'}</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Policy Engine Specification */}
         {activeTab === 'policy' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-5 rounded-2xl bg-card border border-brd space-y-3">
               <h3 className="font-bold text-sm text-ink flex items-center gap-2">
-                <Lock className="w-4 h-4 text-acc" />
-                <span>Autonomous Spending Invariants</span>
+                <ShieldCheck className="w-4 h-4 text-acc" />
+                <span>Deterministic Spending Limits</span>
               </h3>
               <p className="text-xs text-mut">
                 Rules enforced strictly by the deterministic backend engine before order
@@ -445,7 +757,7 @@ export const AdminWorkspace: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 3: Pending Approvals Queue */}
+        {/* Tab 4: Pending Approvals Queue */}
         {activeTab === 'approvals' && (
           <div className="space-y-4">
             {pendingApprovals.length === 0 ? (

@@ -67,7 +67,16 @@ export class OrderService {
   }
 
   /**
-   * Retrieves all orders across the platform (for Admin and Merchant dashboards), newest first.
+   * Retrieves orders for a specific merchant store (multi-tenant isolation).
+   */
+  public static async listMerchantOrders(merchantId: string): Promise<IOrder[]> {
+    return OrderModel.find({ merchantId: new mongoose.Types.ObjectId(merchantId) }).sort({
+      createdAt: -1,
+    });
+  }
+
+  /**
+   * Retrieves all orders across the platform (for Admin dashboards), newest first.
    */
   public static async listAllOrders(): Promise<IOrder[]> {
     return OrderModel.find({}).sort({
@@ -76,19 +85,36 @@ export class OrderService {
   }
 
   /**
-   * Retrieves an order by ID with ownership enforcement.
+   * Retrieves an order by ID with ownership and multi-tenant enforcement.
    */
   public static async getOrderById(
     orderId: string,
     userId: string,
-    role?: string
+    role?: string,
+    merchantId?: string
   ): Promise<IOrder> {
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      throw new BadRequestError('Invalid order ID format');
+    }
     const order = await OrderModel.findById(new mongoose.Types.ObjectId(orderId));
     if (!order) {
       throw new NotFoundError('Order not found');
     }
 
-    if (role !== 'ADMIN' && role !== 'MERCHANT' && order.userId.toString() !== userId) {
+    if (role === 'ADMIN') {
+      return order;
+    }
+
+    if (role === 'MERCHANT') {
+      if (!merchantId || !order.merchantId || order.merchantId.toString() !== merchantId) {
+        throw new ForbiddenError(
+          'Access denied: You are only authorized to view orders belonging to your store'
+        );
+      }
+      return order;
+    }
+
+    if (order.userId.toString() !== userId) {
       throw new ForbiddenError('You are not authorized to view this order');
     }
 
@@ -118,9 +144,10 @@ export class OrderService {
   public static async simulateStep(
     orderId: string,
     userId: string,
-    role?: string
+    role?: string,
+    merchantId?: string
   ): Promise<IOrder> {
-    const order = await this.getOrderById(orderId, userId, role);
+    const order = await this.getOrderById(orderId, userId, role, merchantId);
 
     const validTransitions: Record<string, OrderStatus> = {
       CONFIRMED: 'PACKING',
@@ -308,7 +335,8 @@ export class OrderService {
         auditChainIntact: {
           passed: auditChainIntact,
           label: 'SHA-256 Audit Ledger Immutability',
-          description: 'Continuous cryptographic hash chain verified from Genesis block to latest event',
+          description:
+            'Continuous cryptographic hash chain verified from Genesis block to latest event',
         },
       },
       canonicalSnapshotHash: proof.canonicalSnapshotHash,

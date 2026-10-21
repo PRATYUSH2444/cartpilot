@@ -22,7 +22,7 @@ export const MANDATE_PRESETS: Record<string, MandatePreset> = {
     description: 'Conservative limits for single shoppers and small grocery top-ups',
     autoApproveUpToPaise: 30000, // ₹300.00
     maxOrderAmountPaise: 100000, // ₹1,000.00
-    dailyBudgetPaise: 150000,    // ₹1,500.00
+    dailyBudgetPaise: 150000, // ₹1,500.00
   },
   everyday: {
     key: 'everyday',
@@ -30,7 +30,7 @@ export const MANDATE_PRESETS: Record<string, MandatePreset> = {
     description: 'Balanced spending rules for typical household daily cooking',
     autoApproveUpToPaise: 80000, // ₹800.00
     maxOrderAmountPaise: 200000, // ₹2,000.00
-    dailyBudgetPaise: 300000,    // ₹3,000.00
+    dailyBudgetPaise: 300000, // ₹3,000.00
   },
   family: {
     key: 'family',
@@ -38,7 +38,7 @@ export const MANDATE_PRESETS: Record<string, MandatePreset> = {
     description: 'Generous limits for weekly bulk groceries and family feasts',
     autoApproveUpToPaise: 150000, // ₹1,500.00
     maxOrderAmountPaise: 400000, // ₹4,000.00
-    dailyBudgetPaise: 500000,    // ₹5,000.00
+    dailyBudgetPaise: 500000, // ₹5,000.00
   },
 };
 

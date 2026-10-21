@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '../../common/middleware/auth.js';
+import { requireAuth, requireMerchantPermission } from '../../common/middleware/auth.js';
 import { OrderController } from './order.controller.js';
 
 export const orderRouter = Router();
@@ -19,5 +19,9 @@ orderRouter.get('/:id/proof', OrderController.getOrderProof);
 // POST /api/v1/orders/:id/proof/verify (Tamper-Evident Verification)
 orderRouter.post('/:id/proof/verify', OrderController.verifyOrderProof);
 
-// POST /api/v1/orders/:id/simulate-step (Demo & Verification)
-orderRouter.post('/:id/simulate-step', OrderController.simulateStep);
+// POST /api/v1/orders/:id/simulate-step (Demo & Verification, requires orders.update permission)
+orderRouter.post(
+  '/:id/simulate-step',
+  requireMerchantPermission('orders.update'),
+  OrderController.simulateStep
+);

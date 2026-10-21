@@ -76,3 +76,10 @@ export class ServiceUnavailableError extends AppError {
     super(message, 503, code);
   }
 }
+
+export class TooManyRequestsError extends AppError {
+  constructor(message = 'Too many requests', code = 'TOO_MANY_REQUESTS') {
+    super(message, 429, code);
+  }
+}
+

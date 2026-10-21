@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, UserRole } from '../../context/AuthContext';
 import {
   ShieldCheck,
@@ -13,17 +13,23 @@ import {
   User,
   Store,
   ShieldAlert,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
+
+import { DEMO_CREDENTIALS } from '../../config/demo-credentials';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showDevShortcuts, setShowDevShortcuts] = useState(true);
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogin = async (
     e?: React.FormEvent,
@@ -41,6 +47,12 @@ export const LoginPage: React.FC = () => {
     setIsLoading(false);
 
     if (result.success && result.role) {
+      const locationState = location.state as { from?: { pathname?: string } } | null;
+      const fromPath = locationState?.from?.pathname;
+      if (fromPath && fromPath !== '/login') {
+        navigate(fromPath, { replace: true });
+        return;
+      }
       if (result.role === 'CUSTOMER') {
         navigate('/shopper', { replace: true });
       } else if (result.role === 'MERCHANT') {
@@ -54,13 +66,9 @@ export const LoginPage: React.FC = () => {
   };
 
   const handleQuickLogin = (role: UserRole) => {
-    const creds = {
-      CUSTOMER: { email: 'customer@example.com', password: 'Customer1234!' },
-      MERCHANT: { email: 'merchant@example.com', password: 'Merchant1234!' },
-      ADMIN: { email: 'admin@example.com', password: 'Admin1234!' },
-    };
-
-    const target = creds[role];
+    if (!DEMO_CREDENTIALS) return;
+    const target = DEMO_CREDENTIALS[role];
+    if (!target) return;
     setEmail(target.email);
     setPassword(target.password);
     handleLogin(undefined, target.email, target.password);
@@ -128,13 +136,21 @@ export const LoginPage: React.FC = () => {
             <div className="relative">
               <Lock className="w-4 h-4 text-mut absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
                 required
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-brd bg-paper/60 text-xs text-ink placeholder:text-mut focus:outline-none focus:ring-2 focus:ring-acc/20 focus:border-acc transition-all"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-brd bg-paper/60 text-xs text-ink placeholder:text-mut focus:outline-none focus:ring-2 focus:ring-acc/20 focus:border-acc transition-all"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-mut hover:text-ink transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -157,98 +173,108 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Links to register */}
-        <div className="mt-5 pt-4 border-t border-brd text-center text-xs text-mut">
-          <span>Don&apos;t have an account? </span>
-          <Link to="/register" className="text-acc font-semibold hover:underline">
-            Create Customer Account
-          </Link>
+        {/* Links to register and become merchant */}
+        <div className="mt-5 pt-4 border-t border-brd text-center text-xs space-y-2">
+          <div className="text-mut">
+            <span>Don&apos;t have an account? </span>
+            <Link to="/register" className="text-acc font-semibold hover:underline">
+              Create Customer Account
+            </Link>
+          </div>
+          <div className="text-mut text-[11px]">
+            <span>Want to sell on CartPilot? </span>
+            <Link to="/become-merchant" className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">
+              Apply as a Merchant →
+            </Link>
+          </div>
         </div>
 
-        {/* Development Quick-Fill Accordion */}
-        <div className="mt-6 pt-4 border-t border-dashed border-brd">
-          <button
-            type="button"
-            onClick={() => setShowDevShortcuts(!showDevShortcuts)}
-            className="w-full flex items-center justify-between text-[11px] font-semibold text-mut hover:text-ink transition-colors py-1"
-          >
-            <span className="flex items-center gap-1.5">
-              <span>🛠️ Development Quick Sign-In</span>
-              <span className="text-[9px] uppercase px-1.5 py-0.2 bg-paper rounded border border-brd">
-                Pre-Seeded
+        {/* Development Quick-Fill Accordion (Gated behind import.meta.env.DEV) */}
+        {import.meta.env.DEV && DEMO_CREDENTIALS && (
+          <div className="mt-6 pt-4 border-t border-dashed border-brd">
+            <button
+              type="button"
+              onClick={() => setShowDevShortcuts(!showDevShortcuts)}
+              className="w-full flex items-center justify-between text-[11px] font-semibold text-mut hover:text-ink transition-colors py-1"
+            >
+              <span className="flex items-center gap-1.5">
+                <span>🛠️ Development Quick Sign-In</span>
+                <span className="text-[9px] uppercase px-1.5 py-0.2 bg-paper rounded border border-brd">
+                  Pre-Seeded
+                </span>
               </span>
-            </span>
-            {showDevShortcuts ? (
-              <ChevronUp className="w-3.5 h-3.5" />
-            ) : (
-              <ChevronDown className="w-3.5 h-3.5" />
+              {showDevShortcuts ? (
+                <ChevronUp className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            {showDevShortcuts && (
+              <div className="mt-2.5 space-y-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('CUSTOMER')}
+                  disabled={isLoading}
+                  className="w-full p-2 rounded-lg bg-paper/80 hover:bg-paper border border-brd text-left flex items-center justify-between text-xs transition-colors group"
+                >
+                  <div className="flex items-center gap-2">
+                    <User className="w-3.5 h-3.5 text-emerald-500" />
+                    <div>
+                      <span className="font-semibold text-ink block text-[11px]">
+                        Shopper (Priya Sharma)
+                      </span>
+                      <span className="font-mono text-[10px] text-mut">customer@example.com</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-acc font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                    Sign In →
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('MERCHANT')}
+                  disabled={isLoading}
+                  className="w-full p-2 rounded-lg bg-paper/80 hover:bg-paper border border-brd text-left flex items-center justify-between text-xs transition-colors group"
+                >
+                  <div className="flex items-center gap-2">
+                    <Store className="w-3.5 h-3.5 text-blue-500" />
+                    <div>
+                      <span className="font-semibold text-ink block text-[11px]">
+                        Merchant (Fresh Greens Organics)
+                      </span>
+                      <span className="font-mono text-[10px] text-mut">merchant@example.com</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-acc font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                    Sign In →
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('ADMIN')}
+                  disabled={isLoading}
+                  className="w-full p-2 rounded-lg bg-paper/80 hover:bg-paper border border-brd text-left flex items-center justify-between text-xs transition-colors group"
+                >
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="w-3.5 h-3.5 text-purple-500" />
+                    <div>
+                      <span className="font-semibold text-ink block text-[11px]">
+                        Administrator (Compliance & GRC)
+                      </span>
+                      <span className="font-mono text-[10px] text-mut">admin@example.com</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-acc font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                    Sign In →
+                  </span>
+                </button>
+              </div>
             )}
-          </button>
-
-          {showDevShortcuts && (
-            <div className="mt-2.5 space-y-1.5">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('CUSTOMER')}
-                disabled={isLoading}
-                className="w-full p-2 rounded-lg bg-paper/80 hover:bg-paper border border-brd text-left flex items-center justify-between text-xs transition-colors group"
-              >
-                <div className="flex items-center gap-2">
-                  <User className="w-3.5 h-3.5 text-emerald-500" />
-                  <div>
-                    <span className="font-semibold text-ink block text-[11px]">
-                      Shopper (Priya Sharma)
-                    </span>
-                    <span className="font-mono text-[10px] text-mut">customer@example.com</span>
-                  </div>
-                </div>
-                <span className="text-[10px] text-acc font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                  Sign In →
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('MERCHANT')}
-                disabled={isLoading}
-                className="w-full p-2 rounded-lg bg-paper/80 hover:bg-paper border border-brd text-left flex items-center justify-between text-xs transition-colors group"
-              >
-                <div className="flex items-center gap-2">
-                  <Store className="w-3.5 h-3.5 text-blue-500" />
-                  <div>
-                    <span className="font-semibold text-ink block text-[11px]">
-                      Merchant (Fresh Greens Organics)
-                    </span>
-                    <span className="font-mono text-[10px] text-mut">merchant@example.com</span>
-                  </div>
-                </div>
-                <span className="text-[10px] text-acc font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                  Sign In →
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('ADMIN')}
-                disabled={isLoading}
-                className="w-full p-2 rounded-lg bg-paper/80 hover:bg-paper border border-brd text-left flex items-center justify-between text-xs transition-colors group"
-              >
-                <div className="flex items-center gap-2">
-                  <ShieldAlert className="w-3.5 h-3.5 text-purple-500" />
-                  <div>
-                    <span className="font-semibold text-ink block text-[11px]">
-                      Administrator (Compliance & GRC)
-                    </span>
-                    <span className="font-mono text-[10px] text-mut">admin@example.com</span>
-                  </div>
-                </div>
-                <span className="text-[10px] text-acc font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                  Sign In →
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

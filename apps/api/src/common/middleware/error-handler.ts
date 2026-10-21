@@ -34,11 +34,14 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
     );
   }
 
+  const requestId = (req as Request & { id?: string }).id;
+
   res.status(statusCode).json({
     success: false,
     error: {
       code: errorCode,
       message,
+      ...(requestId ? { requestId } : {}),
       ...(details ? { details } : {}),
       ...(env.NODE_ENV === 'development' && statusCode >= 500 ? { stack: err.stack } : {}),
     },

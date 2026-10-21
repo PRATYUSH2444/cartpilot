@@ -11,7 +11,18 @@ export interface IUser extends Document {
   phone?: string;
   isActive: boolean;
   refreshTokenHash?: string;
+  resetPasswordTokenHash?: string;
+  resetPasswordExpires?: Date;
   tokenVersion: number;
+  failedLoginAttempts: number;
+  lockoutUntil?: Date | null;
+  isSuspended: boolean;
+  suspensionReason?: string | null;
+  isEmailVerified: boolean;
+  emailVerificationTokenHash?: string | null;
+  emailVerificationExpires?: Date | null;
+  mustChangePassword: boolean;
+  isStaff: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,9 +65,59 @@ const UserSchema = new Schema<IUser>(
     refreshTokenHash: {
       type: String,
     },
+    resetPasswordTokenHash: {
+      type: String,
+      index: true,
+    },
+    resetPasswordExpires: {
+      type: Date,
+    },
     tokenVersion: {
       type: Number,
       default: 0,
+      required: true,
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+      required: true,
+    },
+    lockoutUntil: {
+      type: Date,
+      default: null,
+    },
+    isSuspended: {
+      type: Boolean,
+      default: false,
+      required: true,
+      index: true,
+    },
+    suspensionReason: {
+      type: String,
+      default: null,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+      required: true,
+    },
+    emailVerificationTokenHash: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      default: null,
+    },
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
+      required: true,
+    },
+    isStaff: {
+      type: Boolean,
+      default: false,
       required: true,
     },
   },
@@ -66,11 +127,12 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-// Do not return passwordHash or refreshTokenHash in JSON transformations
+// Do not return passwordHash, refreshTokenHash, or resetPasswordTokenHash in JSON transformations
 UserSchema.set('toJSON', {
   transform: (_doc, ret) => {
     delete (ret as unknown as Record<string, unknown>).passwordHash;
     delete (ret as unknown as Record<string, unknown>).refreshTokenHash;
+    delete (ret as unknown as Record<string, unknown>).resetPasswordTokenHash;
     return ret;
   },
 });

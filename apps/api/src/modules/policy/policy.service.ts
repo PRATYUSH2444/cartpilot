@@ -33,7 +33,13 @@ export interface PolicyRemedy {
   id: string;
   label: string;
   effect: string;
-  action: 'REMOVE_OPTIONAL_ITEMS' | 'RAISE_CAP' | 'REDUCE_QTY' | 'CHANGE_MERCHANT' | 'ENABLE_AGENT' | 'ORDER_LATER';
+  action:
+    | 'REMOVE_OPTIONAL_ITEMS'
+    | 'RAISE_CAP'
+    | 'REDUCE_QTY'
+    | 'CHANGE_MERCHANT'
+    | 'ENABLE_AGENT'
+    | 'ORDER_LATER';
 }
 
 export interface PolicyEvaluationResult {
@@ -84,7 +90,9 @@ export class PolicyService {
 
     // Resolve cap values — support both old and new field names
     const dailyCapPaise: number =
-      mandate.dailyBudgetPaise !== undefined ? mandate.dailyBudgetPaise : ((mandate as any).dailyCapPaise ?? 150000);
+      mandate.dailyBudgetPaise !== undefined
+        ? mandate.dailyBudgetPaise
+        : ((mandate as any).dailyCapPaise ?? 150000);
     const perOrderCapPaise: number =
       (mandate as any).perOrderCapPaise !== undefined ? (mandate as any).perOrderCapPaise : 100000;
     const autoApproveUpToPaise: number =
@@ -104,7 +112,14 @@ export class PolicyService {
         todaySpentPaise,
         cartTotalPaise,
         requiresApproval: false,
-        remedies: [{ id: 'r1', label: 'Turn the agent back on', effect: 'Re-enables the agent', action: 'ENABLE_AGENT' }],
+        remedies: [
+          {
+            id: 'r1',
+            label: 'Turn the agent back on',
+            effect: 'Re-enables the agent',
+            action: 'ENABLE_AGENT',
+          },
+        ],
       });
       await this.logPolicyAuditEvent(userId, cart.id, result);
       return result;
@@ -143,7 +158,14 @@ export class PolicyService {
         todaySpentPaise,
         cartTotalPaise,
         requiresApproval: false,
-        remedies: [{ id: 'r1', label: 'Turn the agent back on', effect: 'Re-enables the agent', action: 'ENABLE_AGENT' }],
+        remedies: [
+          {
+            id: 'r1',
+            label: 'Turn the agent back on',
+            effect: 'Re-enables the agent',
+            action: 'ENABLE_AGENT',
+          },
+        ],
       });
       await this.logPolicyAuditEvent(userId, cart.id, result);
       return result;
@@ -206,7 +228,14 @@ export class PolicyService {
           todaySpentPaise,
           cartTotalPaise,
           requiresApproval: false,
-          remedies: [{ id: 'r1', label: 'Review quantities in cart', effect: 'Opens cart for editing', action: 'REDUCE_QTY' }],
+          remedies: [
+            {
+              id: 'r1',
+              label: 'Review quantities in cart',
+              effect: 'Opens cart for editing',
+              action: 'REDUCE_QTY',
+            },
+          ],
         });
         await this.logPolicyAuditEvent(userId, cart.id, result);
         return result;
@@ -229,7 +258,14 @@ export class PolicyService {
         todaySpentPaise,
         cartTotalPaise,
         requiresApproval: false,
-        remedies: [{ id: 'r1', label: 'Order after midnight (resets at 12:00 am IST)', effect: 'Daily cap resets at midnight IST', action: 'ORDER_LATER' }],
+        remedies: [
+          {
+            id: 'r1',
+            label: 'Order after midnight (resets at 12:00 am IST)',
+            effect: 'Daily cap resets at midnight IST',
+            action: 'ORDER_LATER',
+          },
+        ],
       });
       await this.logPolicyAuditEvent(userId, cart.id, result);
       return result;
@@ -249,7 +285,14 @@ export class PolicyService {
         todaySpentPaise,
         cartTotalPaise,
         requiresApproval: false,
-        remedies: [{ id: 'r1', label: 'Raise your order cap', effect: 'Opens mandate settings', action: 'RAISE_CAP' }],
+        remedies: [
+          {
+            id: 'r1',
+            label: 'Raise your order cap',
+            effect: 'Opens mandate settings',
+            action: 'RAISE_CAP',
+          },
+        ],
       });
       await this.logPolicyAuditEvent(userId, cart.id, result);
       return result;
@@ -268,7 +311,14 @@ export class PolicyService {
         todaySpentPaise,
         cartTotalPaise,
         requiresApproval: false,
-        remedies: [{ id: 'r1', label: 'Review quantities in cart', effect: 'Opens cart for editing', action: 'REDUCE_QTY' }],
+        remedies: [
+          {
+            id: 'r1',
+            label: 'Review quantities in cart',
+            effect: 'Opens cart for editing',
+            action: 'REDUCE_QTY',
+          },
+        ],
       });
       await this.logPolicyAuditEvent(userId, cart.id, result);
       return result;
@@ -353,9 +403,7 @@ export class PolicyService {
       (mandate as any).perOrderCapPaise ??
       mandate.maxOrderAmountPaise;
     const dailyCapPaise: number =
-      input.draftRules?.dailyCapPaise ??
-      (mandate as any).dailyCapPaise ??
-      mandate.dailyBudgetPaise;
+      input.draftRules?.dailyCapPaise ?? (mandate as any).dailyCapPaise ?? mandate.dailyBudgetPaise;
     const autoApproveUpToPaise: number =
       input.draftRules?.autoApproveUpToPaise ??
       (mandate as any).autoApproveUpToPaise ??
@@ -376,66 +424,129 @@ export class PolicyService {
         outcome: 'DENY',
         reasonCode: 'AGENT_DISABLED',
         explanation: 'The agent is globally disabled.',
-        dailyCapPaise, perOrderCapPaise, autoApproveUpToPaise,
-        todaySpentPaise, cartTotalPaise, requiresApproval: false,
-        remedies: [{ id: 'r1', label: 'Turn the agent back on', effect: 'Re-enables the agent', action: 'ENABLE_AGENT' }],
+        dailyCapPaise,
+        perOrderCapPaise,
+        autoApproveUpToPaise,
+        todaySpentPaise,
+        cartTotalPaise,
+        requiresApproval: false,
+        remedies: [
+          {
+            id: 'r1',
+            label: 'Turn the agent back on',
+            effect: 'Re-enables the agent',
+            action: 'ENABLE_AGENT',
+          },
+        ],
       });
     }
 
     if ((mandate as any).revoked === true) {
       return this._buildResult({
-        outcome: 'DENY', reasonCode: 'MANDATE_REVOKED',
-        explanation: 'Mandate revoked.', dailyCapPaise, perOrderCapPaise,
-        autoApproveUpToPaise, todaySpentPaise, cartTotalPaise,
-        requiresApproval: false, remedies: [],
+        outcome: 'DENY',
+        reasonCode: 'MANDATE_REVOKED',
+        explanation: 'Mandate revoked.',
+        dailyCapPaise,
+        perOrderCapPaise,
+        autoApproveUpToPaise,
+        todaySpentPaise,
+        cartTotalPaise,
+        requiresApproval: false,
+        remedies: [],
       });
     }
 
     if ((mandate as any).paused === true) {
       return this._buildResult({
-        outcome: 'DENY', reasonCode: 'AGENT_PAUSED',
-        explanation: 'Agent paused.', dailyCapPaise, perOrderCapPaise,
-        autoApproveUpToPaise, todaySpentPaise, cartTotalPaise,
+        outcome: 'DENY',
+        reasonCode: 'AGENT_PAUSED',
+        explanation: 'Agent paused.',
+        dailyCapPaise,
+        perOrderCapPaise,
+        autoApproveUpToPaise,
+        todaySpentPaise,
+        cartTotalPaise,
         requiresApproval: false,
-        remedies: [{ id: 'r1', label: 'Turn the agent back on', effect: 'Re-enables the agent', action: 'ENABLE_AGENT' }],
+        remedies: [
+          {
+            id: 'r1',
+            label: 'Turn the agent back on',
+            effect: 'Re-enables the agent',
+            action: 'ENABLE_AGENT',
+          },
+        ],
       });
     }
 
     if (cartTotalPaise > perOrderCapPaise) {
       return this._buildResult({
-        outcome: 'DENY', reasonCode: 'ABOVE_ORDER_CAP',
-        explanation: `Amount ₹${(cartTotalPaise/100).toFixed(2)} exceeds per-order cap ₹${(perOrderCapPaise/100).toFixed(2)}.`,
-        dailyCapPaise, perOrderCapPaise, autoApproveUpToPaise,
-        todaySpentPaise, cartTotalPaise, requiresApproval: false,
-        remedies: [{ id: 'r1', label: 'Raise your order cap', effect: 'Opens mandate settings', action: 'RAISE_CAP' }],
+        outcome: 'DENY',
+        reasonCode: 'ABOVE_ORDER_CAP',
+        explanation: `Amount ₹${(cartTotalPaise / 100).toFixed(2)} exceeds per-order cap ₹${(perOrderCapPaise / 100).toFixed(2)}.`,
+        dailyCapPaise,
+        perOrderCapPaise,
+        autoApproveUpToPaise,
+        todaySpentPaise,
+        cartTotalPaise,
+        requiresApproval: false,
+        remedies: [
+          {
+            id: 'r1',
+            label: 'Raise your order cap',
+            effect: 'Opens mandate settings',
+            action: 'RAISE_CAP',
+          },
+        ],
       });
     }
 
     if (todaySpentPaise + cartTotalPaise > dailyCapPaise) {
       return this._buildResult({
-        outcome: 'DENY', reasonCode: 'ABOVE_DAILY_CAP',
-        explanation: `Amount ₹${(cartTotalPaise/100).toFixed(2)} + today spent ₹${(todaySpentPaise/100).toFixed(2)} exceeds daily cap ₹${(dailyCapPaise/100).toFixed(2)}.`,
-        dailyCapPaise, perOrderCapPaise, autoApproveUpToPaise,
-        todaySpentPaise, cartTotalPaise, requiresApproval: false,
-        remedies: [{ id: 'r1', label: 'Order after midnight (resets at 12:00 am IST)', effect: 'Daily cap resets at midnight IST', action: 'ORDER_LATER' }],
+        outcome: 'DENY',
+        reasonCode: 'ABOVE_DAILY_CAP',
+        explanation: `Amount ₹${(cartTotalPaise / 100).toFixed(2)} + today spent ₹${(todaySpentPaise / 100).toFixed(2)} exceeds daily cap ₹${(dailyCapPaise / 100).toFixed(2)}.`,
+        dailyCapPaise,
+        perOrderCapPaise,
+        autoApproveUpToPaise,
+        todaySpentPaise,
+        cartTotalPaise,
+        requiresApproval: false,
+        remedies: [
+          {
+            id: 'r1',
+            label: 'Order after midnight (resets at 12:00 am IST)',
+            effect: 'Daily cap resets at midnight IST',
+            action: 'ORDER_LATER',
+          },
+        ],
       });
     }
 
     if (cartTotalPaise > autoApproveUpToPaise) {
       return this._buildResult({
-        outcome: 'NEEDS_APPROVAL', reasonCode: 'ABOVE_AUTO_LIMIT',
-        explanation: `Amount ₹${(cartTotalPaise/100).toFixed(2)} exceeds auto-approve limit ₹${(autoApproveUpToPaise/100).toFixed(2)}. Approval required.`,
-        dailyCapPaise, perOrderCapPaise, autoApproveUpToPaise,
-        todaySpentPaise, cartTotalPaise, requiresApproval: true,
+        outcome: 'NEEDS_APPROVAL',
+        reasonCode: 'ABOVE_AUTO_LIMIT',
+        explanation: `Amount ₹${(cartTotalPaise / 100).toFixed(2)} exceeds auto-approve limit ₹${(autoApproveUpToPaise / 100).toFixed(2)}. Approval required.`,
+        dailyCapPaise,
+        perOrderCapPaise,
+        autoApproveUpToPaise,
+        todaySpentPaise,
+        cartTotalPaise,
+        requiresApproval: true,
         remedies: [],
       });
     }
 
     return this._buildResult({
-      outcome: 'ALLOW', reasonCode: 'WITHIN_LIMIT',
-      explanation: `Amount ₹${(cartTotalPaise/100).toFixed(2)} is within all limits. Auto-approved.`,
-      dailyCapPaise, perOrderCapPaise, autoApproveUpToPaise,
-      todaySpentPaise, cartTotalPaise, requiresApproval: false,
+      outcome: 'ALLOW',
+      reasonCode: 'WITHIN_LIMIT',
+      explanation: `Amount ₹${(cartTotalPaise / 100).toFixed(2)} is within all limits. Auto-approved.`,
+      dailyCapPaise,
+      perOrderCapPaise,
+      autoApproveUpToPaise,
+      todaySpentPaise,
+      cartTotalPaise,
+      requiresApproval: false,
       remedies: [],
     });
   }
@@ -457,7 +568,9 @@ export class PolicyService {
 
     if (input.action === 'RAISE_CAP') {
       const cart = await CartService.getOrCreateActiveCart(userId);
-      const newCap = input.requiredCapPaise || Math.max(cart.pricing.totalPaise, mandate.maxOrderAmountPaise + 10000);
+      const newCap =
+        input.requiredCapPaise ||
+        Math.max(cart.pricing.totalPaise, mandate.maxOrderAmountPaise + 10000);
       mandate.maxOrderAmountPaise = newCap;
       mandate.perOrderCapPaise = newCap;
       mandate.version += 1;

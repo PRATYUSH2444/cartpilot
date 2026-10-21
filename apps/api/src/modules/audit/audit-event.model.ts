@@ -3,11 +3,36 @@ import mongoose, { Document, Schema } from 'mongoose';
 export type AuditActorRole = 'CUSTOMER' | 'MERCHANT' | 'ADMIN' | 'SYSTEM';
 
 export type AuditResourceType =
-  'CART' | 'MANDATE' | 'POLICY' | 'APPROVAL' | 'PAYMENT' | 'ORDER' | 'INVENTORY' | 'USER';
+  | 'CART'
+  | 'MANDATE'
+  | 'POLICY'
+  | 'APPROVAL'
+  | 'PAYMENT'
+  | 'ORDER'
+  | 'INVENTORY'
+  | 'USER'
+  | 'MERCHANT'
+  | 'SESSION'
+  | 'STAFF';
 
 export type AuditEventType =
   | 'USER_REGISTERED'
   | 'USER_LOGGED_IN'
+  | 'AUTH_LOGIN_SUCCESS'
+  | 'AUTH_LOGIN_FAILED'
+  | 'AUTH_ACCOUNT_LOCKED'
+  | 'AUTH_PASSWORD_RESET_REQUESTED'
+  | 'AUTH_PASSWORD_RESET_COMPLETED'
+  | 'AUTH_PASSWORD_CHANGED'
+  | 'AUTH_SESSION_REVOKED'
+  | 'AUTH_ALL_SESSIONS_REVOKED'
+  | 'AUTH_TOKEN_REUSE_DETECTED'
+  | 'MERCHANT_APPLICATION_SUBMITTED'
+  | 'MERCHANT_STATUS_UPDATED'
+  | 'STAFF_INVITED'
+  | 'STAFF_INVITATION_ACCEPTED'
+  | 'STAFF_REVOKED'
+  | 'ADMIN_PROVISIONED'
   | 'MANDATE_UPDATED'
   | 'POLICY_EVALUATION'
   | 'APPROVAL_REQUESTED'
@@ -77,7 +102,19 @@ const auditEventSchema = new Schema<AuditEventDocument>(
     },
     resourceType: {
       type: String,
-      enum: ['CART', 'MANDATE', 'POLICY', 'APPROVAL', 'PAYMENT', 'ORDER', 'INVENTORY', 'USER'],
+      enum: [
+        'CART',
+        'MANDATE',
+        'POLICY',
+        'APPROVAL',
+        'PAYMENT',
+        'ORDER',
+        'INVENTORY',
+        'USER',
+        'MERCHANT',
+        'SESSION',
+        'STAFF',
+      ],
       required: true,
     },
     payload: {

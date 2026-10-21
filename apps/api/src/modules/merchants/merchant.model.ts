@@ -1,5 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export type MerchantStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+
 export interface IMerchantAddress {
   street: string;
   city: string;
@@ -15,6 +17,12 @@ export interface IMerchant extends Document {
   contactEmail: string;
   contactPhone?: string;
   isActive: boolean;
+  status: MerchantStatus;
+  rejectionReason?: string | null;
+  suspensionReason?: string | null;
+  serviceAreaPincodes: string[];
+  isVegetarianCertified: boolean;
+  applicationSubmittedAt: Date;
   rating: number;
   address: IMerchantAddress;
   createdAt: Date;
@@ -55,6 +63,34 @@ const MerchantSchema = new Schema<IMerchant>(
       default: true,
       required: true,
       index: true,
+    },
+    status: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED'],
+      default: 'APPROVED',
+      required: true,
+      index: true,
+    },
+    rejectionReason: {
+      type: String,
+      default: null,
+    },
+    suspensionReason: {
+      type: String,
+      default: null,
+    },
+    serviceAreaPincodes: {
+      type: [String],
+      default: ['560001', '560034', '560102', '560103'],
+    },
+    isVegetarianCertified: {
+      type: Boolean,
+      default: true,
+      required: true,
+    },
+    applicationSubmittedAt: {
+      type: Date,
+      default: Date.now,
     },
     rating: {
       type: Number,

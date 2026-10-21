@@ -559,11 +559,15 @@ export class RecipeService {
     customIngredients?: string[],
     budgetPaise?: number
   ): Promise<RecipeResolutionResult> {
-    logger.info({ dishName, servings, customIngredients, budgetPaise }, 'Resolving recipe to catalog SKUs');
+    logger.info(
+      { dishName, servings, customIngredients, budgetPaise },
+      'Resolving recipe to catalog SKUs'
+    );
 
     const budgetMatch = dishName.match(/under\s*(?:₹|rs\.?|inr)?\s*(\d+)/i);
     const statedBudget =
-      budgetPaise || (budgetMatch && budgetMatch[1] ? parseInt(budgetMatch[1], 10) * 100 : undefined);
+      budgetPaise ||
+      (budgetMatch && budgetMatch[1] ? parseInt(budgetMatch[1], 10) * 100 : undefined);
 
     const cleanDish = dishName.trim().toLowerCase();
     const cleanDishTokens = cleanDish.split(/\s+/);

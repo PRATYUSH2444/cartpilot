@@ -37,8 +37,7 @@ import {
   Menu,
   Search,
 } from 'lucide-react';
-
-const API_BASE = 'http://localhost:5000/api/v1';
+import { API_BASE } from '../../config/api';
 
 interface ServerChatMessage {
   _id: string;
@@ -61,10 +60,26 @@ interface PaymentOrderState {
 }
 
 const EXAMPLE_PROMPTS = [
-  { emoji: '🍲', label: 'Quick Paneer Pulao for 4', prompt: 'Make Paneer Pulao for 4 people with all ingredients listed' },
-  { emoji: '🍛', label: 'Spicy Dal Tadka, serves 2', prompt: 'Dal Tadka recipe with ingredients for 2 servings' },
-  { emoji: '📖', label: 'Weekly groceries under ₹1,200', prompt: 'Weekly vegetarian grocery list under ₹1200' },
-  { emoji: '🧄', label: 'Aloo Matar curry, feeds 6', prompt: 'Aloo Matar curry ingredients for 6 people' },
+  {
+    emoji: '🍲',
+    label: 'Quick Paneer Pulao for 4',
+    prompt: 'Make Paneer Pulao for 4 people with all ingredients listed',
+  },
+  {
+    emoji: '🍛',
+    label: 'Spicy Dal Tadka, serves 2',
+    prompt: 'Dal Tadka recipe with ingredients for 2 servings',
+  },
+  {
+    emoji: '📖',
+    label: 'Weekly groceries under ₹1,200',
+    prompt: 'Weekly vegetarian grocery list under ₹1200',
+  },
+  {
+    emoji: '🧄',
+    label: 'Aloo Matar curry, feeds 6',
+    prompt: 'Aloo Matar curry ingredients for 6 people',
+  },
 ];
 
 const QUICK_REPLIES_DEFAULT = [
@@ -102,7 +117,9 @@ export const ShopperWorkspace: React.FC = () => {
     message: string;
   } | null>(null);
   const [activeChatSessionId, setActiveChatSessionId] = useState<string>('');
-  const [chatSessions, setChatSessions] = useState<{ _id: string; title: string; updatedAt?: string }[]>([]);
+  const [chatSessions, setChatSessions] = useState<
+    { _id: string; title: string; updatedAt?: string }[]
+  >([]);
   const [sessionSearch, setSessionSearch] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -252,9 +269,18 @@ export const ShopperWorkspace: React.FC = () => {
           fetch(`${API_BASE}/orders`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
-        if (cartRes.ok) { const d = await cartRes.json(); setCart(d.data); }
-        if (mandateRes.ok) { const d = await mandateRes.json(); setMandate(d.data.mandate); }
-        if (orderRes.ok) { const d = await orderRes.json(); setOrders(d.data || []); }
+        if (cartRes.ok) {
+          const d = await cartRes.json();
+          setCart(d.data);
+        }
+        if (mandateRes.ok) {
+          const d = await mandateRes.json();
+          setMandate(d.data.mandate);
+        }
+        if (orderRes.ok) {
+          const d = await orderRes.json();
+          setOrders(d.data || []);
+        }
 
         await evaluatePolicy(token);
 
@@ -296,7 +322,10 @@ export const ShopperWorkspace: React.FC = () => {
                   id: m._id,
                   sender: m.sender.toLowerCase() as 'user' | 'agent' | 'system',
                   content: m.content,
-                  timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  timestamp: new Date(m.createdAt).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
                   toolCalls: m.toolCalls,
                   cardType: m.cardType,
                   cardData: m.cardData,
@@ -361,7 +390,9 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
-  const handleAddProposedItems = async (itemsToAdd?: Array<{ productId: string; quantity: number }>) => {
+  const handleAddProposedItems = async (
+    itemsToAdd?: Array<{ productId: string; quantity: number }>
+  ) => {
     if (!token || !itemsToAdd || itemsToAdd.length === 0) return;
     setIsLoading(true);
     try {
@@ -372,7 +403,9 @@ export const ShopperWorkspace: React.FC = () => {
           body: JSON.stringify({ productId: item.productId, quantity: item.quantity }),
         });
       }
-      const cartRes = await fetch(`${API_BASE}/cart`, { headers: { Authorization: `Bearer ${token}` } });
+      const cartRes = await fetch(`${API_BASE}/cart`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (cartRes.ok) {
         const cData = await cartRes.json();
         setCart(cData.data);
@@ -545,8 +578,13 @@ export const ShopperWorkspace: React.FC = () => {
         const data = await res.json();
         const confirmedOrder = data.data.order;
         setActivePaymentOrder(null);
-        const cartRes = await fetch(`${API_BASE}/cart`, { headers: { Authorization: `Bearer ${token}` } });
-        if (cartRes.ok) { const cData = await cartRes.json(); setCart(cData.data); }
+        const cartRes = await fetch(`${API_BASE}/cart`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (cartRes.ok) {
+          const cData = await cartRes.json();
+          setCart(cData.data);
+        }
         await evaluatePolicy(token);
         setOrders((prev) => [confirmedOrder, ...prev]);
         setMessages((prev) => [
@@ -744,7 +782,9 @@ export const ShopperWorkspace: React.FC = () => {
           ]);
 
           if (agentMessage.cardType === 'cart') {
-            const cartRes = await fetch(`${API_BASE}/cart`, { headers: { Authorization: `Bearer ${token}` } });
+            const cartRes = await fetch(`${API_BASE}/cart`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
             if (cartRes.ok) {
               const cData = await cartRes.json();
               setCart(cData.data);
@@ -798,7 +838,9 @@ export const ShopperWorkspace: React.FC = () => {
             <Leaf className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="font-heading font-bold text-base text-[--ink] leading-tight">CartPilot</div>
+            <div className="font-heading font-bold text-base text-[--ink] leading-tight">
+              CartPilot
+            </div>
             <div className="text-[--mut] text-[11px]">AI Shopping</div>
           </div>
           <button
@@ -841,7 +883,10 @@ export const ShopperWorkspace: React.FC = () => {
           filteredSessions.map((s) => (
             <button
               key={s._id}
-              onClick={() => { setActiveChatSessionId(s._id); setSidebarOpen(false); }}
+              onClick={() => {
+                setActiveChatSessionId(s._id);
+                setSidebarOpen(false);
+              }}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-xs transition-colors mb-0.5 group ${
                 s._id === activeChatSessionId
                   ? 'bg-[--brand-soft] text-[--brand]'
@@ -1024,8 +1069,12 @@ export const ShopperWorkspace: React.FC = () => {
                 cartVersion={(msg.cardData as { cartVersion?: number }).cartVersion || 1}
                 approvalHash={(msg.cardData as { approvalHash?: string }).approvalHash}
                 status={(msg.cardData as { approvalStatus?: string }).approvalStatus || 'PENDING'}
-                onApprove={() => handleGrantApproval((msg.cardData as { approvalId?: string }).approvalId || '')}
-                onReject={() => handleRejectApproval((msg.cardData as { approvalId?: string }).approvalId || '')}
+                onApprove={() =>
+                  handleGrantApproval((msg.cardData as { approvalId?: string }).approvalId || '')
+                }
+                onReject={() =>
+                  handleRejectApproval((msg.cardData as { approvalId?: string }).approvalId || '')
+                }
                 isLoading={isLoading}
               />
             </div>
@@ -1071,17 +1120,19 @@ export const ShopperWorkspace: React.FC = () => {
   const ComposerBar = (
     <div className="sticky bottom-0 glass border-t border-[--line] px-4 py-3">
       {/* Novelty N2: Live Decision Lamp & 1-Tap Counterfactual Remedy */}
-      {cart && cart.items.length > 0 && (currentLamp.status === 'ask' || currentLamp.status === 'stop') && (
-        <div className="mb-2.5">
-          <DecisionLamp
-            status={currentLamp.status}
-            reasonCode={currentLamp.reasonCode}
-            reasonText={currentLamp.reasonText}
-            remedies={currentLamp.remedies}
-            onApplyRemedy={handleApplyRemedy}
-          />
-        </div>
-      )}
+      {cart &&
+        cart.items.length > 0 &&
+        (currentLamp.status === 'ask' || currentLamp.status === 'stop') && (
+          <div className="mb-2.5">
+            <DecisionLamp
+              status={currentLamp.status}
+              reasonCode={currentLamp.reasonCode}
+              reasonText={currentLamp.reasonText}
+              remedies={currentLamp.remedies}
+              onApplyRemedy={handleApplyRemedy}
+            />
+          </div>
+        )}
 
       {/* Quick replies */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-2 scrollbar-none">
@@ -1167,6 +1218,9 @@ export const ShopperWorkspace: React.FC = () => {
               <span className="text-[--mut]">
                 {chatSessions.find((s) => s._id === activeChatSessionId)?.title || 'CartPilot'}
               </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 font-medium border border-amber-500/20">
+                Test mode: Estimated, simulated LLM
+              </span>
             </div>
           </div>
 
@@ -1177,9 +1231,7 @@ export const ShopperWorkspace: React.FC = () => {
               className="flex items-center gap-2 px-3 py-1.5 rounded-chip bg-[--brand] text-white text-xs font-semibold hover:opacity-90 transition-opacity"
             >
               <ShoppingBag className="w-4 h-4" />
-              <span className="hidden sm:inline">
-                {cart?.pricing?.formatted?.total || '₹0.00'}
-              </span>
+              <span className="hidden sm:inline">{cart?.pricing?.formatted?.total || '₹0.00'}</span>
               {cartItemCount > 0 && (
                 <span className="w-5 h-5 rounded-full bg-white text-[--brand] text-[11px] font-bold flex items-center justify-center">
                   {cartItemCount}
@@ -1215,9 +1267,7 @@ export const ShopperWorkspace: React.FC = () => {
         </div>
 
         {/* Composer */}
-        <div className="max-w-3xl mx-auto w-full">
-          {ComposerBar}
-        </div>
+        <div className="max-w-3xl mx-auto w-full">{ComposerBar}</div>
       </div>
 
       {/* ── Feedback Banner ───────────────────────────────────────────────── */}
@@ -1295,8 +1345,13 @@ export const ShopperWorkspace: React.FC = () => {
                 </div>
               )}
               <button
-                onClick={() => { setIsCartDrawerOpen(false); handleInitiateCheckout(); }}
-                disabled={!cart || cart.items.length === 0 || isLoading || currentLamp.status === 'stop'}
+                onClick={() => {
+                  setIsCartDrawerOpen(false);
+                  handleInitiateCheckout();
+                }}
+                disabled={
+                  !cart || cart.items.length === 0 || isLoading || currentLamp.status === 'stop'
+                }
                 className="w-full py-3 rounded-[var(--radius-input)] bg-[--brand] text-white font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-40"
               >
                 Review &amp; Checkout

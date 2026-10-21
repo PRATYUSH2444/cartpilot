@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.config.js';
 import { logger } from './common/logging/logger.js';
 import { connectDatabase, disconnectDatabase } from './database/connection.js';
+import { InventoryService } from './modules/inventory/inventory.service.js';
 
 async function bootstrap(): Promise<void> {
   const app = createApp();
@@ -20,12 +21,23 @@ async function bootstrap(): Promise<void> {
     );
   }
 
+  // Start background reservation sweeper (cleans up expired 15-minute reservation locks)
+  const sweeperInterval = setInterval(async () => {
+    try {
+      await InventoryService.sweepExpiredReservations();
+    } catch (err) {
+      logger.error({ err }, 'Error during background inventory sweeper run');
+    }
+  }, env.RESERVATION_SWEEPER_INTERVAL_MS);
+  sweeperInterval.unref();
+
   const server = app.listen(env.PORT, () => {
     logger.info(
       {
         port: env.PORT,
         nodeEnv: env.NODE_ENV,
         healthEndpoint: `http://localhost:${env.PORT}/api/v1/health`,
+        sweeperIntervalMs: env.RESERVATION_SWEEPER_INTERVAL_MS,
       },
       '🚀 CartPilot API Server started successfully'
     );
@@ -34,6 +46,7 @@ async function bootstrap(): Promise<void> {
   // Graceful shutdown handling
   async function shutdown(signal: string): Promise<void> {
     logger.info({ signal }, 'Received shutdown signal, terminating server gracefully...');
+    clearInterval(sweeperInterval);
 
     server.close(async () => {
       logger.info('HTTP server closed');

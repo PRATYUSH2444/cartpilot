@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import {
   ShoppingBag,
   Sun,
@@ -130,19 +131,23 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* User profile identifier */}
+          {/* User profile identifier & Security settings */}
           {user && (
-            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg border border-brd bg-paper/40 text-xs">
+            <Link
+              to="/account-security"
+              className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg border border-brd bg-paper/40 hover:bg-paper text-xs transition-colors group"
+              title="Manage Account Security & Active Sessions"
+            >
               {currentMeta.icon}
               <div className="text-left">
-                <span className="font-semibold text-ink block text-[11px] truncate max-w-[120px]">
+                <span className="font-semibold text-ink block text-[11px] truncate max-w-[120px] group-hover:text-acc transition-colors">
                   {user.name}
                 </span>
                 <span className="text-[10px] text-mut block truncate max-w-[120px]">
                   {user.email}
                 </span>
               </div>
-            </div>
+            </Link>
           )}
 
           {/* Theme toggle */}

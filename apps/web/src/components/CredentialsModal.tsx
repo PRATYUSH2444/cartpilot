@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DEMO_CREDENTIALS } from '../config/demo-credentials';
 import {
   X,
   Key,
@@ -39,7 +40,7 @@ export const CredentialsModal: React.FC<CredentialsModalProps> = ({
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  if (!isOpen) return null;
+  if (!isOpen || !DEMO_CREDENTIALS) return null;
 
   const credentialsList: CredentialDetail[] = [
     {
@@ -48,9 +49,9 @@ export const CredentialsModal: React.FC<CredentialsModalProps> = ({
       badge: 'Autonomous Shopper',
       color: 'emerald',
       icon: <User className="w-5 h-5 text-emerald-500" />,
-      email: 'customer@example.com',
+      email: DEMO_CREDENTIALS.CUSTOMER.email,
       aliasEmail: 'customer@cartpilot.com',
-      password: 'Customer1234!',
+      password: DEMO_CREDENTIALS.CUSTOMER.password,
       description: 'End shopper empowered by natural-language AI agent with spending boundaries.',
       capabilities: [
         'Pure vegetarian product browsing',
@@ -66,9 +67,9 @@ export const CredentialsModal: React.FC<CredentialsModalProps> = ({
       badge: 'Catalog & Orders',
       color: 'blue',
       icon: <Store className="w-5 h-5 text-blue-500" />,
-      email: 'merchant@example.com',
+      email: DEMO_CREDENTIALS.MERCHANT.email,
       aliasEmail: 'merchant@freshgrocers.com',
-      password: 'Merchant1234!',
+      password: DEMO_CREDENTIALS.MERCHANT.password,
       description: 'Verified organic produce vendor managing live stock and order fulfillment.',
       capabilities: [
         'Manage certified vegetarian inventory',
@@ -83,9 +84,9 @@ export const CredentialsModal: React.FC<CredentialsModalProps> = ({
       badge: 'Gateway Authority',
       color: 'purple',
       icon: <ShieldAlert className="w-5 h-5 text-purple-500" />,
-      email: 'admin@example.com',
+      email: DEMO_CREDENTIALS.ADMIN.email,
       aliasEmail: 'admin@cartpilot.com',
-      password: 'Admin1234!',
+      password: DEMO_CREDENTIALS.ADMIN.password,
       description: 'Governance officer inspecting policy enforcements and cryptographic proof.',
       capabilities: [
         'Deterministic policy engine oversight',

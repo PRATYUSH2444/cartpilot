@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth, UserRole } from '../context/AuthContext';
 import { ShieldCheck, Loader2 } from 'lucide-react';
+import { AccessDeniedPage } from '../pages/auth/AccessDeniedPage';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -31,14 +32,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Redirect to the user's authorized role workspace
-    if (user.role === 'CUSTOMER') {
-      return <Navigate to="/shopper" replace />;
-    } else if (user.role === 'MERCHANT') {
-      return <Navigate to="/merchant" replace />;
-    } else if (user.role === 'ADMIN') {
-      return <Navigate to="/admin" replace />;
-    }
+    return <AccessDeniedPage userRole={user.role} allowedRoles={allowedRoles} />;
   }
 
   return <>{children}</>;
