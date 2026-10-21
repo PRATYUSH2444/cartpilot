@@ -486,20 +486,19 @@ export const ShopperWorkspace: React.FC = () => {
   };
 
   const persistCardToChat = async (
-    content: string,
-    cardType: 'rules' | 'items' | 'cart' | 'approval' | 'payment' | 'order' | 'proof',
-    cardData: unknown
+    type: 'rules' | 'items' | 'cart' | 'approval' | 'payment' | 'order' | 'proof',
+    resourceId?: string,
+    content?: string
   ) => {
-    if (!token || !activeChatSessionId) return;
+    if (!token || !activeChatSessionId || !resourceId) return;
     try {
       await fetch(`${API_BASE}/chat/sessions/${activeChatSessionId}/cards`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          sender: 'AGENT',
+          type,
+          resourceId,
           content,
-          cardType,
-          cardData,
         }),
       });
     } catch (e) {
@@ -546,7 +545,9 @@ export const ShopperWorkspace: React.FC = () => {
             cardData: { order, razorpay },
           },
         ]);
-        await persistCardToChat(cardContent, 'payment', { order, razorpay });
+        if (order?._id) {
+          await persistCardToChat('order', order._id, cardContent);
+        }
         showBanner('success', 'Checkout initiated and inventory reserved');
       } else {
         const errData = await res.json();
@@ -574,7 +575,10 @@ export const ShopperWorkspace: React.FC = () => {
               cardData: approvalCardPayload,
             },
           ]);
-          await persistCardToChat(cardContent, 'approval', approvalCardPayload);
+          const approvalId = policyEval?.approvalId || errData.error?.approvalId;
+          if (approvalId) {
+            await persistCardToChat('approval', approvalId, cardContent);
+          }
         } else {
           showBanner('error', errData.error?.message || 'Checkout initiation failed');
         }
@@ -626,7 +630,9 @@ export const ShopperWorkspace: React.FC = () => {
             cardData: confirmedOrder,
           },
         ]);
-        await persistCardToChat(cardContent, 'order', confirmedOrder);
+        if (confirmedOrder?._id) {
+          await persistCardToChat('order', confirmedOrder._id, cardContent);
+        }
         showBanner('success', `Payment confirmed for Order ${confirmedOrder.orderNumber}!`);
       } else {
         const errData = await res.json();

@@ -16,6 +16,9 @@ export interface IChatMessage extends Document {
     durationMs?: number;
   }>;
   cardType?: 'rules' | 'items' | 'cart' | 'approval' | 'payment' | 'order' | 'proof';
+  resourceType?: 'order' | 'payment' | 'approval' | 'rules' | 'cart';
+  resourceId?: mongoose.Types.ObjectId;
+  resourceVersion?: number;
   cardData?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -52,6 +55,20 @@ const ChatMessageSchema = new Schema<IChatMessage>(
     cardType: {
       type: String,
       enum: ['rules', 'items', 'cart', 'approval', 'payment', 'order', 'proof'],
+      default: undefined,
+    },
+    resourceType: {
+      type: String,
+      enum: ['order', 'payment', 'approval', 'rules', 'cart'],
+      default: undefined,
+    },
+    resourceId: {
+      type: Schema.Types.ObjectId,
+      default: undefined,
+      index: true,
+    },
+    resourceVersion: {
+      type: Number,
       default: undefined,
     },
     cardData: {

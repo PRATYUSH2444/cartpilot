@@ -3,6 +3,10 @@ import { ChatSessionModel, IChatSession } from './chat-session.model.js';
 import { ChatMessageModel, IChatMessage } from './chat-message.model.js';
 import { AgentService, AgentTurnResult } from '../agent/agent.service.js';
 import { MandateModel } from '../mandates/mandate.model.js';
+import { OrderModel } from '../orders/order.model.js';
+import { PaymentModel } from '../payments/payment.model.js';
+import { ApprovalModel } from '../approvals/approval.model.js';
+import { CartModel } from '../cart/cart.model.js';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../../common/errors/app-error.js';
 import { logger } from '../../common/logging/logger.js';
 
@@ -81,11 +85,82 @@ export class ChatService {
       throw new ForbiddenError('You do not have access to this chat session');
     }
 
-    const messages = await ChatMessageModel.find({ sessionId: session._id }).sort({ createdAt: 1 });
+    const messages = await ChatMessageModel.find({ sessionId: session._id }).sort({ createdAt: 1 }).lean();
+
+    // Authoritatively rehydrate server-owned card data from real database resources
+    for (const msg of messages) {
+      if (msg.resourceType && msg.resourceId) {
+        try {
+          if (msg.resourceType === 'order') {
+            const order = await OrderModel.findById(msg.resourceId).lean();
+            if (order) {
+              msg.cardData = {
+                orderId: order._id,
+                orderNumber: order.orderNumber,
+                status: order.status,
+                totalPaise: order.pricingSnapshot.totalPaise,
+                itemsCount: order.items.length,
+                placedAt: order.placedAt,
+                items: order.items,
+                pricingSnapshot: order.pricingSnapshot,
+              };
+            }
+          } else if (msg.resourceType === 'payment') {
+            const payment = await PaymentModel.findOne({
+              $or: [{ _id: msg.resourceId }, { orderId: msg.resourceId }],
+            }).lean();
+            if (payment) {
+              msg.cardData = {
+                paymentId: payment._id,
+                orderId: payment.orderId,
+                gatewayOrderId: payment.gatewayOrderId,
+                gatewayPaymentId: payment.gatewayPaymentId,
+                amountPaise: payment.amountPaise,
+                status: payment.status,
+              };
+            }
+          } else if (msg.resourceType === 'approval') {
+            const approval = await ApprovalModel.findById(msg.resourceId).lean();
+            if (approval) {
+              msg.cardData = {
+                approvalId: approval._id,
+                cartId: approval.cartId,
+                status: approval.status,
+                calculatedTotalPaise: approval.calculatedTotalPaise,
+                approvalHash: approval.approvalHash,
+              };
+            }
+          } else if (msg.resourceType === 'rules') {
+            const mandate = await MandateModel.findById(msg.resourceId).lean();
+            if (mandate) {
+              msg.cardData = {
+                mandateId: mandate._id,
+                version: mandate.version,
+                autoApproveUpToPaise: mandate.autoApproveUpToPaise,
+                perOrderCapPaise: (mandate as any).perOrderCapPaise || mandate.maxOrderAmountPaise,
+                dailyCapPaise: (mandate as any).dailyCapPaise || mandate.dailyBudgetPaise,
+              };
+            }
+          } else if (msg.resourceType === 'cart') {
+            const cart = await CartModel.findById(msg.resourceId).lean();
+            if (cart) {
+              msg.cardData = {
+                cartId: cart._id,
+                version: cart.version,
+                itemsCount: cart.items.length,
+                totalPaise: cart.pricing.totalPaise,
+              };
+            }
+          }
+        } catch (e) {
+          logger.warn({ err: e, msgId: msg._id }, 'Error rehydrating card resource');
+        }
+      }
+    }
 
     return {
       session,
-      messages,
+      messages: messages as any,
     };
   }
 
@@ -167,16 +242,30 @@ export class ChatService {
   }
 
   /**
-   * Appends a card-carrying message to an active chat session and persists it.
+   * Appends an authoritative server-owned card message to an active chat session.
+   * Rejects spoofed card contents, enforces resource ownership and verification.
    */
   public static async appendCardMessage(
     sessionId: string,
     userId: string,
-    sender: 'AGENT' | 'SYSTEM' | 'USER',
-    content: string,
-    cardType: 'rules' | 'items' | 'cart' | 'approval' | 'payment' | 'order' | 'proof',
-    cardData: Record<string, unknown>
+    type: string,
+    resourceId: string,
+    sender: 'AGENT' | 'SYSTEM' | 'USER' = 'AGENT',
+    contentOverride?: string
   ): Promise<IChatMessage> {
+    const ALLOWED_CARD_TYPES = ['order', 'payment', 'approval', 'rules', 'cart'] as const;
+    type AllowedCardType = (typeof ALLOWED_CARD_TYPES)[number];
+
+    if (!type || !ALLOWED_CARD_TYPES.includes(type as AllowedCardType)) {
+      throw new BadRequestError(
+        `Invalid card resource type: '${type}'. Allowed types are: ${ALLOWED_CARD_TYPES.join(', ')}`
+      );
+    }
+
+    if (!resourceId || !mongoose.Types.ObjectId.isValid(resourceId)) {
+      throw new BadRequestError('A valid resourceId ObjectId is required');
+    }
+
     const userObjectId = new mongoose.Types.ObjectId(userId);
     const sessionObjectId = new mongoose.Types.ObjectId(sessionId);
 
@@ -185,12 +274,125 @@ export class ChatService {
       throw new NotFoundError('Chat session not found or does not belong to user');
     }
 
+    let resourceVersion = 1;
+    let cardData: Record<string, any> = {};
+    let content = contentOverride;
+
+    if (type === 'order') {
+      const order = await OrderModel.findById(resourceId);
+      if (!order) {
+        throw new NotFoundError(`Order with ID ${resourceId} does not exist`);
+      }
+      if (order.userId.toString() !== userId) {
+        throw new ForbiddenError("Access denied: card belongs to another user's order");
+      }
+      resourceVersion = 1;
+      cardData = {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        totalPaise: order.pricingSnapshot.totalPaise,
+        itemsCount: order.items.length,
+        placedAt: order.placedAt,
+        items: order.items,
+        pricingSnapshot: order.pricingSnapshot,
+      };
+      if (!content) {
+        content = `Order #${order.orderNumber} confirmed (${order.items.length} items, ₹${(order.pricingSnapshot.totalPaise / 100).toFixed(2)})`;
+      }
+    } else if (type === 'payment') {
+      let payment = await PaymentModel.findById(resourceId);
+      if (!payment) {
+        payment = await PaymentModel.findOne({ orderId: new mongoose.Types.ObjectId(resourceId) });
+      }
+      if (!payment) {
+        throw new NotFoundError(`Payment with ID ${resourceId} does not exist`);
+      }
+      if (payment.userId.toString() !== userId) {
+        throw new ForbiddenError("Access denied: card belongs to another user's payment");
+      }
+      if (payment.status !== 'PAID') {
+        throw new BadRequestError(`Cannot save payment card: payment is not verified (status: ${payment.status})`);
+      }
+      resourceVersion = 1;
+      cardData = {
+        paymentId: payment._id,
+        orderId: payment.orderId,
+        gatewayOrderId: payment.gatewayOrderId,
+        gatewayPaymentId: payment.gatewayPaymentId,
+        amountPaise: payment.amountPaise,
+        status: payment.status,
+      };
+      if (!content) {
+        content = `Payment verified for Order (₹${(payment.amountPaise / 100).toFixed(2)})`;
+      }
+    } else if (type === 'approval') {
+      const approval = await ApprovalModel.findById(resourceId);
+      if (!approval) {
+        throw new NotFoundError(`Approval with ID ${resourceId} does not exist`);
+      }
+      if (approval.userId.toString() !== userId) {
+        throw new ForbiddenError("Access denied: card belongs to another user's approval");
+      }
+      resourceVersion = approval.cartVersion || 1;
+      cardData = {
+        approvalId: approval._id,
+        cartId: approval.cartId,
+        status: approval.status,
+        calculatedTotalPaise: approval.calculatedTotalPaise,
+        approvalHash: approval.approvalHash,
+      };
+      if (!content) {
+        content = `Autonomous policy check: cart total requires human confirmation`;
+      }
+    } else if (type === 'rules') {
+      const mandate = await MandateModel.findById(resourceId);
+      if (!mandate) {
+        throw new NotFoundError(`Mandate with ID ${resourceId} does not exist`);
+      }
+      if (mandate.userId.toString() !== userId) {
+        throw new ForbiddenError("Access denied: card belongs to another user's mandate");
+      }
+      resourceVersion = mandate.version || 1;
+      cardData = {
+        mandateId: mandate._id,
+        version: mandate.version,
+        autoApproveUpToPaise: mandate.autoApproveUpToPaise,
+        perOrderCapPaise: (mandate as any).perOrderCapPaise || mandate.maxOrderAmountPaise,
+        dailyCapPaise: (mandate as any).dailyCapPaise || mandate.dailyBudgetPaise,
+      };
+      if (!content) {
+        content = `Active autonomous shopping mandate rules`;
+      }
+    } else if (type === 'cart') {
+      const cart = await CartModel.findById(resourceId);
+      if (!cart) {
+        throw new NotFoundError(`Cart with ID ${resourceId} does not exist`);
+      }
+      if (cart.userId.toString() !== userId) {
+        throw new ForbiddenError("Access denied: card belongs to another user's cart");
+      }
+      resourceVersion = cart.version || 1;
+      cardData = {
+        cartId: cart._id,
+        version: cart.version,
+        itemsCount: cart.items.length,
+        totalPaise: cart.pricing.totalPaise,
+      };
+      if (!content) {
+        content = `Active shopping cart (${cart.items.length} items)`;
+      }
+    }
+
     const message = await ChatMessageModel.create({
       sessionId: session._id,
       userId: userObjectId,
       sender,
       content,
-      cardType,
+      cardType: type as any,
+      resourceType: type as any,
+      resourceId: new mongoose.Types.ObjectId(resourceId),
+      resourceVersion,
       cardData,
     });
 

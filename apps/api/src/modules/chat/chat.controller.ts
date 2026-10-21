@@ -47,15 +47,25 @@ export class ChatController {
 
   public async appendCard(req: AuthenticatedRequest, res: Response): Promise<void> {
     const sessionId = req.params.id as string;
-    const { sender, content, cardType, cardData } = req.body;
+    const { type, cardType, resourceId, cardData, sender, content } = req.body || {};
+
+    const targetType = type || cardType;
+    const targetResourceId =
+      resourceId ||
+      cardData?.orderId ||
+      cardData?._id ||
+      cardData?.paymentId ||
+      cardData?.approvalId ||
+      cardData?.cartId ||
+      cardData?.mandateId;
 
     const message = await ChatService.appendCardMessage(
       sessionId,
       req.user!.id,
+      targetType,
+      targetResourceId,
       sender || 'AGENT',
-      content,
-      cardType,
-      cardData || {}
+      content
     );
 
     res.status(201).json({
