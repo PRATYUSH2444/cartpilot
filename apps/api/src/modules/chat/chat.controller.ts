@@ -44,6 +44,25 @@ export class ChatController {
       data: result,
     });
   }
+
+  public async appendCard(req: AuthenticatedRequest, res: Response): Promise<void> {
+    const sessionId = req.params.id as string;
+    const { sender, content, cardType, cardData } = req.body;
+
+    const message = await ChatService.appendCardMessage(
+      sessionId,
+      req.user!.id,
+      sender || 'AGENT',
+      content,
+      cardType,
+      cardData || {}
+    );
+
+    res.status(201).json({
+      success: true,
+      data: message,
+    });
+  }
 }
 
 export const chatController = new ChatController();

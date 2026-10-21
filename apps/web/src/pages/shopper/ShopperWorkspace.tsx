@@ -485,6 +485,28 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
+  const persistCardToChat = async (
+    content: string,
+    cardType: 'rules' | 'items' | 'cart' | 'approval' | 'payment' | 'order' | 'proof',
+    cardData: unknown
+  ) => {
+    if (!token || !activeChatSessionId) return;
+    try {
+      await fetch(`${API_BASE}/chat/sessions/${activeChatSessionId}/cards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          sender: 'AGENT',
+          content,
+          cardType,
+          cardData,
+        }),
+      });
+    } catch (e) {
+      console.warn('Failed to persist card message:', e);
+    }
+  };
+
   const handleInitiateCheckout = async () => {
     if (!cart || cart.items.length === 0 || !token) {
       showBanner('error', 'Cart is empty');
@@ -512,42 +534,47 @@ export const ShopperWorkspace: React.FC = () => {
         const { order, razorpay } = data.data;
         setActivePaymentOrder({ order, razorpay });
         setIsCartDrawerOpen(false);
+        const cardContent = `Pre-checkout verification passed! Inventory reserved for 15 minutes. Created Razorpay test order ${razorpay.orderId}. Please complete payment below:`;
         setMessages((prev) => [
           ...prev,
           {
             id: `msg-checkout-${Date.now()}`,
             sender: 'agent',
-            content: `Pre-checkout verification passed! Inventory reserved for 15 minutes. Created Razorpay test order ${razorpay.orderId}. Please complete payment below:`,
+            content: cardContent,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             cardType: 'payment',
             cardData: { order, razorpay },
           },
         ]);
+        await persistCardToChat(cardContent, 'payment', { order, razorpay });
         showBanner('success', 'Checkout initiated and inventory reserved');
       } else {
         const errData = await res.json();
         if (errData.error?.code === 'APPROVAL_REQUIRED' || policyEval?.requiresApproval) {
           showBanner('error', errData.error?.message || 'Human approval required');
           setIsCartDrawerOpen(false);
+          const cardContent =
+            'Deterministic Policy Check: This cart total exceeds your autonomous spending limit. Please review the bound cart snapshot and grant approval:';
+          const approvalCardPayload = {
+            cartTotal: cart.pricing.formatted.total,
+            reason: policyEval?.explanation || errData.error?.message,
+            cartVersion: cart.version,
+            approvalId: policyEval?.approvalId,
+            approvalHash: policyEval?.approvalHash,
+            approvalStatus: policyEval?.approvalStatus || 'PENDING',
+          };
           setMessages((prev) => [
             ...prev,
             {
               id: `msg-approval-${Date.now()}`,
               sender: 'agent',
-              content:
-                'Deterministic Policy Check: This cart total exceeds your autonomous spending limit. Please review the bound cart snapshot and grant approval:',
+              content: cardContent,
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               cardType: 'approval',
-              cardData: {
-                cartTotal: cart.pricing.formatted.total,
-                reason: policyEval?.explanation || errData.error?.message,
-                cartVersion: cart.version,
-                approvalId: policyEval?.approvalId,
-                approvalHash: policyEval?.approvalHash,
-                approvalStatus: policyEval?.approvalStatus || 'PENDING',
-              },
+              cardData: approvalCardPayload,
             },
           ]);
+          await persistCardToChat(cardContent, 'approval', approvalCardPayload);
         } else {
           showBanner('error', errData.error?.message || 'Checkout initiation failed');
         }
@@ -587,17 +614,19 @@ export const ShopperWorkspace: React.FC = () => {
         }
         await evaluatePolicy(token);
         setOrders((prev) => [confirmedOrder, ...prev]);
+        const cardContent = `Payment authorized and verified! Stock committed to order ${confirmedOrder.orderNumber}. Order confirmation card:`;
         setMessages((prev) => [
           ...prev,
           {
             id: `msg-paid-${Date.now()}`,
             sender: 'agent',
-            content: `Payment authorized and verified! Stock committed to order ${confirmedOrder.orderNumber}. Order confirmation card:`,
+            content: cardContent,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             cardType: 'order',
             cardData: confirmedOrder,
           },
         ]);
+        await persistCardToChat(cardContent, 'order', confirmedOrder);
         showBanner('success', `Payment confirmed for Order ${confirmedOrder.orderNumber}!`);
       } else {
         const errData = await res.json();

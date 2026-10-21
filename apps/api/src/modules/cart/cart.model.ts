@@ -75,8 +75,20 @@ const CartSchema = new Schema<ICart>(
   }
 );
 
-// Only one ACTIVE cart per user at any given time
-CartSchema.index({ userId: 1, status: 1 });
+// Only one ACTIVE cart per user at any given time (strictly unique partial index)
+CartSchema.index(
+  { userId: 1, status: 1 },
+  { unique: true, partialFilterExpression: { status: 'ACTIVE' } }
+);
+
+// Index for user cart queries and updates
+CartSchema.index({ userId: 1, updatedAt: -1 });
+
+// TTL index for abandoned carts (expires after 30 days)
+CartSchema.index(
+  { updatedAt: 1 },
+  { expireAfterSeconds: 30 * 24 * 60 * 60, partialFilterExpression: { status: 'ABANDONED' } }
+);
 
 export const CartModel: Model<ICart> =
   mongoose.models.Cart || mongoose.model<ICart>('Cart', CartSchema);

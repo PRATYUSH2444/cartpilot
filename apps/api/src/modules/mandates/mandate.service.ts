@@ -61,8 +61,11 @@ export class MandateService {
       mandate = await MandateModel.create({
         userId: userObjectId,
         version: 1,
-        maxOrderAmountPaise: 60000, // ₹600.00
+        maxOrderAmountPaise: 100000, // ₹1,000.00
+        autoApproveUpToPaise: 30000, // ₹300.00
+        perOrderCapPaise: 100000, // ₹1,000.00
         dailyBudgetPaise: 150000, // ₹1,500.00
+        dailyCapPaise: 150000, // ₹1,500.00
         allowedMerchantIds: [],
         blockedCategories: [],
         requireExplicitApproval: false,

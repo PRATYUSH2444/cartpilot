@@ -12,6 +12,7 @@
     "seed": "tsx src/database/seed.ts",
     "seed:clean": "tsx src/database/seed.ts --clean",
     "provision:admin": "tsx src/scripts/provision-admin.ts",
+    "db:reset": "tsx src/scripts/reset-dev-database.ts",
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {

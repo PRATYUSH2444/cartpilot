@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { ChatSessionModel, IChatSession } from './chat-session.model.js';
 import { ChatMessageModel, IChatMessage } from './chat-message.model.js';
 import { AgentService, AgentTurnResult } from '../agent/agent.service.js';
+import { MandateModel } from '../mandates/mandate.model.js';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../../common/errors/app-error.js';
 import { logger } from '../../common/logging/logger.js';
 
@@ -27,7 +28,10 @@ export class ChatService {
       title: title || 'New Grocery Shopping Session',
     });
 
-    // Create initial welcome message
+    // Read user's real mandate configuration for welcome rules card
+    const mandate = await MandateModel.findOne({ userId: userObjectId, isActive: true });
+
+    // Create initial welcome message with actual mandate limits
     await ChatMessageModel.create({
       sessionId: session._id,
       userId: userObjectId,
@@ -36,9 +40,12 @@ export class ChatService {
         'Welcome to CartPilot! I am your policy-controlled shopping assistant. I help you find strictly vegetarian groceries, plan meals, and assemble carts governed by deterministic spending mandates. The AI proposes, the policy engine decides, and you confirm payment.',
       cardType: 'rules',
       cardData: {
-        maxOrderAmountPaise: 60000,
-        dailyBudgetPaise: 150000,
-        requireExplicitApproval: false,
+        autoApproveUpToPaise: mandate ? mandate.autoApproveUpToPaise : 30000,
+        maxOrderAmountPaise: mandate ? mandate.maxOrderAmountPaise : 100000,
+        perOrderCapPaise: mandate ? (mandate.perOrderCapPaise || mandate.maxOrderAmountPaise) : 100000,
+        dailyBudgetPaise: mandate ? mandate.dailyBudgetPaise : 150000,
+        dailyCapPaise: mandate ? (mandate.dailyCapPaise || mandate.dailyBudgetPaise) : 150000,
+        requireExplicitApproval: mandate ? mandate.requireExplicitApproval : false,
       },
     });
 
@@ -157,5 +164,39 @@ export class ChatService {
       userMessage,
       agentMessage,
     };
+  }
+
+  /**
+   * Appends a card-carrying message to an active chat session and persists it.
+   */
+  public static async appendCardMessage(
+    sessionId: string,
+    userId: string,
+    sender: 'AGENT' | 'SYSTEM' | 'USER',
+    content: string,
+    cardType: 'rules' | 'items' | 'cart' | 'approval' | 'payment' | 'order' | 'proof',
+    cardData: Record<string, unknown>
+  ): Promise<IChatMessage> {
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const sessionObjectId = new mongoose.Types.ObjectId(sessionId);
+
+    const session = await ChatSessionModel.findOne({ _id: sessionObjectId, userId: userObjectId });
+    if (!session) {
+      throw new NotFoundError('Chat session not found or does not belong to user');
+    }
+
+    const message = await ChatMessageModel.create({
+      sessionId: session._id,
+      userId: userObjectId,
+      sender,
+      content,
+      cardType,
+      cardData,
+    });
+
+    session.updatedAt = new Date();
+    await session.save();
+
+    return message;
   }
 }

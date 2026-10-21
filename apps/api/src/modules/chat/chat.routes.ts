@@ -29,3 +29,10 @@ chatRouter.post(
   validateRequest(SendMessageSchema),
   (req, res, next) => chatController.sendMessage(req, res).catch(next)
 );
+
+chatRouter.post(
+  '/sessions/:id/cards',
+  authenticate,
+  requireRole('CUSTOMER', 'ADMIN'),
+  (req, res, next) => chatController.appendCard(req, res).catch(next)
+);
