@@ -15,6 +15,11 @@
     "db:reset": "tsx src/scripts/reset-dev-database.ts",
     "lint": "eslint src --ext .ts"
   },
+  "config": {
+    "mongodbMemoryServer": {
+      "version": "8.2.6"
+    }
+  },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",

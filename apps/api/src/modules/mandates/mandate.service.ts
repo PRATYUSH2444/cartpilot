@@ -11,6 +11,8 @@ export interface MandatePreset {
   name: string;
   description: string;
   autoApproveUpToPaise: number;
+  perOrderCapPaise: number;
+  dailyCapPaise: number;
   maxOrderAmountPaise: number;
   dailyBudgetPaise: number;
 }
@@ -21,6 +23,8 @@ export const MANDATE_PRESETS: Record<string, MandatePreset> = {
     name: 'Careful',
     description: 'Conservative limits for single shoppers and small grocery top-ups',
     autoApproveUpToPaise: 30000, // ₹300.00
+    perOrderCapPaise: 100000, // ₹1,000.00
+    dailyCapPaise: 150000, // ₹1,500.00
     maxOrderAmountPaise: 100000, // ₹1,000.00
     dailyBudgetPaise: 150000, // ₹1,500.00
   },
@@ -29,6 +33,8 @@ export const MANDATE_PRESETS: Record<string, MandatePreset> = {
     name: 'Everyday',
     description: 'Balanced spending rules for typical household daily cooking',
     autoApproveUpToPaise: 80000, // ₹800.00
+    perOrderCapPaise: 200000, // ₹2,000.00
+    dailyCapPaise: 300000, // ₹3,000.00
     maxOrderAmountPaise: 200000, // ₹2,000.00
     dailyBudgetPaise: 300000, // ₹3,000.00
   },
@@ -37,6 +43,8 @@ export const MANDATE_PRESETS: Record<string, MandatePreset> = {
     name: 'Family week',
     description: 'Generous limits for weekly bulk groceries and family feasts',
     autoApproveUpToPaise: 150000, // ₹1,500.00
+    perOrderCapPaise: 400000, // ₹4,000.00
+    dailyCapPaise: 500000, // ₹5,000.00
     maxOrderAmountPaise: 400000, // ₹4,000.00
     dailyBudgetPaise: 500000, // ₹5,000.00
   },
@@ -96,12 +104,26 @@ export class MandateService {
   async updateMandate(userId: string, input: UpdateMandateInput): Promise<MandateDocument> {
     const mandate = await this.getOrCreateMandate(userId);
 
-    if (input.maxOrderAmountPaise !== undefined) {
+    if (input.perOrderCapPaise !== undefined) {
+      mandate.perOrderCapPaise = input.perOrderCapPaise;
+      mandate.maxOrderAmountPaise = input.perOrderCapPaise;
+    } else if (input.maxOrderAmountPaise !== undefined) {
       mandate.maxOrderAmountPaise = input.maxOrderAmountPaise;
+      mandate.perOrderCapPaise = input.maxOrderAmountPaise;
     }
-    if (input.dailyBudgetPaise !== undefined) {
+
+    if (input.dailyCapPaise !== undefined) {
+      mandate.dailyCapPaise = input.dailyCapPaise;
+      mandate.dailyBudgetPaise = input.dailyCapPaise;
+    } else if (input.dailyBudgetPaise !== undefined) {
       mandate.dailyBudgetPaise = input.dailyBudgetPaise;
+      mandate.dailyCapPaise = input.dailyBudgetPaise;
     }
+
+    if (input.autoApproveUpToPaise !== undefined) {
+      mandate.autoApproveUpToPaise = input.autoApproveUpToPaise;
+    }
+
     if (input.allowedMerchantIds !== undefined) {
       mandate.allowedMerchantIds = input.allowedMerchantIds.map(
         (id) => new mongoose.Types.ObjectId(id)
@@ -129,7 +151,10 @@ export class MandateService {
       payload: {
         version: mandate.version,
         maxOrderAmountPaise: mandate.maxOrderAmountPaise,
+        perOrderCapPaise: mandate.perOrderCapPaise,
         dailyBudgetPaise: mandate.dailyBudgetPaise,
+        dailyCapPaise: mandate.dailyCapPaise,
+        autoApproveUpToPaise: mandate.autoApproveUpToPaise,
         blockedCategories: mandate.blockedCategories,
         requireExplicitApproval: mandate.requireExplicitApproval,
       },
@@ -152,8 +177,8 @@ export class MandateService {
    * to user's active mandate, increments version, and records an audit event.
    */
   async applyPreset(userId: string, presetKey: string): Promise<MandateWithSpend> {
-    const key = presetKey.toLowerCase() as 'careful' | 'everyday' | 'family';
-    const preset = MANDATE_PRESETS[key];
+    const normalizedKey = presetKey.toLowerCase() === 'family_week' ? 'family' : presetKey.toLowerCase();
+    const preset = MANDATE_PRESETS[normalizedKey];
     if (!preset) {
       throw new BadRequestError(
         `Invalid mandate preset: "${presetKey}". Supported presets: careful, everyday, family.`
@@ -161,11 +186,11 @@ export class MandateService {
     }
 
     const mandate = await this.getOrCreateMandate(userId);
-    mandate.maxOrderAmountPaise = preset.maxOrderAmountPaise;
-    mandate.dailyBudgetPaise = preset.dailyBudgetPaise;
+    mandate.maxOrderAmountPaise = preset.perOrderCapPaise;
+    mandate.perOrderCapPaise = preset.perOrderCapPaise;
+    mandate.dailyBudgetPaise = preset.dailyCapPaise;
+    mandate.dailyCapPaise = preset.dailyCapPaise;
     mandate.autoApproveUpToPaise = preset.autoApproveUpToPaise;
-    mandate.perOrderCapPaise = preset.maxOrderAmountPaise;
-    mandate.dailyCapPaise = preset.dailyBudgetPaise;
     mandate.version += 1;
     await mandate.save();
 

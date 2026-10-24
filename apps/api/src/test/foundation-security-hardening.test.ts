@@ -241,7 +241,7 @@ describe('Phase 01 — Foundation Security Hardening, Invariants & Abuse Prevent
       slug: `scarce-saffron-${Date.now()}`,
       category: 'SPICES',
       description: 'Extremely limited edition saffron',
-      pricePaise: 45000,
+      pricePaise: 20000, // ₹200.00 (total ~₹250 with delivery, within ₹300 auto-approval limit)
       packageSize: 1,
       packageUnit: 'G',
       availableStock: 1,

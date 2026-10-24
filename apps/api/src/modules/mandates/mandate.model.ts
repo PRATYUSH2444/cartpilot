@@ -39,12 +39,12 @@ const mandateSchema = new Schema<MandateDocument>(
     maxOrderAmountPaise: {
       type: Number,
       required: true,
-      default: 60000, // ₹600.00 default autonomous limit
+      default: 100000, // ₹1,000.00 canonical default per-order cap (alias of perOrderCapPaise)
     },
     dailyBudgetPaise: {
       type: Number,
       required: true,
-      default: 150000, // ₹1500.00 default daily budget limit
+      default: 150000, // ₹1,500.00 canonical default daily cap (alias of dailyCapPaise)
     },
     allowedMerchantIds: [
       {
@@ -64,18 +64,18 @@ const mandateSchema = new Schema<MandateDocument>(
       type: Boolean,
       default: true,
     },
-    // New fields (spec §7.2) — defaults mirror the old fields for safe migration
+    // Canonical fields (spec §7.2 & UX_CONTRACT)
     autoApproveUpToPaise: {
       type: Number,
-      default: 50000, // ₹500.00 default auto-approve limit
+      default: 30000, // ₹300.00 default autonomous limit
     },
     perOrderCapPaise: {
       type: Number,
-      default: 100000, // ₹1000.00 default per-order cap
+      default: 100000, // ₹1,000.00 canonical per-order cap
     },
     dailyCapPaise: {
       type: Number,
-      default: 150000, // ₹1500.00 default daily cap (same as dailyBudgetPaise)
+      default: 150000, // ₹1,500.00 canonical daily cap
     },
     paused: {
       type: Boolean,
@@ -93,5 +93,41 @@ const mandateSchema = new Schema<MandateDocument>(
     timestamps: true,
   }
 );
+
+// Enforce that perOrderCapPaise <-> maxOrderAmountPaise and dailyCapPaise <-> dailyBudgetPaise can never diverge
+mandateSchema.pre('validate', function (next) {
+  // Synchronize per-order cap fields
+  if (this.perOrderCapPaise !== undefined && (this.maxOrderAmountPaise === undefined || this.isModified('perOrderCapPaise'))) {
+    this.maxOrderAmountPaise = this.perOrderCapPaise;
+  } else if (this.maxOrderAmountPaise !== undefined && (this.perOrderCapPaise === undefined || this.isModified('maxOrderAmountPaise'))) {
+    this.perOrderCapPaise = this.maxOrderAmountPaise;
+  }
+
+  // Synchronize daily cap fields
+  if (this.dailyCapPaise !== undefined && (this.dailyBudgetPaise === undefined || this.isModified('dailyCapPaise'))) {
+    this.dailyBudgetPaise = this.dailyCapPaise;
+  } else if (this.dailyBudgetPaise !== undefined && (this.dailyCapPaise === undefined || this.isModified('dailyBudgetPaise'))) {
+    this.dailyCapPaise = this.dailyBudgetPaise;
+  }
+
+  next();
+});
+
+mandateSchema.pre(['updateOne', 'findOneAndUpdate'], function (next) {
+  const update: any = this.getUpdate();
+  if (!update) return next();
+  const set = update.$set || update;
+  if (set.perOrderCapPaise !== undefined && set.maxOrderAmountPaise === undefined) {
+    set.maxOrderAmountPaise = set.perOrderCapPaise;
+  } else if (set.maxOrderAmountPaise !== undefined && set.perOrderCapPaise === undefined) {
+    set.perOrderCapPaise = set.maxOrderAmountPaise;
+  }
+  if (set.dailyCapPaise !== undefined && set.dailyBudgetPaise === undefined) {
+    set.dailyBudgetPaise = set.dailyCapPaise;
+  } else if (set.dailyBudgetPaise !== undefined && set.dailyCapPaise === undefined) {
+    set.dailyCapPaise = set.dailyBudgetPaise;
+  }
+  next();
+});
 
 export const MandateModel = mongoose.model<MandateDocument>('Mandate', mandateSchema);

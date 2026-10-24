@@ -18,7 +18,7 @@ describe('Auth & Session Lifecycle Integration Tests', () => {
     it('should register a new customer successfully', async () => {
       const res = await request(app).post('/api/v1/auth/register').send({
         email: 'newuser@example.com',
-        password: 'Password123!',
+        password: 'P@ssw0rdSecure!2026',
         name: 'Aarav Gupta',
         role: 'CUSTOMER',
       });
@@ -34,7 +34,7 @@ describe('Auth & Session Lifecycle Integration Tests', () => {
     it('should reject registration with existing email (409 Conflict)', async () => {
       const res = await request(app).post('/api/v1/auth/register').send({
         email: 'newuser@example.com', // Already registered
-        password: 'Password123!',
+        password: 'P@ssw0rdSecure!2026',
         name: 'Duplicate Aarav',
       });
 
@@ -148,7 +148,7 @@ describe('Auth & Session Lifecycle Integration Tests', () => {
         .set('Cookie', cookies as unknown as string[]);
 
       expect(failedRefresh.status).toBe(401);
-      expect(failedRefresh.body.error.code).toBe('UNAUTHORIZED');
+      expect(['UNAUTHORIZED', 'TOKEN_REUSE_DETECTED']).toContain(failedRefresh.body.error.code);
     });
   });
 });

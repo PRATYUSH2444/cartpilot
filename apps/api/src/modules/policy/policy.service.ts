@@ -88,17 +88,19 @@ export class PolicyService {
     const todaySpentPaise = mandateWithSpend.todaySpentPaise;
     const cartTotalPaise = cart.pricing.totalPaise;
 
-    // Resolve cap values — support both old and new field names
-    const dailyCapPaise: number =
-      mandate.dailyBudgetPaise !== undefined
-        ? mandate.dailyBudgetPaise
-        : ((mandate as any).dailyCapPaise ?? 150000);
-    const perOrderCapPaise: number =
-      (mandate as any).perOrderCapPaise !== undefined ? (mandate as any).perOrderCapPaise : 100000;
+    // Resolve canonical cap values (spec §7.2 & UX_CONTRACT)
     const autoApproveUpToPaise: number =
-      mandate.maxOrderAmountPaise !== undefined
-        ? mandate.maxOrderAmountPaise
-        : ((mandate as any).autoApproveUpToPaise ?? 60000);
+      mandate.autoApproveUpToPaise !== undefined
+        ? mandate.autoApproveUpToPaise
+        : 30000;
+    const perOrderCapPaise: number =
+      (mandate as any).perOrderCapPaise !== undefined && (mandate as any).maxOrderAmountPaise !== undefined
+        ? Math.min((mandate as any).perOrderCapPaise, (mandate as any).maxOrderAmountPaise)
+        : ((mandate as any).perOrderCapPaise ?? (mandate as any).maxOrderAmountPaise ?? 100000);
+    const dailyCapPaise: number =
+      (mandate as any).dailyCapPaise !== undefined && (mandate as any).dailyBudgetPaise !== undefined
+        ? Math.min((mandate as any).dailyCapPaise, (mandate as any).dailyBudgetPaise)
+        : ((mandate as any).dailyCapPaise ?? (mandate as any).dailyBudgetPaise ?? 150000);
 
     // Rule 1: AGENT_DISABLED — global kill switch (isActive=false)
     if (!mandate.isActive) {
@@ -400,14 +402,18 @@ export class PolicyService {
     // Resolve caps — draft rules override if provided
     const perOrderCapPaise: number =
       input.draftRules?.perOrderCapPaise ??
-      (mandate as any).perOrderCapPaise ??
-      mandate.maxOrderAmountPaise;
+      ((mandate as any).perOrderCapPaise !== undefined && (mandate as any).maxOrderAmountPaise !== undefined
+        ? Math.min((mandate as any).perOrderCapPaise, (mandate as any).maxOrderAmountPaise)
+        : ((mandate as any).perOrderCapPaise ?? (mandate as any).maxOrderAmountPaise ?? 100000));
     const dailyCapPaise: number =
-      input.draftRules?.dailyCapPaise ?? (mandate as any).dailyCapPaise ?? mandate.dailyBudgetPaise;
+      input.draftRules?.dailyCapPaise ??
+      ((mandate as any).dailyCapPaise !== undefined && (mandate as any).dailyBudgetPaise !== undefined
+        ? Math.min((mandate as any).dailyCapPaise, (mandate as any).dailyBudgetPaise)
+        : ((mandate as any).dailyCapPaise ?? (mandate as any).dailyBudgetPaise ?? 150000));
     const autoApproveUpToPaise: number =
       input.draftRules?.autoApproveUpToPaise ??
       (mandate as any).autoApproveUpToPaise ??
-      mandate.maxOrderAmountPaise;
+      30000;
 
     let cartTotalPaise = 0;
     if (input.amountPaise !== undefined) {

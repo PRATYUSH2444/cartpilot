@@ -113,7 +113,9 @@ export class CheckoutService {
 
     const mandate = await mandateService.getOrCreateMandate(userId);
     const requiresSignOff =
-      mandate.requireExplicitApproval || pricing.totalPaise > mandate.maxOrderAmountPaise;
+      policyResult.requiresApproval ||
+      mandate.requireExplicitApproval ||
+      pricing.totalPaise > (mandate.autoApproveUpToPaise ?? 30000);
 
     if (requiresSignOff) {
       const validApproval = await approvalService.findValidApprovedRecord({

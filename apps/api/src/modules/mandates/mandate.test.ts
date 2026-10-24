@@ -37,8 +37,11 @@ describe('Phase 04 — Mandate & Spending Rules Integration Tests', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.mandate.maxOrderAmountPaise).toBe(60000); // ₹600.00
+    expect(res.body.data.mandate.maxOrderAmountPaise).toBe(100000); // ₹1,000.00 canonical per-order cap
+    expect(res.body.data.mandate.perOrderCapPaise).toBe(100000);
+    expect(res.body.data.mandate.autoApproveUpToPaise).toBe(30000); // ₹300.00 auto-approve threshold
     expect(res.body.data.mandate.dailyBudgetPaise).toBe(150000); // ₹1,500.00
+    expect(res.body.data.mandate.dailyCapPaise).toBe(150000);
     expect(res.body.data.mandate.version).toBe(1);
     expect(res.body.data.todaySpentPaise).toBe(0);
     expect(res.body.data.remainingDailyBudgetPaise).toBe(150000);

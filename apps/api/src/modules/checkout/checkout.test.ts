@@ -12,6 +12,7 @@ describe('Phase 03 — Checkout & Order Orchestration Integration Tests', () => 
   const app = createApp();
   let customerToken: string;
   let customerId: string;
+  let merchantToken: string;
   let onionProduct: any;
   let initialStock: number;
   let createdOrderId: string;
@@ -34,6 +35,15 @@ describe('Phase 03 — Checkout & Order Orchestration Integration Tests', () => 
     onionProduct = await ProductModel.findOne({ slug: 'red-onions-nashik-1kg' });
     expect(onionProduct).not.toBeNull();
     initialStock = onionProduct.availableStock;
+
+    // Merchant token for fulfillment stepping tests
+    const merchantUser = await UserModel.findOne({ role: 'MERCHANT' });
+    expect(merchantUser).not.toBeNull();
+    const merchantSession = AuthService.generateTokens(
+      merchantUser!,
+      onionProduct.merchantId.toString()
+    );
+    merchantToken = merchantSession.accessToken;
   }, 60000);
 
   it('POST /api/v1/checkout/initiate — should reject checkout when cart is empty', async () => {
@@ -128,7 +138,7 @@ describe('Phase 03 — Checkout & Order Orchestration Integration Tests', () => 
     // Current status is PENDING_PAYMENT, so advancing fulfillment step must be rejected with 400
     const res = await request(app)
       .post(`/api/v1/orders/${createdOrderId}/simulate-step`)
-      .set('Authorization', `Bearer ${customerToken}`);
+      .set('Authorization', `Bearer ${merchantToken}`);
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
@@ -141,7 +151,7 @@ describe('Phase 03 — Checkout & Order Orchestration Integration Tests', () => 
     // Step 1: CONFIRMED -> PACKING
     let res = await request(app)
       .post(`/api/v1/orders/${createdOrderId}/simulate-step`)
-      .set('Authorization', `Bearer ${customerToken}`);
+      .set('Authorization', `Bearer ${merchantToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('PACKING');
@@ -149,7 +159,7 @@ describe('Phase 03 — Checkout & Order Orchestration Integration Tests', () => 
     // Step 2: PACKING -> OUT_FOR_DELIVERY
     res = await request(app)
       .post(`/api/v1/orders/${createdOrderId}/simulate-step`)
-      .set('Authorization', `Bearer ${customerToken}`);
+      .set('Authorization', `Bearer ${merchantToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('OUT_FOR_DELIVERY');
@@ -157,7 +167,7 @@ describe('Phase 03 — Checkout & Order Orchestration Integration Tests', () => 
     // Step 3: OUT_FOR_DELIVERY -> DELIVERED
     res = await request(app)
       .post(`/api/v1/orders/${createdOrderId}/simulate-step`)
-      .set('Authorization', `Bearer ${customerToken}`);
+      .set('Authorization', `Bearer ${merchantToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('DELIVERED');

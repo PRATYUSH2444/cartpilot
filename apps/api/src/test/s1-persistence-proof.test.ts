@@ -217,23 +217,51 @@ describe('Task S1: Persistent Database & Restart Survival Proof', () => {
     expect(sessionRes.status).toBe(201);
     const sessionId = sessionRes.body.data._id;
 
-    // Post payment card
+    // Post server-verified order card per Addendum 1 security contract
+    const order = await OrderModel.create({
+      orderNumber: 'CP-CARD-TEST',
+      userId: user._id,
+      merchantId: new mongoose.Types.ObjectId(),
+      status: 'CONFIRMED',
+      items: [
+        {
+          productId: new mongoose.Types.ObjectId(),
+          name: 'Card Test Item',
+          category: 'GRAINS',
+          unitPricePaise: 45000,
+          quantity: 1,
+          subtotalPaise: 45000,
+          packageSize: 1,
+          packageUnit: 'KG',
+        },
+      ],
+      pricingSnapshot: {
+        subtotalPaise: 45000,
+        deliveryFeePaise: 0,
+        taxPaise: 0,
+        discountPaise: 0,
+        totalPaise: 45000,
+      },
+      shippingAddressSnapshot: {
+        street: '123 Market St',
+        city: 'Bengaluru',
+        state: 'Karnataka',
+        postalCode: '560001',
+      },
+      placedAt: new Date(),
+    });
+
     const cardRes = await request(app)
       .post(`/api/v1/chat/sessions/${sessionId}/cards`)
       .set('Authorization', `Bearer ${token}`)
       .send({
-        sender: 'AGENT',
-        content: 'Pre-checkout verification passed. Complete payment below:',
-        cardType: 'payment',
-        cardData: {
-          orderId: 'ord_123',
-          amountPaise: 45000,
-        },
+        type: 'order',
+        resourceId: order._id.toString(),
       });
 
     expect(cardRes.status).toBe(201);
     expect(cardRes.body.success).toBe(true);
-    expect(cardRes.body.data.cardType).toBe('payment');
+    expect(cardRes.body.data.cardType).toBe('order');
 
     // Simulate page reload: GET session with messages
     const reloadRes = await request(app)
@@ -242,11 +270,11 @@ describe('Task S1: Persistent Database & Restart Survival Proof', () => {
 
     expect(reloadRes.status).toBe(200);
     const messages = reloadRes.body.data.messages;
-    expect(messages.length).toBeGreaterThanOrEqual(2); // Welcome rules card + payment card
+    expect(messages.length).toBeGreaterThanOrEqual(2); // Welcome rules card + order card
 
-    const persistedPaymentCard = messages.find((m: any) => m.cardType === 'payment');
-    expect(persistedPaymentCard).toBeDefined();
-    expect(persistedPaymentCard.cardData.amountPaise).toBe(45000);
+    const persistedOrderCard = messages.find((m: any) => m.cardType === 'order');
+    expect(persistedOrderCard).toBeDefined();
+    expect(persistedOrderCard.cardData.totalPaise).toBe(45000);
 
     await mongoose.disconnect();
     await memoryServer.stop();
