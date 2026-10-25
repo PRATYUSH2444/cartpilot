@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, CheckCircle2, AlertTriangle, Sliders, Sparkles, Play, Zap } from 'lucide-react';
+import { Shield, CheckCircle2, AlertTriangle, Sliders, Sparkles, Play, Zap, Users } from 'lucide-react';
 import { MandateRules, PolicyEvaluation } from '../../types';
 
 interface RulesCardProps {
@@ -14,21 +14,21 @@ const PRESET_OPTIONS = [
   {
     key: 'careful',
     name: 'Careful',
-    icon: '🛡️',
+    Icon: Shield,
     tagline: '₹300 / ₹1k / ₹1.5k',
     desc: 'Strict approval for any big basket',
   },
   {
     key: 'everyday',
     name: 'Everyday',
-    icon: '⚡',
+    Icon: Zap,
     tagline: '₹800 / ₹2k / ₹3k',
     desc: 'Balanced autonomy for routine meals',
   },
   {
-    key: 'family_week',
-    name: 'Family Week',
-    icon: '👨‍👩‍👧‍👦',
+    key: 'family',
+    name: 'Family week',
+    Icon: Users,
     tagline: '₹1.5k / ₹4k / ₹5k',
     desc: 'Higher headroom for weekly family bulk shops',
   },
@@ -41,13 +41,18 @@ export const RulesCard: React.FC<RulesCardProps> = ({
   activePresetKey = 'careful',
   onApplyRemedy,
 }) => {
-  const maxOrderRupees = (rules.maxOrderAmountPaise / 100).toFixed(2);
-  const dailyBudgetRupees = (rules.dailyBudgetPaise / 100).toFixed(2);
+  const autoApprovePaise = rules.autoApproveUpToPaise || 30000;
+  const perOrderCapPaise = rules.perOrderCapPaise || rules.maxOrderAmountPaise || 100000;
+  const dailyCapPaise = rules.dailyCapPaise || rules.dailyBudgetPaise || 150000;
+
+  const autoApproveRupees = (autoApprovePaise / 100).toFixed(2);
+  const perOrderCapRupees = (perOrderCapPaise / 100).toFixed(2);
+  const dailyCapRupees = (dailyCapPaise / 100).toFixed(2);
   const cartRupees = (currentCartTotalPaise / 100).toFixed(2);
 
   const percentUsed = Math.min(
     100,
-    Math.round((currentCartTotalPaise / rules.maxOrderAmountPaise) * 100)
+    Math.round((currentCartTotalPaise / autoApprovePaise) * 100)
   );
 
   // Policy Playground Simulator State
@@ -161,14 +166,16 @@ export const RulesCard: React.FC<RulesCardProps> = ({
       {/* Novelty N1: Mandate Starter Presets */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-mono text-mut uppercase tracking-wider flex items-center gap-1">
-            <Zap className="w-3 h-3 text-amber-500" /> Starter Presets (1-Tap Activation)
+          <span className="text-xs text-mut font-medium flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5 text-amber-500" /> Starter presets (1-tap activation)
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {PRESET_OPTIONS.map((p) => {
-            const isActive = activePresetKey === p.key;
+            const isActive =
+              activePresetKey === p.key || (p.key === 'family' && activePresetKey === 'family_week');
             const isPending = isApplyingPreset === p.key;
+            const Icon = p.Icon;
             return (
               <button
                 key={p.key}
@@ -182,36 +189,44 @@ export const RulesCard: React.FC<RulesCardProps> = ({
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-1.5 font-bold text-xs text-ink">
-                    <span>{p.icon}</span>
+                    <Icon className="w-3.5 h-3.5 text-acc" />
                     <span>{p.name}</span>
                   </div>
                   {isActive && (
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   )}
                 </div>
-                <div className="text-[10px] font-mono text-mut mb-0.5">{p.tagline}</div>
-                <div className="text-[10px] text-mut/80 line-clamp-1">{p.desc}</div>
+                <div className="text-xs font-semibold text-mut mb-0.5">{p.tagline}</div>
+                <div className="text-[11px] text-mut/80 line-clamp-1">{p.desc}</div>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Rules Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+      {/* Rules Grid (3 Canonical Caps: Auto-approve limit, Per-order cap, Daily cap) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <div className="p-3 rounded-xl border border-brd bg-paper/50">
-          <span className="text-[11px] text-mut uppercase font-mono">Autonomous Limit</span>
-          <div className="text-lg font-display font-bold text-ink mt-0.5">₹{maxOrderRupees}</div>
+          <span className="text-xs text-mut font-medium">Autonomous limit</span>
+          <div className="text-lg font-display font-bold text-ink mt-0.5">₹{autoApproveRupees}</div>
           <p className="text-[11px] text-mut mt-1 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Auto-approved under threshold
+            <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" /> Auto-approved under limit
           </p>
         </div>
 
         <div className="p-3 rounded-xl border border-brd bg-paper/50">
-          <span className="text-[11px] text-mut uppercase font-mono">Daily Order Cap</span>
-          <div className="text-lg font-display font-bold text-ink mt-0.5">₹{dailyBudgetRupees}</div>
+          <span className="text-xs text-mut font-medium">Per-order cap</span>
+          <div className="text-lg font-display font-bold text-ink mt-0.5">₹{perOrderCapRupees}</div>
           <p className="text-[11px] text-mut mt-1 flex items-center gap-1">
-            <AlertTriangle className="w-3 h-3 text-amber-500" /> Hard cap ceiling
+            <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" /> Single order ceiling
+          </p>
+        </div>
+
+        <div className="p-3 rounded-xl border border-brd bg-paper/50">
+          <span className="text-xs text-mut font-medium">Daily order cap</span>
+          <div className="text-lg font-display font-bold text-ink mt-0.5">₹{dailyCapRupees}</div>
+          <p className="text-[11px] text-mut mt-1 flex items-center gap-1">
+            <Shield className="w-3 h-3 text-acc shrink-0" /> 24h spending ceiling
           </p>
         </div>
       </div>
@@ -220,10 +235,10 @@ export const RulesCard: React.FC<RulesCardProps> = ({
       <div className="p-3 rounded-xl border border-brd bg-paper/40">
         <div className="flex items-center justify-between text-xs mb-1.5">
           <span className="text-mut font-medium flex items-center gap-1">
-            <Sliders className="w-3 h-3" /> Order Cap Utilization
+            <Sliders className="w-3 h-3" /> Autonomous Limit Utilization
           </span>
-          <span className="font-mono font-bold text-ink">
-            ₹{cartRupees} / ₹{maxOrderRupees} ({percentUsed}%)
+          <span className="font-semibold text-ink">
+            ₹{cartRupees} / ₹{autoApproveRupees} ({percentUsed}%)
           </span>
         </div>
         <div className="w-full h-2 rounded-full bg-brd overflow-hidden">

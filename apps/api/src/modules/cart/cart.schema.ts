@@ -21,5 +21,10 @@ export const ProductIdParamSchema = z.object({
   productId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid Product ID format'),
 });
 
+export const UpdateDeliveryNoteSchema = z.object({
+  deliveryNote: z.string().max(500, 'Delivery note cannot exceed 500 characters').optional().default(''),
+});
+
 export type AddCartItemInput = z.infer<typeof AddCartItemSchema>;
 export type UpdateCartItemInput = z.infer<typeof UpdateCartItemSchema>;
+export type UpdateDeliveryNoteInput = z.infer<typeof UpdateDeliveryNoteSchema>;

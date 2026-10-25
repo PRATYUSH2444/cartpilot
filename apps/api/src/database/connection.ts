@@ -28,27 +28,42 @@ export async function connectDatabase(uriOverride?: string): Promise<typeof mong
 
     return conn;
   } catch (error) {
-    // In dev mode, if local mongo isn't up, seamlessly auto-start embedded MongoDB server and seed data
-    if (env.NODE_ENV !== 'production') {
+    const isTestOrExplicitMemory =
+      env.USE_IN_MEMORY_DB ||
+      process.env.USE_IN_MEMORY_DB === 'true' ||
+      env.NODE_ENV === 'test' ||
+      Boolean(uriOverride);
+
+    // In-memory server is allowed ONLY for automated tests or when explicitly requested via flag
+    if (isTestOrExplicitMemory) {
       try {
         logger.info(
-          'Local MongoDB (27017) not active; launching embedded MongoDB development instance...'
+          'Automated test environment or USE_IN_MEMORY_DB=true detected; launching ephemeral MongoMemoryServer...'
         );
         const { MongoMemoryServer } = await import('mongodb-memory-server');
         const embeddedServer = await MongoMemoryServer.create();
         const embeddedUri = embeddedServer.getUri();
         const conn = await mongoose.connect(embeddedUri);
-        logger.info({ uri: embeddedUri }, '✅ Connected to embedded development MongoDB server');
+        logger.info({ uri: embeddedUri }, '✅ Connected to ephemeral in-memory test database');
 
-        // Auto-seed initial credentials and catalog
         const { runSeed } = await import('./seed.js');
         await runSeed(false);
 
         return conn;
       } catch (embeddedErr) {
-        logger.warn({ embeddedErr }, 'Could not initialize embedded MongoDB fallback');
+        logger.warn({ embeddedErr }, 'Could not initialize in-memory database fallback');
       }
     }
+
+    const maskedUri = (uriOverride || env.MONGODB_URI).replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
+    logger.error(
+      { error },
+      `❌ Could not connect to persistent MongoDB at ${maskedUri}.\n` +
+      `To ensure data survives server restarts:\n` +
+      `  1. (Recommended) Set MONGODB_URI in apps/api/.env to your MongoDB Atlas cluster URI, OR\n` +
+      `  2. Start the local replica-set container: 'docker compose up -d'.\n` +
+      `  (To use ephemeral in-memory MongoDB for testing only, set USE_IN_MEMORY_DB=true).`
+    );
 
     if (env.NODE_ENV === 'production') {
       process.exit(1);

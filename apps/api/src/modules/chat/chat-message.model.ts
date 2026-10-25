@@ -16,6 +16,9 @@ export interface IChatMessage extends Document {
     durationMs?: number;
   }>;
   cardType?: 'rules' | 'items' | 'cart' | 'approval' | 'payment' | 'order' | 'proof';
+  resourceType?: 'order' | 'payment' | 'approval' | 'rules' | 'cart';
+  resourceId?: mongoose.Types.ObjectId;
+  resourceVersion?: number;
   cardData?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -54,6 +57,20 @@ const ChatMessageSchema = new Schema<IChatMessage>(
       enum: ['rules', 'items', 'cart', 'approval', 'payment', 'order', 'proof'],
       default: undefined,
     },
+    resourceType: {
+      type: String,
+      enum: ['order', 'payment', 'approval', 'rules', 'cart'],
+      default: undefined,
+    },
+    resourceId: {
+      type: Schema.Types.ObjectId,
+      default: undefined,
+      index: true,
+    },
+    resourceVersion: {
+      type: Number,
+      default: undefined,
+    },
     cardData: {
       type: Schema.Types.Mixed,
       default: undefined,
@@ -66,6 +83,7 @@ const ChatMessageSchema = new Schema<IChatMessage>(
 );
 
 ChatMessageSchema.index({ sessionId: 1, createdAt: 1 });
+ChatMessageSchema.index({ userId: 1, createdAt: -1 });
 
 export const ChatMessageModel: Model<IChatMessage> =
   mongoose.models.ChatMessage || mongoose.model<IChatMessage>('ChatMessage', ChatMessageSchema);

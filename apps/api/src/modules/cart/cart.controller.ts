@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../../common/middleware/auth.js';
 import { CartService } from './cart.service.js';
-import { AddCartItemInput, UpdateCartItemInput } from './cart.schema.js';
+import { AddCartItemInput, UpdateCartItemInput, UpdateDeliveryNoteInput } from './cart.schema.js';
 
 export class CartController {
   public static async getCart(
@@ -90,6 +90,25 @@ export class CartController {
       res.status(200).json({
         success: true,
         message: 'Cart cleared successfully',
+        data: cart,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async updateDeliveryNote(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const { deliveryNote } = req.body as UpdateDeliveryNoteInput;
+      const cart = await CartService.updateDeliveryNote(userId, deliveryNote || '');
+      res.status(200).json({
+        success: true,
+        message: 'Delivery note updated',
         data: cart,
       });
     } catch (err) {

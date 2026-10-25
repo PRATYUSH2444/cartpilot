@@ -12,6 +12,7 @@ export type OrderStatus =
   | 'REFUNDED';
 
 export interface IOrderItemSnapshot {
+  variantId?: string;
   productId: mongoose.Types.ObjectId;
   name: string;
   category: string;
@@ -25,6 +26,7 @@ export interface IOrderItemSnapshot {
 export interface IPricingSnapshot {
   subtotalPaise: number;
   deliveryFeePaise: number;
+  platformFeePaise?: number;
   taxPaise: number;
   discountPaise: number;
   totalPaise: number;
@@ -51,6 +53,7 @@ export interface IOrder extends Document {
   items: IOrderItemSnapshot[];
   pricingSnapshot: IPricingSnapshot;
   shippingAddressSnapshot: IShippingAddressSnapshot;
+  deliveryNote?: string;
   approvalSnapshot?: IApprovalSnapshot;
   reservationId?: mongoose.Types.ObjectId;
   paymentId?: mongoose.Types.ObjectId;
@@ -62,6 +65,10 @@ export interface IOrder extends Document {
 
 const OrderItemSnapshotSchema = new Schema<IOrderItemSnapshot>(
   {
+    variantId: {
+      type: String,
+      required: false,
+    },
     productId: {
       type: Schema.Types.ObjectId,
       ref: 'Product',
@@ -127,6 +134,12 @@ const PricingSnapshotSchema = new Schema<IPricingSnapshot>(
       required: true,
       min: 0,
       validate: { validator: Number.isInteger, message: 'deliveryFeePaise must be an integer' },
+    },
+    platformFeePaise: {
+      type: Number,
+      default: 0,
+      min: 0,
+      validate: { validator: Number.isInteger, message: 'platformFeePaise must be an integer' },
     },
     taxPaise: {
       type: Number,
@@ -214,6 +227,12 @@ const OrderSchema = new Schema<IOrder>(
       type: ShippingAddressSnapshotSchema,
       required: true,
     },
+    deliveryNote: {
+      type: String,
+      required: false,
+      trim: true,
+      maxlength: 500,
+    },
     approvalSnapshot: {
       type: new Schema(
         {
@@ -248,6 +267,9 @@ const OrderSchema = new Schema<IOrder>(
 );
 
 OrderSchema.index({ userId: 1, createdAt: -1 });
+OrderSchema.index({ merchantId: 1, createdAt: -1 });
+OrderSchema.index({ merchantId: 1, status: 1 });
+OrderSchema.index({ status: 1, createdAt: -1 });
 
 export const OrderModel: Model<IOrder> =
   mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);

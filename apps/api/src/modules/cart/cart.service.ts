@@ -6,17 +6,20 @@ import { AppError, NotFoundError } from '../../common/errors/app-error.js';
 import { approvalService } from '../approvals/approval.service.js';
 
 export interface PopulatedCartItem {
+  variantId?: string;
   productId: string;
   name: string;
   slug: string;
   category: string;
   pricePaise: number;
+  unitPricePaise: number;
   packageSize: number;
   packageUnit: string;
   availableStock: number;
   imageUrl?: string;
   quantity: number;
   itemTotalPaise: number;
+  subtotalPaise: number;
   formattedItemTotal: string;
   addedAt: Date;
 }
@@ -29,6 +32,7 @@ export interface CartResponse {
   items: PopulatedCartItem[];
   pricing: CalculatedPricing;
   itemCount: number;
+  deliveryNote?: string;
 }
 
 export class CartService {
@@ -212,6 +216,29 @@ export class CartService {
   }
 
   /**
+   * Updates the shopper delivery note on the active cart.
+   */
+  public static async updateDeliveryNote(userId: string, deliveryNote: string): Promise<CartResponse> {
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    let cart = await CartModel.findOne({ userId: userObjectId, status: 'ACTIVE' });
+    if (!cart) {
+      cart = await CartModel.create({
+        userId: userObjectId,
+        items: [],
+        version: 1,
+        status: 'ACTIVE',
+        deliveryNote: deliveryNote.trim(),
+      });
+    } else {
+      cart.deliveryNote = deliveryNote.trim();
+      cart.version += 1;
+      await cart.save();
+    }
+
+    return this.buildCartResponse(cart);
+  }
+
+  /**
    * Helper that populates product details and applies authoritative pure server pricing.
    */
   private static async buildCartResponse(cart: ICart): Promise<CartResponse> {
@@ -225,6 +252,7 @@ export class CartService {
         items: [],
         pricing,
         itemCount: 0,
+        deliveryNote: cart.deliveryNote,
       };
     }
 
@@ -243,17 +271,20 @@ export class CartService {
       if (prod && prod.isActive) {
         const itemTotalPaise = prod.pricePaise * cartItem.quantity;
         populatedItems.push({
+          variantId: undefined,
           productId: prod._id.toString(),
           name: prod.name,
           slug: prod.slug,
           category: prod.category,
           pricePaise: prod.pricePaise,
+          unitPricePaise: prod.pricePaise,
           packageSize: prod.packageSize,
           packageUnit: prod.packageUnit,
           availableStock: prod.availableStock,
           imageUrl: prod.imageUrl,
           quantity: cartItem.quantity,
           itemTotalPaise,
+          subtotalPaise: itemTotalPaise,
           formattedItemTotal: PricingService.formatPaise(itemTotalPaise),
           addedAt: cartItem.addedAt,
         });
@@ -277,6 +308,7 @@ export class CartService {
       items: populatedItems,
       pricing,
       itemCount: totalItemCount,
+      deliveryNote: cart.deliveryNote,
     };
   }
 }

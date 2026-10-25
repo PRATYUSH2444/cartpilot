@@ -30,15 +30,29 @@ export interface PopulatedCartItem {
   formattedItemTotal: string;
 }
 
+export interface OrderLine {
+  variantId?: string;
+  productId: string;
+  name: string;
+  packageSize: number;
+  packageUnit: string;
+  unitPricePaise: number;
+  quantity: number;
+  subtotalPaise: number;
+  category?: string;
+}
+
 export interface PricingBreakdown {
   subtotalPaise: number;
   deliveryFeePaise: number;
+  platformFeePaise?: number;
   taxPaise: number;
   discountPaise: number;
   totalPaise: number;
   formatted: {
     subtotal: string;
     deliveryFee: string;
+    platformFee?: string;
     tax: string;
     discount: string;
     total: string;
@@ -52,6 +66,7 @@ export interface CartData {
   items: PopulatedCartItem[];
   pricing: PricingBreakdown;
   itemCount: number;
+  deliveryNote?: string;
 }
 
 export interface MandateData {
@@ -174,10 +189,11 @@ export interface OrderData {
     | 'DELIVERED'
     | 'CANCELLED'
     | 'FAILED';
-  items: OrderItemSnapshot[];
+  items: OrderLine[];
   pricingSnapshot: {
     subtotalPaise: number;
     deliveryFeePaise: number;
+    platformFeePaise?: number;
     taxPaise: number;
     discountPaise: number;
     totalPaise: number;
@@ -188,6 +204,7 @@ export interface OrderData {
     state: string;
     postalCode: string;
   };
+  deliveryNote?: string;
   approvalSnapshot?: {
     approvalId: string;
     approvalHash: string;

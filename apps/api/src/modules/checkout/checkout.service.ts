@@ -76,6 +76,7 @@ export class CheckoutService {
       const itemTotalPaise = prod.pricePaise * item.quantity;
 
       itemSnapshots.push({
+        variantId: undefined,
         productId: prod._id,
         name: prod.name,
         category: prod.category,
@@ -113,7 +114,9 @@ export class CheckoutService {
 
     const mandate = await mandateService.getOrCreateMandate(userId);
     const requiresSignOff =
-      mandate.requireExplicitApproval || pricing.totalPaise > mandate.maxOrderAmountPaise;
+      policyResult.requiresApproval ||
+      mandate.requireExplicitApproval ||
+      pricing.totalPaise > (mandate.autoApproveUpToPaise ?? 30000);
 
     if (requiresSignOff) {
       const validApproval = await approvalService.findValidApprovedRecord({
@@ -162,11 +165,13 @@ export class CheckoutService {
       pricingSnapshot: {
         subtotalPaise: pricing.subtotalPaise,
         deliveryFeePaise: pricing.deliveryFeePaise,
+        platformFeePaise: pricing.platformFeePaise,
         taxPaise: pricing.taxPaise,
         discountPaise: pricing.discountPaise,
         totalPaise: pricing.totalPaise,
       },
       shippingAddressSnapshot,
+      deliveryNote: input?.deliveryNote || input?.notes || cart.deliveryNote,
       approvalSnapshot,
       reservationId: reservation._id,
       placedAt: new Date(),

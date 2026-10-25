@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { logger } from '../../common/logging/logger.js';
 import { auditService } from '../audit/audit.service.js';
 import { OrderService } from '../orders/order.service.js';
 import { IMandate, MandateDocument, MandateModel } from './mandate.model.js';
@@ -11,6 +12,8 @@ export interface MandatePreset {
   name: string;
   description: string;
   autoApproveUpToPaise: number;
+  perOrderCapPaise: number;
+  dailyCapPaise: number;
   maxOrderAmountPaise: number;
   dailyBudgetPaise: number;
 }
@@ -21,6 +24,8 @@ export const MANDATE_PRESETS: Record<string, MandatePreset> = {
     name: 'Careful',
     description: 'Conservative limits for single shoppers and small grocery top-ups',
     autoApproveUpToPaise: 30000, // ₹300.00
+    perOrderCapPaise: 100000, // ₹1,000.00
+    dailyCapPaise: 150000, // ₹1,500.00
     maxOrderAmountPaise: 100000, // ₹1,000.00
     dailyBudgetPaise: 150000, // ₹1,500.00
   },
@@ -29,6 +34,8 @@ export const MANDATE_PRESETS: Record<string, MandatePreset> = {
     name: 'Everyday',
     description: 'Balanced spending rules for typical household daily cooking',
     autoApproveUpToPaise: 80000, // ₹800.00
+    perOrderCapPaise: 200000, // ₹2,000.00
+    dailyCapPaise: 300000, // ₹3,000.00
     maxOrderAmountPaise: 200000, // ₹2,000.00
     dailyBudgetPaise: 300000, // ₹3,000.00
   },
@@ -37,6 +44,8 @@ export const MANDATE_PRESETS: Record<string, MandatePreset> = {
     name: 'Family week',
     description: 'Generous limits for weekly bulk groceries and family feasts',
     autoApproveUpToPaise: 150000, // ₹1,500.00
+    perOrderCapPaise: 400000, // ₹4,000.00
+    dailyCapPaise: 500000, // ₹5,000.00
     maxOrderAmountPaise: 400000, // ₹4,000.00
     dailyBudgetPaise: 500000, // ₹5,000.00
   },
@@ -51,6 +60,104 @@ export interface MandateWithSpend {
 
 export class MandateService {
   /**
+   * Addendum 4: Startup migration check that inspects existing mandates on boot:
+   * Any mandate holding legacy default maxOrderAmountPaise: 60000 or missing canonical caps
+   * is migrated to canonical Careful values with version incremented and logged to audit ledger.
+   */
+  public static async migrateLegacyMandates(): Promise<{ scanned: number; migrated: number }> {
+    const legacyFilter = {
+      $or: [
+        { maxOrderAmountPaise: 60000 },
+        { perOrderCapPaise: { $exists: false } },
+        { autoApproveUpToPaise: { $exists: false } },
+        { dailyCapPaise: { $exists: false } },
+      ],
+    };
+
+    const mandates = await MandateModel.find(legacyFilter);
+    let migrated = 0;
+
+    for (const mandate of mandates) {
+      let changed = false;
+
+      // 1. Migrate legacy 60000 default to canonical 100000 (Careful)
+      if (mandate.maxOrderAmountPaise === 60000) {
+        mandate.maxOrderAmountPaise = 100000;
+        mandate.perOrderCapPaise = 100000;
+        changed = true;
+      }
+
+      // 2. Synchronize perOrderCapPaise with maxOrderAmountPaise if missing or diverged
+      if (
+        (mandate as any).perOrderCapPaise === undefined ||
+        (mandate as any).perOrderCapPaise === null ||
+        mandate.perOrderCapPaise !== mandate.maxOrderAmountPaise
+      ) {
+        mandate.perOrderCapPaise = mandate.maxOrderAmountPaise ?? 100000;
+        changed = true;
+      }
+
+      // 3. Ensure autoApproveUpToPaise is populated
+      if (mandate.autoApproveUpToPaise === undefined || mandate.autoApproveUpToPaise === null) {
+        mandate.autoApproveUpToPaise = 30000; // ₹300.00 Careful default
+        changed = true;
+      }
+
+      // 4. Synchronize dailyCapPaise with dailyBudgetPaise if missing or diverged
+      if (
+        (mandate as any).dailyCapPaise === undefined ||
+        (mandate as any).dailyCapPaise === null ||
+        mandate.dailyCapPaise !== mandate.dailyBudgetPaise
+      ) {
+        mandate.dailyCapPaise = mandate.dailyBudgetPaise ?? 150000;
+        changed = true;
+      }
+
+      if (changed) {
+        mandate.version += 1;
+        await mandate.save();
+        migrated++;
+
+        logger.info(
+          {
+            mandateId: mandate._id.toString(),
+            userId: mandate.userId.toString(),
+            version: mandate.version,
+            autoApproveUpToPaise: mandate.autoApproveUpToPaise,
+            perOrderCapPaise: mandate.perOrderCapPaise,
+            dailyCapPaise: mandate.dailyCapPaise,
+          },
+          'Migrated legacy mandate document to canonical Careful defaults'
+        );
+
+        await auditService.recordEvent({
+          eventType: 'MANDATE_UPDATED',
+          actorId: mandate.userId.toString(),
+          actorRole: 'SYSTEM',
+          resourceId: mandate._id.toString(),
+          resourceType: 'MANDATE',
+          payload: {
+            action: 'MIGRATED_LEGACY_MANDATE',
+            version: mandate.version,
+            autoApproveUpToPaise: mandate.autoApproveUpToPaise,
+            perOrderCapPaise: mandate.perOrderCapPaise,
+            dailyCapPaise: mandate.dailyCapPaise,
+          },
+        });
+      }
+    }
+
+    if (migrated > 0) {
+      logger.info(
+        { scanned: mandates.length, migrated },
+        'Completed legacy mandate startup migration'
+      );
+    }
+
+    return { scanned: mandates.length, migrated };
+  }
+
+  /**
    * Retrieves active mandate for user, auto-creating standard defaults if none exists.
    */
   async getOrCreateMandate(userId: string): Promise<MandateDocument> {
@@ -61,8 +168,11 @@ export class MandateService {
       mandate = await MandateModel.create({
         userId: userObjectId,
         version: 1,
-        maxOrderAmountPaise: 60000, // ₹600.00
+        maxOrderAmountPaise: 100000, // ₹1,000.00
+        autoApproveUpToPaise: 30000, // ₹300.00
+        perOrderCapPaise: 100000, // ₹1,000.00
         dailyBudgetPaise: 150000, // ₹1,500.00
+        dailyCapPaise: 150000, // ₹1,500.00
         allowedMerchantIds: [],
         blockedCategories: [],
         requireExplicitApproval: false,
@@ -93,12 +203,26 @@ export class MandateService {
   async updateMandate(userId: string, input: UpdateMandateInput): Promise<MandateDocument> {
     const mandate = await this.getOrCreateMandate(userId);
 
-    if (input.maxOrderAmountPaise !== undefined) {
+    if (input.perOrderCapPaise !== undefined) {
+      mandate.perOrderCapPaise = input.perOrderCapPaise;
+      mandate.maxOrderAmountPaise = input.perOrderCapPaise;
+    } else if (input.maxOrderAmountPaise !== undefined) {
       mandate.maxOrderAmountPaise = input.maxOrderAmountPaise;
+      mandate.perOrderCapPaise = input.maxOrderAmountPaise;
     }
-    if (input.dailyBudgetPaise !== undefined) {
+
+    if (input.dailyCapPaise !== undefined) {
+      mandate.dailyCapPaise = input.dailyCapPaise;
+      mandate.dailyBudgetPaise = input.dailyCapPaise;
+    } else if (input.dailyBudgetPaise !== undefined) {
       mandate.dailyBudgetPaise = input.dailyBudgetPaise;
+      mandate.dailyCapPaise = input.dailyBudgetPaise;
     }
+
+    if (input.autoApproveUpToPaise !== undefined) {
+      mandate.autoApproveUpToPaise = input.autoApproveUpToPaise;
+    }
+
     if (input.allowedMerchantIds !== undefined) {
       mandate.allowedMerchantIds = input.allowedMerchantIds.map(
         (id) => new mongoose.Types.ObjectId(id)
@@ -126,7 +250,10 @@ export class MandateService {
       payload: {
         version: mandate.version,
         maxOrderAmountPaise: mandate.maxOrderAmountPaise,
+        perOrderCapPaise: mandate.perOrderCapPaise,
         dailyBudgetPaise: mandate.dailyBudgetPaise,
+        dailyCapPaise: mandate.dailyCapPaise,
+        autoApproveUpToPaise: mandate.autoApproveUpToPaise,
         blockedCategories: mandate.blockedCategories,
         requireExplicitApproval: mandate.requireExplicitApproval,
       },
@@ -149,8 +276,8 @@ export class MandateService {
    * to user's active mandate, increments version, and records an audit event.
    */
   async applyPreset(userId: string, presetKey: string): Promise<MandateWithSpend> {
-    const key = presetKey.toLowerCase() as 'careful' | 'everyday' | 'family';
-    const preset = MANDATE_PRESETS[key];
+    const normalizedKey = presetKey.toLowerCase() === 'family_week' ? 'family' : presetKey.toLowerCase();
+    const preset = MANDATE_PRESETS[normalizedKey];
     if (!preset) {
       throw new BadRequestError(
         `Invalid mandate preset: "${presetKey}". Supported presets: careful, everyday, family.`
@@ -158,11 +285,11 @@ export class MandateService {
     }
 
     const mandate = await this.getOrCreateMandate(userId);
-    mandate.maxOrderAmountPaise = preset.maxOrderAmountPaise;
-    mandate.dailyBudgetPaise = preset.dailyBudgetPaise;
+    mandate.maxOrderAmountPaise = preset.perOrderCapPaise;
+    mandate.perOrderCapPaise = preset.perOrderCapPaise;
+    mandate.dailyBudgetPaise = preset.dailyCapPaise;
+    mandate.dailyCapPaise = preset.dailyCapPaise;
     mandate.autoApproveUpToPaise = preset.autoApproveUpToPaise;
-    mandate.perOrderCapPaise = preset.maxOrderAmountPaise;
-    mandate.dailyCapPaise = preset.dailyBudgetPaise;
     mandate.version += 1;
     await mandate.save();
 

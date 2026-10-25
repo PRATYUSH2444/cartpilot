@@ -443,6 +443,25 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
+  const handleUpdateDeliveryNote = async (deliveryNote: string) => {
+    if (!token) return;
+    if (cart) {
+      setCart({ ...cart, deliveryNote });
+    }
+    try {
+      await fetch(`${API_BASE}/cart/delivery-note`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ deliveryNote }),
+      });
+    } catch (err) {
+      console.error('Failed to update delivery note', err);
+    }
+  };
+
   const handleRemoveItem = async (productId: string) => {
     if (!token) return;
     setIsLoading(true);
@@ -485,6 +504,27 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
+  const persistCardToChat = async (
+    type: 'rules' | 'items' | 'cart' | 'approval' | 'payment' | 'order' | 'proof',
+    resourceId?: string,
+    content?: string
+  ) => {
+    if (!token || !activeChatSessionId || !resourceId) return;
+    try {
+      await fetch(`${API_BASE}/chat/sessions/${activeChatSessionId}/cards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          type,
+          resourceId,
+          content,
+        }),
+      });
+    } catch (e) {
+      console.warn('Failed to persist card message:', e);
+    }
+  };
+
   const handleInitiateCheckout = async () => {
     if (!cart || cart.items.length === 0 || !token) {
       showBanner('error', 'Cart is empty');
@@ -512,42 +552,52 @@ export const ShopperWorkspace: React.FC = () => {
         const { order, razorpay } = data.data;
         setActivePaymentOrder({ order, razorpay });
         setIsCartDrawerOpen(false);
+        const cardContent = `Pre-checkout verification passed! Inventory reserved for 15 minutes. Created Razorpay test order ${razorpay.orderId}. Please complete payment below:`;
         setMessages((prev) => [
           ...prev,
           {
             id: `msg-checkout-${Date.now()}`,
             sender: 'agent',
-            content: `Pre-checkout verification passed! Inventory reserved for 15 minutes. Created Razorpay test order ${razorpay.orderId}. Please complete payment below:`,
+            content: cardContent,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             cardType: 'payment',
             cardData: { order, razorpay },
           },
         ]);
+        if (order?._id) {
+          await persistCardToChat('order', order._id, cardContent);
+        }
         showBanner('success', 'Checkout initiated and inventory reserved');
       } else {
         const errData = await res.json();
         if (errData.error?.code === 'APPROVAL_REQUIRED' || policyEval?.requiresApproval) {
           showBanner('error', errData.error?.message || 'Human approval required');
           setIsCartDrawerOpen(false);
+          const cardContent =
+            'Deterministic Policy Check: This cart total exceeds your autonomous spending limit. Please review the bound cart snapshot and grant approval:';
+          const approvalCardPayload = {
+            cartTotal: cart.pricing.formatted.total,
+            reason: policyEval?.explanation || errData.error?.message,
+            cartVersion: cart.version,
+            approvalId: policyEval?.approvalId,
+            approvalHash: policyEval?.approvalHash,
+            approvalStatus: policyEval?.approvalStatus || 'PENDING',
+          };
           setMessages((prev) => [
             ...prev,
             {
               id: `msg-approval-${Date.now()}`,
               sender: 'agent',
-              content:
-                'Deterministic Policy Check: This cart total exceeds your autonomous spending limit. Please review the bound cart snapshot and grant approval:',
+              content: cardContent,
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               cardType: 'approval',
-              cardData: {
-                cartTotal: cart.pricing.formatted.total,
-                reason: policyEval?.explanation || errData.error?.message,
-                cartVersion: cart.version,
-                approvalId: policyEval?.approvalId,
-                approvalHash: policyEval?.approvalHash,
-                approvalStatus: policyEval?.approvalStatus || 'PENDING',
-              },
+              cardData: approvalCardPayload,
             },
           ]);
+          const approvalId = policyEval?.approvalId || errData.error?.approvalId;
+          if (approvalId) {
+            await persistCardToChat('approval', approvalId, cardContent);
+          }
         } else {
           showBanner('error', errData.error?.message || 'Checkout initiation failed');
         }
@@ -587,17 +637,21 @@ export const ShopperWorkspace: React.FC = () => {
         }
         await evaluatePolicy(token);
         setOrders((prev) => [confirmedOrder, ...prev]);
+        const cardContent = `Payment authorized and verified! Stock committed to order ${confirmedOrder.orderNumber}. Order confirmation card:`;
         setMessages((prev) => [
           ...prev,
           {
             id: `msg-paid-${Date.now()}`,
             sender: 'agent',
-            content: `Payment authorized and verified! Stock committed to order ${confirmedOrder.orderNumber}. Order confirmation card:`,
+            content: cardContent,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             cardType: 'order',
             cardData: confirmedOrder,
           },
         ]);
+        if (confirmedOrder?._id) {
+          await persistCardToChat('order', confirmedOrder._id, cardContent);
+        }
         showBanner('success', `Payment confirmed for Order ${confirmedOrder.orderNumber}!`);
       } else {
         const errData = await res.json();
@@ -1056,6 +1110,8 @@ export const ShopperWorkspace: React.FC = () => {
                 cardData={msg.cardData as ProposalPayload}
                 onAddToCart={handleAddToCart}
                 onAddAllToCart={handleAddProposedItems}
+                cartItems={cart?.items}
+                onUpdateQuantity={handleUpdateQuantity}
                 title="Recipe Ingredients Proposal"
               />
             </div>
@@ -1087,6 +1143,9 @@ export const ShopperWorkspace: React.FC = () => {
                 orderNumber={(msg.cardData as PaymentOrderState).order.orderNumber}
                 razorpayOrderId={(msg.cardData as PaymentOrderState).razorpay.orderId}
                 amountPaise={(msg.cardData as PaymentOrderState).razorpay.amountPaise}
+                items={(msg.cardData as PaymentOrderState).order.items}
+                pricing={(msg.cardData as PaymentOrderState).order.pricingSnapshot}
+                deliveryNote={(msg.cardData as PaymentOrderState).order.deliveryNote}
                 onVerifySuccess={handleVerifyPaymentSuccess}
                 onVerifyFail={handleSimulateTamperPayment}
                 isLoading={isLoading}
@@ -1326,6 +1385,7 @@ export const ShopperWorkspace: React.FC = () => {
                   onRemoveItem={handleRemoveItem}
                   onClearCart={handleClearCart}
                   onInitiateCheckout={handleInitiateCheckout}
+                  onUpdateDeliveryNote={handleUpdateDeliveryNote}
                   lampStatus={currentLamp.status}
                   lampReasonCode={currentLamp.reasonCode}
                   lampReasonText={currentLamp.reasonText}
