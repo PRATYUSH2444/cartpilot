@@ -148,7 +148,7 @@ export class ChatService {
                 cartId: cart._id,
                 version: cart.version,
                 itemsCount: cart.items.length,
-                totalPaise: cart.pricing.totalPaise,
+                totalPaise: (cart as any).pricing?.totalPaise ?? 0,
               };
             }
           }
@@ -377,7 +377,7 @@ export class ChatService {
         cartId: cart._id,
         version: cart.version,
         itemsCount: cart.items.length,
-        totalPaise: cart.pricing.totalPaise,
+        totalPaise: (cart as any).pricing?.totalPaise ?? 0,
       };
       if (!content) {
         content = `Active shopping cart (${cart.items.length} items)`;
