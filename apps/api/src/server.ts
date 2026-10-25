@@ -14,6 +14,10 @@ async function bootstrap(): Promise<void> {
       const { runSeed } = await import('./database/seed.js');
       await runSeed(false);
     }
+
+    // Addendum 4: Execute startup check & migration for legacy mandates
+    const { MandateService } = await import('./modules/mandates/mandate.service.js');
+    await MandateService.migrateLegacyMandates();
   } catch (error) {
     logger.warn(
       { error },

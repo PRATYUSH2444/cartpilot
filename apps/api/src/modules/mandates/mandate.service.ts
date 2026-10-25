@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { logger } from '../../common/logging/logger.js';
 import { auditService } from '../audit/audit.service.js';
 import { OrderService } from '../orders/order.service.js';
 import { IMandate, MandateDocument, MandateModel } from './mandate.model.js';
@@ -58,6 +59,104 @@ export interface MandateWithSpend {
 }
 
 export class MandateService {
+  /**
+   * Addendum 4: Startup migration check that inspects existing mandates on boot:
+   * Any mandate holding legacy default maxOrderAmountPaise: 60000 or missing canonical caps
+   * is migrated to canonical Careful values with version incremented and logged to audit ledger.
+   */
+  public static async migrateLegacyMandates(): Promise<{ scanned: number; migrated: number }> {
+    const legacyFilter = {
+      $or: [
+        { maxOrderAmountPaise: 60000 },
+        { perOrderCapPaise: { $exists: false } },
+        { autoApproveUpToPaise: { $exists: false } },
+        { dailyCapPaise: { $exists: false } },
+      ],
+    };
+
+    const mandates = await MandateModel.find(legacyFilter);
+    let migrated = 0;
+
+    for (const mandate of mandates) {
+      let changed = false;
+
+      // 1. Migrate legacy 60000 default to canonical 100000 (Careful)
+      if (mandate.maxOrderAmountPaise === 60000) {
+        mandate.maxOrderAmountPaise = 100000;
+        mandate.perOrderCapPaise = 100000;
+        changed = true;
+      }
+
+      // 2. Synchronize perOrderCapPaise with maxOrderAmountPaise if missing or diverged
+      if (
+        (mandate as any).perOrderCapPaise === undefined ||
+        (mandate as any).perOrderCapPaise === null ||
+        mandate.perOrderCapPaise !== mandate.maxOrderAmountPaise
+      ) {
+        mandate.perOrderCapPaise = mandate.maxOrderAmountPaise ?? 100000;
+        changed = true;
+      }
+
+      // 3. Ensure autoApproveUpToPaise is populated
+      if (mandate.autoApproveUpToPaise === undefined || mandate.autoApproveUpToPaise === null) {
+        mandate.autoApproveUpToPaise = 30000; // ₹300.00 Careful default
+        changed = true;
+      }
+
+      // 4. Synchronize dailyCapPaise with dailyBudgetPaise if missing or diverged
+      if (
+        (mandate as any).dailyCapPaise === undefined ||
+        (mandate as any).dailyCapPaise === null ||
+        mandate.dailyCapPaise !== mandate.dailyBudgetPaise
+      ) {
+        mandate.dailyCapPaise = mandate.dailyBudgetPaise ?? 150000;
+        changed = true;
+      }
+
+      if (changed) {
+        mandate.version += 1;
+        await mandate.save();
+        migrated++;
+
+        logger.info(
+          {
+            mandateId: mandate._id.toString(),
+            userId: mandate.userId.toString(),
+            version: mandate.version,
+            autoApproveUpToPaise: mandate.autoApproveUpToPaise,
+            perOrderCapPaise: mandate.perOrderCapPaise,
+            dailyCapPaise: mandate.dailyCapPaise,
+          },
+          'Migrated legacy mandate document to canonical Careful defaults'
+        );
+
+        await auditService.recordEvent({
+          eventType: 'MANDATE_UPDATED',
+          actorId: mandate.userId.toString(),
+          actorRole: 'SYSTEM',
+          resourceId: mandate._id.toString(),
+          resourceType: 'MANDATE',
+          payload: {
+            action: 'MIGRATED_LEGACY_MANDATE',
+            version: mandate.version,
+            autoApproveUpToPaise: mandate.autoApproveUpToPaise,
+            perOrderCapPaise: mandate.perOrderCapPaise,
+            dailyCapPaise: mandate.dailyCapPaise,
+          },
+        });
+      }
+    }
+
+    if (migrated > 0) {
+      logger.info(
+        { scanned: mandates.length, migrated },
+        'Completed legacy mandate startup migration'
+      );
+    }
+
+    return { scanned: mandates.length, migrated };
+  }
+
   /**
    * Retrieves active mandate for user, auto-creating standard defaults if none exists.
    */
