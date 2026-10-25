@@ -103,6 +103,7 @@ export class ChatService {
                 placedAt: order.placedAt,
                 items: order.items,
                 pricingSnapshot: order.pricingSnapshot,
+                deliveryNote: order.deliveryNote,
               };
             }
           } else if (msg.resourceType === 'payment') {
@@ -296,6 +297,7 @@ export class ChatService {
         placedAt: order.placedAt,
         items: order.items,
         pricingSnapshot: order.pricingSnapshot,
+        deliveryNote: order.deliveryNote,
       };
       if (!content) {
         content = `Order #${order.orderNumber} confirmed (${order.items.length} items, ₹${(order.pricingSnapshot.totalPaise / 100).toFixed(2)})`;

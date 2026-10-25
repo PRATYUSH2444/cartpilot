@@ -7,12 +7,14 @@ export interface PricingCalculationItem {
 export interface CalculatedPricing {
   subtotalPaise: number;
   deliveryFeePaise: number;
+  platformFeePaise: number;
   taxPaise: number;
   discountPaise: number;
   totalPaise: number;
   formatted: {
     subtotal: string;
     deliveryFee: string;
+    platformFee: string;
     tax: string;
     discount: string;
     total: string;
@@ -41,7 +43,8 @@ export class PricingService {
    */
   public static calculate(
     items: PricingCalculationItem[],
-    discountPaise: number = 0
+    discountPaise: number = 0,
+    platformFeePaise: number = 0
   ): CalculatedPricing {
     // 1. Calculate raw integer subtotal
     const subtotalPaise = items.reduce((acc, item) => {
@@ -64,24 +67,27 @@ export class PricingService {
     // 3. Compute 5% GST on subtotal, rounded to nearest integer paise
     const taxPaise = Math.round(subtotalPaise * this.GST_PERCENTAGE);
 
-    // 4. Ensure discount is non-negative and capped at subtotal + deliveryFee + tax
+    // 4. Ensure discount is non-negative and capped at subtotal + deliveryFee + tax + platform
     const sanitizedDiscountPaise = Math.max(0, Math.floor(discountPaise));
+    const sanitizedPlatformFeePaise = Math.max(0, Math.floor(platformFeePaise));
 
-    // 5. Total calculation
+    // 5. Total calculation (integer paise reconciliation)
     const totalPaise = Math.max(
       0,
-      subtotalPaise + deliveryFeePaise + taxPaise - sanitizedDiscountPaise
+      subtotalPaise + deliveryFeePaise + sanitizedPlatformFeePaise + taxPaise - sanitizedDiscountPaise
     );
 
     return {
       subtotalPaise,
       deliveryFeePaise,
+      platformFeePaise: sanitizedPlatformFeePaise,
       taxPaise,
       discountPaise: sanitizedDiscountPaise,
       totalPaise,
       formatted: {
         subtotal: this.formatPaise(subtotalPaise),
         deliveryFee: this.formatPaise(deliveryFeePaise),
+        platformFee: this.formatPaise(sanitizedPlatformFeePaise),
         tax: this.formatPaise(taxPaise),
         discount: this.formatPaise(sanitizedDiscountPaise),
         total: this.formatPaise(totalPaise),

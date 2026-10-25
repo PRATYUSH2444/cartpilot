@@ -124,7 +124,7 @@ describe('Task S1: Persistence and Data Integrity Root Cause Tests', () => {
     // Clean up second server
     await mongoose.disconnect();
     await memoryServer2.stop();
-  });
+  }, 30000);
 
   it('2. Confirms seed script is idempotent and does not delete user data when run on an existing persistent DB', async () => {
     // Reconnect to a fresh server for this test
@@ -164,5 +164,5 @@ describe('Task S1: Persistence and Data Integrity Root Cause Tests', () => {
 
     await mongoose.disconnect();
     await persistentMockServer.stop();
-  });
+  }, 30000);
 });

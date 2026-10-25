@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Check, Sparkles, ShoppingCart, Layers } from 'lucide-react';
-import { Product } from '../../types';
+import { Plus, Minus, Check, Sparkles, ShoppingCart, Layers } from 'lucide-react';
+import { Product, PopulatedCartItem } from '../../types';
 
 export interface ProposedItem {
   productId: string;
@@ -50,6 +50,8 @@ interface ItemsCardProps {
   cardData: Product[] | ProposalPayload;
   onAddToCart: (productId: string, quantity: number) => void;
   onAddAllToCart?: (items: Array<{ productId: string; quantity: number }>) => void;
+  cartItems?: PopulatedCartItem[];
+  onUpdateQuantity?: (productId: string, quantity: number) => void;
   title?: string;
 }
 
@@ -57,6 +59,8 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
   cardData,
   onAddToCart,
   onAddAllToCart,
+  cartItems,
+  onUpdateQuantity,
   title = 'Catalog Recommendations',
 }) => {
   const [addingId, setAddingId] = useState<string | null>(null);
@@ -247,29 +251,61 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
                   Stock: {item.availableStock !== undefined ? item.availableStock : 'In Stock'}
                 </span>
 
-                <button
-                  onClick={() => handleAdd(item.productId, qty)}
-                  disabled={
-                    isAdding || (item.availableStock !== undefined && item.availableStock < qty)
+                {(() => {
+                  const cartItem = cartItems?.find((c) => c.productId === item.productId);
+                  const currentCartQty = cartItem?.quantity ?? 0;
+
+                  if (currentCartQty > 0 && onUpdateQuantity) {
+                    return (
+                      <div className="flex items-center border border-brd rounded-lg bg-card overflow-hidden">
+                        <button
+                          onClick={() => onUpdateQuantity(item.productId, currentCartQty - 1)}
+                          className="p-1 px-2 hover:bg-paper text-mut hover:text-ink transition-colors cursor-pointer"
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="w-6 text-center font-mono text-xs font-bold text-ink">
+                          {currentCartQty}
+                        </span>
+                        <button
+                          onClick={() => onUpdateQuantity(item.productId, currentCartQty + 1)}
+                          disabled={item.availableStock !== undefined && currentCartQty >= item.availableStock}
+                          className="p-1 px-2 hover:bg-paper text-mut hover:text-ink transition-colors disabled:opacity-40 cursor-pointer"
+                          aria-label="Increase quantity"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
                   }
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                    isAdding
-                      ? 'bg-emerald-600 text-white'
-                      : item.availableStock !== undefined && item.availableStock < qty
-                        ? 'bg-brd text-mut cursor-not-allowed'
-                        : 'bg-card text-ink border border-brd hover:border-acc hover:text-acc shadow-sm'
-                  }`}
-                >
-                  {isAdding ? (
-                    <>
-                      <Check className="w-3 h-3" /> Added
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-3 h-3" /> Add {qty > 1 ? `${qty} packs` : ''}
-                    </>
-                  )}
-                </button>
+
+                  return (
+                    <button
+                      onClick={() => handleAdd(item.productId, qty)}
+                      disabled={
+                        isAdding || (item.availableStock !== undefined && item.availableStock < qty)
+                      }
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        isAdding
+                          ? 'bg-emerald-600 text-white'
+                          : item.availableStock !== undefined && item.availableStock < qty
+                            ? 'bg-brd text-mut cursor-not-allowed'
+                            : 'bg-card text-ink border border-brd hover:border-acc hover:text-acc shadow-sm'
+                      }`}
+                    >
+                      {isAdding ? (
+                        <>
+                          <Check className="w-3 h-3" /> Added
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3 h-3" /> Add {qty > 1 ? `${qty} packs` : ''}
+                        </>
+                      )}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           );

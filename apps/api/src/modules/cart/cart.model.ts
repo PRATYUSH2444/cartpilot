@@ -14,6 +14,7 @@ export interface ICart extends Document {
   items: ICartItem[];
   version: number;
   status: CartStatus;
+  deliveryNote?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,6 +61,12 @@ const CartSchema = new Schema<ICart>(
       default: 1,
       required: true,
       min: 1,
+    },
+    deliveryNote: {
+      type: String,
+      required: false,
+      trim: true,
+      maxlength: 500,
     },
     status: {
       type: String,

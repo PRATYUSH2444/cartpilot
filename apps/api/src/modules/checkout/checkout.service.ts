@@ -76,6 +76,7 @@ export class CheckoutService {
       const itemTotalPaise = prod.pricePaise * item.quantity;
 
       itemSnapshots.push({
+        variantId: undefined,
         productId: prod._id,
         name: prod.name,
         category: prod.category,
@@ -164,11 +165,13 @@ export class CheckoutService {
       pricingSnapshot: {
         subtotalPaise: pricing.subtotalPaise,
         deliveryFeePaise: pricing.deliveryFeePaise,
+        platformFeePaise: pricing.platformFeePaise,
         taxPaise: pricing.taxPaise,
         discountPaise: pricing.discountPaise,
         totalPaise: pricing.totalPaise,
       },
       shippingAddressSnapshot,
+      deliveryNote: input?.deliveryNote || input?.notes || cart.deliveryNote,
       approvalSnapshot,
       reservationId: reservation._id,
       placedAt: new Date(),

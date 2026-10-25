@@ -9,6 +9,8 @@ export const InitiateCheckoutSchema = z.object({
       postalCode: z.string().regex(/^\d{6}$/, 'Postal code must be a 6-digit Indian PIN code'),
     })
     .optional(),
+  deliveryNote: z.string().max(500, 'Delivery note cannot exceed 500 characters').optional(),
+  notes: z.string().max(500).optional(),
 });
 
 export type InitiateCheckoutInput = z.infer<typeof InitiateCheckoutSchema>;

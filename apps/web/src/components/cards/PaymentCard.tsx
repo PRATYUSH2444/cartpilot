@@ -1,10 +1,22 @@
-import { CreditCard, ShieldCheck, ShieldAlert, Lock } from 'lucide-react';
+import React from 'react';
+import { CreditCard, ShieldCheck, ShieldAlert, Lock, ShoppingBag, FileText } from 'lucide-react';
+import { OrderLine } from '../../types';
 
 interface PaymentCardProps {
   orderId: string;
   orderNumber: string;
   razorpayOrderId: string;
   amountPaise: number;
+  items?: OrderLine[];
+  pricing?: {
+    subtotalPaise: number;
+    deliveryFeePaise: number;
+    platformFeePaise?: number;
+    taxPaise: number;
+    discountPaise: number;
+    totalPaise: number;
+  };
+  deliveryNote?: string;
   onVerifySuccess: () => void;
   onVerifyFail: () => void;
   isLoading?: boolean;
@@ -15,6 +27,9 @@ export const PaymentCard: React.FC<PaymentCardProps> = ({
   orderNumber,
   razorpayOrderId,
   amountPaise,
+  items,
+  pricing,
+  deliveryNote,
   onVerifySuccess,
   onVerifyFail,
   isLoading = false,
@@ -57,6 +72,85 @@ export const PaymentCard: React.FC<PaymentCardProps> = ({
         </p>
       </div>
 
+      {/* Items being ordered — prevents disappearing from chat during ordering */}
+      {items && items.length > 0 && (
+        <div className="p-3.5 rounded-xl border border-brd bg-paper/60 mb-4 space-y-2">
+          <div className="flex items-center justify-between text-xs font-semibold text-ink border-b border-brd pb-1.5">
+            <span className="flex items-center gap-1.5">
+              <ShoppingBag className="w-3.5 h-3.5 text-acc" />
+              <span>Ordering Items ({items.length})</span>
+            </span>
+            <span className="font-mono text-[11px] text-mut">Item-Wise Breakdown</span>
+          </div>
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            {items.map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between text-xs py-1">
+                <div className="flex-1 min-w-0 pr-2">
+                  <span className="font-medium text-ink truncate block">{item.name}</span>
+                  <span className="text-[10px] text-mut font-mono">
+                    {item.packageSize} {item.packageUnit} · ₹{(item.unitPricePaise / 100).toFixed(2)} each
+                  </span>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <span className="font-mono font-bold text-ink">
+                    x{item.quantity} · ₹{(item.subtotalPaise / 100).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Pricing Reconciliation */}
+          {pricing && (
+            <div className="pt-2 border-t border-brd space-y-1 text-[11px] text-mut font-mono">
+              <div className="flex justify-between">
+                <span>Items Subtotal:</span>
+                <span>₹{(pricing.subtotalPaise / 100).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Delivery Fee:</span>
+                <span>
+                  {pricing.deliveryFeePaise === 0
+                    ? 'FREE'
+                    : `₹${(pricing.deliveryFeePaise / 100).toFixed(2)}`}
+                </span>
+              </div>
+              {(pricing.platformFeePaise ?? 0) > 0 && (
+                <div className="flex justify-between">
+                  <span>Platform Fee:</span>
+                  <span>₹{((pricing.platformFeePaise ?? 0) / 100).toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>GST (5%):</span>
+                <span>₹{(pricing.taxPaise / 100).toFixed(2)}</span>
+              </div>
+              {(pricing.discountPaise ?? 0) > 0 && (
+                <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                  <span>Discount:</span>
+                  <span>-₹{(pricing.discountPaise / 100).toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-1 border-t border-brd font-bold text-ink text-xs">
+                <span>Reconciled Total:</span>
+                <span className="text-acc">₹{(pricing.totalPaise / 100).toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Shopper Delivery Note if provided */}
+      {deliveryNote && (
+        <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 mb-4 text-xs">
+          <div className="flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400 mb-1">
+            <FileText className="w-3.5 h-3.5" />
+            <span>Delivery Instructions for Merchant & Rider:</span>
+          </div>
+          <p className="text-ink font-mono text-[11px] italic">"{deliveryNote}"</p>
+        </div>
+      )}
+
       {/* Test Simulated Card Details */}
       <div className="p-3.5 rounded-xl border border-brd bg-paper/60 mb-5 space-y-2 text-xs">
         <div className="flex items-center justify-between text-mut">
@@ -82,7 +176,7 @@ export const PaymentCard: React.FC<PaymentCardProps> = ({
         <button
           onClick={onVerifySuccess}
           disabled={isLoading}
-          className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-display font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all"
+          className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-display font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
         >
           <Lock className="w-3.5 h-3.5" />
           <span>Authorize & Pay ₹{rupees} (HMAC-SHA256 Signed)</span>
@@ -91,7 +185,7 @@ export const PaymentCard: React.FC<PaymentCardProps> = ({
         <button
           onClick={onVerifyFail}
           disabled={isLoading}
-          className="w-full py-2 px-3 rounded-lg border border-rose-500/30 text-rose-600 hover:bg-rose-500/10 font-mono text-[11px] flex items-center justify-center gap-1.5 transition-all"
+          className="w-full py-2 px-3 rounded-lg border border-rose-500/30 text-rose-600 hover:bg-rose-500/10 font-mono text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
         >
           <ShieldAlert className="w-3.5 h-3.5" />
           <span>Simulate Forged Signature Attack (Expect 400 Reject)</span>

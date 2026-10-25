@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, Truck } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, Truck, FileText } from 'lucide-react';
 import { CartData, LampStatus } from '../../types';
 import { DecisionLamp } from '../DecisionLamp';
 
@@ -9,6 +9,7 @@ interface CartCardProps {
   onRemoveItem: (productId: string) => void;
   onClearCart: () => void;
   onInitiateCheckout: () => void;
+  onUpdateDeliveryNote?: (note: string) => void;
   lampStatus: LampStatus;
   lampReasonCode?: string;
   lampReasonText?: string;
@@ -21,6 +22,7 @@ export const CartCard: React.FC<CartCardProps> = ({
   onRemoveItem,
   onClearCart,
   onInitiateCheckout,
+  onUpdateDeliveryNote,
   lampStatus,
   lampReasonCode,
   lampReasonText,
@@ -184,6 +186,27 @@ export const CartCard: React.FC<CartCardProps> = ({
               {pricing.formatted.total}
             </span>
           </div>
+        </div>
+      )}
+
+      {/* Optional Shopper Delivery Note */}
+      {items.length > 0 && (
+        <div className="mb-4 p-3 rounded-xl border border-brd bg-paper/40">
+          <label className="text-[11px] font-semibold text-ink flex items-center justify-between mb-1.5">
+            <span className="flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-acc" />
+              <span>Delivery Instructions / Note (Optional)</span>
+            </span>
+            <span className="text-[10px] text-mut font-mono">Visible to merchant & rider</span>
+          </label>
+          <input
+            type="text"
+            value={cart.deliveryNote || ''}
+            onChange={(e) => onUpdateDeliveryNote?.(e.target.value)}
+            placeholder="e.g. Leave with security, ring bell twice, fresh produce only"
+            className="w-full px-3 py-2 rounded-lg bg-card border border-brd text-xs text-ink placeholder:text-mut focus:outline-none focus:border-acc transition-colors font-sans"
+            maxLength={500}
+          />
         </div>
       )}
 

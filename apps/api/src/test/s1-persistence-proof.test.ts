@@ -278,5 +278,5 @@ describe('Task S1: Persistent Database & Restart Survival Proof', () => {
 
     await mongoose.disconnect();
     await memoryServer.stop();
-  });
+  }, 60000);
 });

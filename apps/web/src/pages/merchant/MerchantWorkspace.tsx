@@ -21,6 +21,9 @@ import {
   XCircle,
   Copy,
   Check,
+  FileText,
+  Receipt,
+  ShoppingBag,
 } from 'lucide-react';
 import { API_BASE } from '../../config/api';
 
@@ -659,24 +662,82 @@ export const MerchantWorkspace: React.FC = () => {
                     </div>
 
                     {/* Order Line Items */}
-                    <div className="space-y-1.5">
-                      <span className="text-[11px] uppercase font-bold text-mut block">
-                        Purchased Items:
-                      </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] uppercase font-bold text-mut flex items-center gap-1.5">
+                          <ShoppingBag className="w-3.5 h-3.5 text-acc" />
+                          Purchased Items ({order.items?.length || 0}):
+                        </span>
+                        <span className="text-[11px] font-mono text-mut">Item-Wise Pipeline</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {order.items?.map((item, idx) => (
                           <div
                             key={idx}
-                            className="p-2 rounded-lg bg-paper/60 border border-brd text-xs flex items-center justify-between"
+                            className="p-2.5 rounded-xl bg-paper/60 border border-brd text-xs flex items-center justify-between"
                           >
-                            <span className="font-medium text-ink truncate mr-2">{item.name}</span>
-                            <span className="font-mono font-semibold text-mut flex-shrink-0">
-                              x{item.quantity} (₹{(item.unitPricePaise / 100).toFixed(2)})
-                            </span>
+                            <div className="min-w-0 pr-2">
+                              <span className="font-semibold text-ink truncate block">{item.name}</span>
+                              <span className="text-[10px] text-mut font-mono">
+                                {item.packageSize} {item.packageUnit} · ₹{(item.unitPricePaise / 100).toFixed(2)} each
+                              </span>
+                            </div>
+                            <div className="text-right flex-shrink-0 font-mono">
+                              <span className="font-bold text-ink block">x{item.quantity}</span>
+                              <span className="text-[10px] text-mut">₹{(item.subtotalPaise / 100).toFixed(2)}</span>
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
+
+                    {/* Pricing Breakdown & Reconciliation */}
+                    {order.pricingSnapshot && (
+                      <div className="p-3 rounded-xl bg-paper/40 border border-brd space-y-1 text-xs">
+                        <div className="flex items-center justify-between text-ink font-semibold pb-1 border-b border-brd/60 text-[11px]">
+                          <span className="flex items-center gap-1.5">
+                            <Receipt className="w-3.5 h-3.5 text-acc" />
+                            Financial Breakdown (Integer Paise Invariant)
+                          </span>
+                          <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">RECONCILED</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-[11px] text-mut">
+                          <div>
+                            <span className="text-[10px] block uppercase">Subtotal</span>
+                            <span className="text-ink font-semibold">₹{(order.pricingSnapshot.subtotalPaise / 100).toFixed(2)}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] block uppercase">Delivery</span>
+                            <span className="text-ink font-semibold">
+                              {order.pricingSnapshot.deliveryFeePaise === 0
+                                ? 'FREE'
+                                : `₹${(order.pricingSnapshot.deliveryFeePaise / 100).toFixed(2)}`}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] block uppercase">Platform Fee</span>
+                            <span className="text-ink font-semibold">
+                              ₹{((order.pricingSnapshot.platformFeePaise ?? 0) / 100).toFixed(2)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] block uppercase">GST (5%)</span>
+                            <span className="text-ink font-semibold">₹{(order.pricingSnapshot.taxPaise / 100).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Shopper Delivery Note */}
+                    {order.deliveryNote && (
+                      <div className="p-2.5 rounded-xl border border-amber-500/20 bg-amber-500/5 text-xs">
+                        <div className="flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400 mb-0.5 text-[11px]">
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Shopper Delivery Note:</span>
+                        </div>
+                        <p className="text-ink font-mono text-[11px] italic">"{order.deliveryNote}"</p>
+                      </div>
+                    )}
 
                     {/* Stepper visualization */}
                     <div className="pt-2 border-t border-brd/60">

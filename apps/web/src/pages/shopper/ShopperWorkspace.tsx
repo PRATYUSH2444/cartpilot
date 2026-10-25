@@ -443,6 +443,25 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
+  const handleUpdateDeliveryNote = async (deliveryNote: string) => {
+    if (!token) return;
+    if (cart) {
+      setCart({ ...cart, deliveryNote });
+    }
+    try {
+      await fetch(`${API_BASE}/cart/delivery-note`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ deliveryNote }),
+      });
+    } catch (err) {
+      console.error('Failed to update delivery note', err);
+    }
+  };
+
   const handleRemoveItem = async (productId: string) => {
     if (!token) return;
     setIsLoading(true);
@@ -1091,6 +1110,8 @@ export const ShopperWorkspace: React.FC = () => {
                 cardData={msg.cardData as ProposalPayload}
                 onAddToCart={handleAddToCart}
                 onAddAllToCart={handleAddProposedItems}
+                cartItems={cart?.items}
+                onUpdateQuantity={handleUpdateQuantity}
                 title="Recipe Ingredients Proposal"
               />
             </div>
@@ -1122,6 +1143,9 @@ export const ShopperWorkspace: React.FC = () => {
                 orderNumber={(msg.cardData as PaymentOrderState).order.orderNumber}
                 razorpayOrderId={(msg.cardData as PaymentOrderState).razorpay.orderId}
                 amountPaise={(msg.cardData as PaymentOrderState).razorpay.amountPaise}
+                items={(msg.cardData as PaymentOrderState).order.items}
+                pricing={(msg.cardData as PaymentOrderState).order.pricingSnapshot}
+                deliveryNote={(msg.cardData as PaymentOrderState).order.deliveryNote}
                 onVerifySuccess={handleVerifyPaymentSuccess}
                 onVerifyFail={handleSimulateTamperPayment}
                 isLoading={isLoading}
@@ -1361,6 +1385,7 @@ export const ShopperWorkspace: React.FC = () => {
                   onRemoveItem={handleRemoveItem}
                   onClearCart={handleClearCart}
                   onInitiateCheckout={handleInitiateCheckout}
+                  onUpdateDeliveryNote={handleUpdateDeliveryNote}
                   lampStatus={currentLamp.status}
                   lampReasonCode={currentLamp.reasonCode}
                   lampReasonText={currentLamp.reasonText}

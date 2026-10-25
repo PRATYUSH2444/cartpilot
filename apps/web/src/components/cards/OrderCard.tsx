@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   RefreshCw,
   Hash,
+  FileText,
 } from 'lucide-react';
 import { OrderData, ProofVerificationResult } from '../../types';
 
@@ -168,14 +169,39 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </div>
           <div className="flex justify-between">
             <span>Delivery Fee:</span>
-            <span className="font-mono">₹{deliveryRupees}</span>
+            <span className="font-mono">
+              {pricingSnapshot.deliveryFeePaise === 0 ? 'FREE' : `₹${deliveryRupees}`}
+            </span>
           </div>
+          {(pricingSnapshot.platformFeePaise ?? 0) > 0 && (
+            <div className="flex justify-between">
+              <span>Platform Fee:</span>
+              <span className="font-mono">₹{((pricingSnapshot.platformFeePaise ?? 0) / 100).toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span>Tax (5% GST):</span>
             <span className="font-mono">₹{taxRupees}</span>
           </div>
+          {(pricingSnapshot.discountPaise ?? 0) > 0 && (
+            <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+              <span>Discount:</span>
+              <span className="font-mono">-₹{((pricingSnapshot.discountPaise ?? 0) / 100).toFixed(2)}</span>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Shopper Delivery Note */}
+      {order.deliveryNote && (
+        <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 text-xs mb-4">
+          <div className="flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400 mb-1">
+            <FileText className="w-3.5 h-3.5" />
+            <span>Delivery Instructions:</span>
+          </div>
+          <p className="text-ink font-mono text-[11px] italic">"{order.deliveryNote}"</p>
+        </div>
+      )}
 
       {/* Shipping Address Snapshot */}
       <div className="p-3 rounded-xl border border-brd bg-paper/40 text-xs mb-4">
