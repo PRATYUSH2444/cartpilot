@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, CheckCircle2, AlertTriangle, Sliders, Sparkles, Play, Zap, Users } from 'lucide-react';
 import { MandateRules, PolicyEvaluation } from '../../types';
+import { API_BASE } from '../../config/api';
 
 interface RulesCardProps {
   rules: MandateRules;
@@ -67,7 +68,7 @@ export const RulesCard: React.FC<RulesCardProps> = ({
     async (rupees: number) => {
       setIsSimulating(true);
       try {
-        const res = await fetch('http://localhost:5000/api/v1/policy/simulate', {
+        const res = await fetch(`${API_BASE}/policy/simulate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ amountPaise: Math.round(rupees * 100) }),

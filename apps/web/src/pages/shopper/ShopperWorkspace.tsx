@@ -6,6 +6,14 @@ import { ApprovalCard } from '../../components/cards/ApprovalCard';
 import { PaymentCard } from '../../components/cards/PaymentCard';
 import { OrderCard } from '../../components/cards/OrderCard';
 import { DecisionLamp } from '../../components/DecisionLamp';
+import { DeliveryChip } from '../../components/shopper/DeliveryChip';
+import { StickyCartBar } from '../../components/shopper/StickyCartBar';
+import { BottomTabBar, TabKey } from '../../components/shopper/BottomTabBar';
+import { ProductSheet } from '../../components/shopper/ProductSheet';
+import { BrowseSheet } from '../../components/shopper/BrowseSheet';
+import { ContextPanel } from '../../components/shopper/ContextPanel';
+import { OrdersSheet } from '../../components/shopper/OrdersSheet';
+import { RulesSheet } from '../../components/shopper/RulesSheet';
 import { useAuth } from '../../context/AuthContext';
 import {
   CartData,
@@ -15,6 +23,7 @@ import {
   ChatMessage,
   LampStatus,
   ToolCallItem,
+  Product,
 } from '../../types';
 import {
   Bot,
@@ -111,6 +120,14 @@ export const ShopperWorkspace: React.FC = () => {
   const [activePaymentOrder, setActivePaymentOrder] = useState<PaymentOrderState | null>(null);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState<boolean>(false);
   const [isMandateModalOpen, setIsMandateModalOpen] = useState<boolean>(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductSheetOpen, setIsProductSheetOpen] = useState<boolean>(false);
+  const [isBrowseSheetOpen, setIsBrowseSheetOpen] = useState<boolean>(false);
+  const [isOrdersSheetOpen, setIsOrdersSheetOpen] = useState<boolean>(false);
+  const [isRulesSheetOpen, setIsRulesSheetOpen] = useState<boolean>(false);
+  const [isContextPanelCollapsed, setIsContextPanelCollapsed] = useState<boolean>(false);
+  const [activeMobileTab, setActiveMobileTab] = useState<TabKey>('chat');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [feedbackBanner, setFeedbackBanner] = useState<{
     type: 'success' | 'error';
@@ -244,6 +261,93 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
+  const handleSelectTab = (tab: TabKey) => {
+    setActiveMobileTab(tab);
+    if (tab === 'chat') {
+      setIsBrowseSheetOpen(false);
+      setIsCartDrawerOpen(false);
+      setIsOrdersSheetOpen(false);
+      setIsRulesSheetOpen(false);
+    } else if (tab === 'browse') {
+      setIsBrowseSheetOpen(true);
+      setIsCartDrawerOpen(false);
+      setIsOrdersSheetOpen(false);
+      setIsRulesSheetOpen(false);
+    } else if (tab === 'cart') {
+      setIsCartDrawerOpen(true);
+      setIsBrowseSheetOpen(false);
+      setIsOrdersSheetOpen(false);
+      setIsRulesSheetOpen(false);
+    } else if (tab === 'orders') {
+      setIsOrdersSheetOpen(true);
+      setIsBrowseSheetOpen(false);
+      setIsCartDrawerOpen(false);
+      setIsRulesSheetOpen(false);
+    } else if (tab === 'rules') {
+      setIsRulesSheetOpen(true);
+      setIsBrowseSheetOpen(false);
+      setIsCartDrawerOpen(false);
+      setIsOrdersSheetOpen(false);
+    }
+  };
+
+  const handleReorder = async (pastOrder: OrderData) => {
+    if (!token || !pastOrder.items || pastOrder.items.length === 0) return;
+    try {
+      setIsLoading(true);
+      const toAdd = pastOrder.items.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+      }));
+      await handleAddProposedItems(toAdd);
+      setIsOrdersSheetOpen(false);
+      setIsCartDrawerOpen(true);
+      showBanner('success', `Added ${toAdd.length} items from #${pastOrder.orderNumber} to cart`);
+    } catch {
+      showBanner('error', 'Failed to reorder items');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateCustomLimits = async (
+    autoApprovePaise: number,
+    perOrderPaise: number,
+    dailyPaise: number
+  ) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE}/mandate`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          autoApproveUpToPaise: autoApprovePaise,
+          perOrderCapPaise: perOrderPaise,
+          dailyBudgetPaise: dailyPaise,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMandate(data.data.mandate);
+        await evaluatePolicy(token);
+        showBanner('success', 'Custom spending mandate limits saved');
+      } else {
+        showBanner('error', 'Failed to update spending limits');
+      }
+    } catch {
+      showBanner('error', 'Network error saving limits');
+    }
+  };
+
+  const handleViewProductInChat = (prod: Product) => {
+    setIsProductSheetOpen(false);
+    setComposerText(`Tell me recipe ideas and nutritional benefits for ${prod.name}`);
+    composerRef.current?.focus();
+  };
+
   const evaluatePolicy = useCallback(async (authToken: string) => {
     try {
       const res = await fetch(`${API_BASE}/policy/evaluate`, {
@@ -263,10 +367,11 @@ export const ShopperWorkspace: React.FC = () => {
     const init = async () => {
       if (!token) return;
       try {
-        const [cartRes, mandateRes, orderRes] = await Promise.all([
+        const [cartRes, mandateRes, orderRes, catalogRes] = await Promise.all([
           fetch(`${API_BASE}/cart`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE}/mandate`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE}/orders`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE}/catalog?limit=50`),
         ]);
 
         if (cartRes.ok) {
@@ -280,6 +385,10 @@ export const ShopperWorkspace: React.FC = () => {
         if (orderRes.ok) {
           const d = await orderRes.json();
           setOrders(d.data || []);
+        }
+        if (catalogRes.ok) {
+          const d = await catalogRes.json();
+          setProducts(d.data || []);
         }
 
         await evaluatePolicy(token);
@@ -1264,35 +1373,43 @@ export const ShopperWorkspace: React.FC = () => {
       {/* Main chat area */}
       <div className="flex-1 flex flex-col min-w-0 relative">
         {/* Top bar */}
-        <div className="h-14 flex items-center justify-between px-4 border-b border-[--line] bg-[--surface] flex-shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="h-14 flex items-center justify-between px-3 sm:px-4 border-b border-[--line] bg-[--surface] flex-shrink-0 gap-2 relative z-10">
+          <div className="flex items-center gap-2 min-w-0 overflow-hidden">
             <button
-              className="md:hidden p-2 text-[--mut] hover:text-[--ink] transition-colors"
+              className="md:hidden p-2 text-[--mut] hover:text-[--ink] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer flex-shrink-0"
               onClick={() => setSidebarOpen(true)}
+              aria-label="Open conversation sidebar"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="hidden md:flex items-center gap-2 text-sm">
-              <div className="w-2 h-2 rounded-full bg-[--go]" />
-              <span className="text-[--mut]">
-                {chatSessions.find((s) => s._id === activeChatSessionId)?.title || 'CartPilot'}
-              </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 font-medium border border-amber-500/20">
-                Test mode: Estimated, simulated LLM
-              </span>
-            </div>
+            <DeliveryChip
+              address="Indiranagar, Bengaluru · 560038"
+              etaText="Delivery in about 30 min (estimated, simulated)"
+            />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0 z-20">
+            {/* Quick Browse button on mobile/tablet/laptop */}
+            <button
+              data-testid="header-browse-btn"
+              onClick={() => setIsBrowseSheetOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-chip border border-brd bg-paper hover:bg-paper/80 text-ink text-xs font-semibold cursor-pointer min-h-[38px]"
+              aria-label="Browse Catalog"
+            >
+              <Search className="w-3.5 h-3.5 text-acc" />
+              <span className="hidden sm:inline">Browse</span>
+            </button>
+
             {/* Cart button */}
             <button
               onClick={() => setIsCartDrawerOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-chip bg-[--brand] text-white text-xs font-semibold hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-chip bg-[--brand] text-white text-xs font-semibold hover:opacity-90 transition-opacity min-h-[38px] cursor-pointer"
+              aria-label={`Open cart with ${cartItemCount} items`}
             >
               <ShoppingBag className="w-4 h-4" />
               <span className="hidden sm:inline">{cart?.pricing?.formatted?.total || '₹0.00'}</span>
               {cartItemCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-white text-[--brand] text-[11px] font-bold flex items-center justify-center">
+                <span className="w-5 h-5 rounded-full bg-white text-[--brand] text-[11px] font-bold flex items-center justify-center font-mono">
                   {cartItemCount}
                 </span>
               )}
@@ -1300,12 +1417,12 @@ export const ShopperWorkspace: React.FC = () => {
           </div>
         </div>
 
-        {/* Chat canvas */}
+        {/* Chat canvas (max 760px on laptop) */}
         <div className="flex-1 overflow-y-auto">
           {messages.length === 0 ? (
             EmptyState
           ) : (
-            <div className="max-w-3xl mx-auto w-full px-4 py-6 space-y-4">
+            <div className="max-w-[760px] mx-auto w-full px-4 py-6 space-y-4">
               {messages.map(renderMessage)}
               {isLoading && (
                 <div className="flex gap-3 items-end">
@@ -1325,9 +1442,98 @@ export const ShopperWorkspace: React.FC = () => {
           )}
         </div>
 
-        {/* Composer */}
-        <div className="max-w-3xl mx-auto w-full">{ComposerBar}</div>
+        {/* Sticky Cart Bar on Mobile */}
+        <div className="md:hidden">
+          <StickyCartBar cart={cart} onOpenCart={() => setIsCartDrawerOpen(true)} />
+        </div>
+
+        {/* Composer (sits above mobile tab bar) */}
+        <div className="max-w-[760px] mx-auto w-full mb-[56px] md:mb-0">{ComposerBar}</div>
       </div>
+
+      {/* Mobile Bottom Tab Bar */}
+      <BottomTabBar
+        activeTab={activeMobileTab}
+        onSelectTab={handleSelectTab}
+        cart={cart}
+      />
+
+      {/* Laptop / Desktop Persistent Context Panel (360px) */}
+      <div className="hidden lg:block h-full">
+        <ContextPanel
+          cart={cart}
+          mandate={mandate}
+          lampStatus={currentLamp.status}
+          lampReasonCode={currentLamp.reasonCode}
+          lampReasonText={currentLamp.reasonText}
+          isCollapsed={isContextPanelCollapsed}
+          onToggleCollapse={() => setIsContextPanelCollapsed(!isContextPanelCollapsed)}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+          onClearCart={handleClearCart}
+          onInitiateCheckout={handleInitiateCheckout}
+          onUpdateDeliveryNote={handleUpdateDeliveryNote}
+          onOpenRules={() => setIsRulesSheetOpen(true)}
+          onOpenBrowse={() => setIsBrowseSheetOpen(true)}
+          isLoading={isLoading}
+        />
+      </div>
+
+      {/* Browse Sheet / Modal */}
+      <BrowseSheet
+        isOpen={isBrowseSheetOpen}
+        onClose={() => {
+          setIsBrowseSheetOpen(false);
+          setActiveMobileTab('chat');
+        }}
+        products={products}
+        cart={cart}
+        orders={orders}
+        onAddToCart={handleAddToCart}
+        onUpdateQuantity={handleUpdateQuantity}
+        onSelectProduct={(p) => {
+          setSelectedProduct(p);
+          setIsProductSheetOpen(true);
+        }}
+        isSlideOver={typeof window !== 'undefined' && window.innerWidth >= 641 && window.innerWidth < 1024}
+      />
+
+      {/* Product Detail Sheet */}
+      <ProductSheet
+        product={selectedProduct}
+        isOpen={isProductSheetOpen}
+        onClose={() => setIsProductSheetOpen(false)}
+        cartItems={cart?.items}
+        onAddToCart={handleAddToCart}
+        onUpdateQuantity={handleUpdateQuantity}
+        onViewInChat={handleViewProductInChat}
+      />
+
+      {/* Orders & Delivery Tracking Sheet */}
+      <OrdersSheet
+        isOpen={isOrdersSheetOpen}
+        onClose={() => {
+          setIsOrdersSheetOpen(false);
+          setActiveMobileTab('chat');
+        }}
+        orders={orders}
+        onReorder={handleReorder}
+        isSlideOver={typeof window !== 'undefined' && window.innerWidth >= 641}
+      />
+
+      {/* Spending Rules Sheet */}
+      <RulesSheet
+        isOpen={isRulesSheetOpen}
+        onClose={() => {
+          setIsRulesSheetOpen(false);
+          setActiveMobileTab('chat');
+        }}
+        mandate={mandate}
+        cart={cart}
+        onSelectPreset={handleSelectPreset}
+        onUpdateCustomLimits={handleUpdateCustomLimits}
+        isSlideOver={typeof window !== 'undefined' && window.innerWidth >= 641}
+      />
 
       {/* ── Feedback Banner ───────────────────────────────────────────────── */}
       {feedbackBanner && (
@@ -1363,7 +1569,10 @@ export const ShopperWorkspace: React.FC = () => {
                 )}
               </div>
               <button
-                onClick={() => setIsCartDrawerOpen(false)}
+                onClick={() => {
+                  setIsCartDrawerOpen(false);
+                  setActiveMobileTab('chat');
+                }}
                 className="p-1.5 text-[--mut] hover:text-[--ink] transition-colors"
               >
                 <X className="w-5 h-5" />

@@ -30,14 +30,14 @@ export default defineConfig({
       cwd: rootDir,
       url: 'http://localhost:5000/api/v1/health',
       reuseExistingServer: true,
-      timeout: 30000,
+      timeout: 60000,
     },
     {
       command: 'npm run dev --workspace=@cartpilot/web',
       cwd: rootDir,
       url: 'http://localhost:5173',
       reuseExistingServer: true,
-      timeout: 30000,
+      timeout: 60000,
     },
   ],
 });

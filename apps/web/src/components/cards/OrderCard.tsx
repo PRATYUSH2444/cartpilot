@@ -11,6 +11,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { OrderData, ProofVerificationResult } from '../../types';
+import { API_BASE } from '../../config/api';
 
 interface OrderCardProps {
   order: OrderData;
@@ -38,7 +39,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     setIsVerifying(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/v1/orders/${order._id}/proof/verify`, {
+      const res = await fetch(`${API_BASE}/orders/${order._id}/proof/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
