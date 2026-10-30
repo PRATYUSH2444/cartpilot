@@ -36,9 +36,9 @@ export const ProofCard: React.FC<ProofCardProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-display font-bold text-ink tracking-tight">
-              Cryptographic Audit Proof
+              Audit Integrity Receipt
             </h3>
-            <p className="text-xs text-mut font-mono">Immutable SHA-256 Hash Chain</p>
+            <p className="text-xs text-mut font-mono">Tamper-Evident SHA-256 Ledger (Internal Verification)</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -128,8 +128,8 @@ export const ProofCard: React.FC<ProofCardProps> = ({
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin' : ''}`} />
           {isVerifying
-            ? 'Verifying Entire Cryptographic Chain...'
-            : 'Verify Full Hash Chain Integrity'}
+            ? 'Verifying Ledger Integrity Chain...'
+            : 'Verify Ledger Integrity Receipt'}
         </button>
       )}
 

@@ -1067,7 +1067,7 @@ export const ShopperWorkspace: React.FC = () => {
       {/* Bottom nav links */}
       <div className="border-t border-[--line] px-2 py-3 space-y-0.5">
         <button
-          onClick={() => setIsCartDrawerOpen(true)}
+          onClick={() => setIsOrdersSheetOpen(true)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-xs text-[--mut] hover:bg-[--surface-2] hover:text-[--ink] transition-colors"
         >
           <Package className="w-4 h-4" />
@@ -1324,6 +1324,7 @@ export const ShopperWorkspace: React.FC = () => {
         <textarea
           ref={composerRef}
           rows={1}
+          aria-label="Ask CartPilot for groceries, recipes, or spending rules"
           value={composerText}
           onChange={(e) => {
             setComposerText(e.target.value);
@@ -1335,14 +1336,15 @@ export const ShopperWorkspace: React.FC = () => {
           placeholder="Ask CartPilot for vegetarian groceries, recipes, or spending rules…"
           disabled={isLoading}
           className="flex-1 resize-none rounded-[var(--radius-input)] bg-[--surface] border border-[--line] px-4 py-2.5 text-sm text-[--ink] placeholder:text-[--mut] focus:outline-none focus:ring-2 focus:ring-[--brand]/20 focus:border-[--brand]/40 transition-all overflow-hidden leading-relaxed"
-          style={{ minHeight: '42px', maxHeight: '96px' }}
+          style={{ minHeight: '44px', maxHeight: '96px' }}
         />
 
         {isLoading ? (
           <button
             onClick={() => setIsLoading(false)}
-            className="w-10 h-10 flex-shrink-0 rounded-[var(--radius-input)] bg-[--stop] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] flex-shrink-0 rounded-[var(--radius-input)] bg-[--stop] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
             title="Stop"
+            aria-label="Stop generation"
           >
             <Square className="w-4 h-4" />
           </button>
@@ -1350,8 +1352,9 @@ export const ShopperWorkspace: React.FC = () => {
           <button
             onClick={() => handleSendMessage(composerText)}
             disabled={!composerText.trim()}
-            className="w-10 h-10 flex-shrink-0 rounded-[var(--radius-input)] bg-[--brand] text-white flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-40"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] flex-shrink-0 rounded-[var(--radius-input)] bg-[--brand] text-white flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-40 cursor-pointer"
             title="Send (Enter)"
+            aria-label="Send message"
           >
             <Send className="w-4 h-4" />
           </button>
@@ -1396,7 +1399,7 @@ export const ShopperWorkspace: React.FC = () => {
             <button
               data-testid="header-browse-btn"
               onClick={() => setIsBrowseSheetOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-chip border border-brd bg-paper hover:bg-paper/80 text-ink text-xs font-semibold cursor-pointer min-h-[38px]"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-chip border border-brd bg-paper hover:bg-paper/80 text-ink text-xs font-semibold cursor-pointer min-h-[44px] min-w-[44px]"
               aria-label="Browse Catalog"
             >
               <Search className="w-3.5 h-3.5 text-acc" />
@@ -1406,8 +1409,8 @@ export const ShopperWorkspace: React.FC = () => {
             {/* Cart button */}
             <button
               onClick={() => setIsCartDrawerOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-chip bg-[--brand] text-white text-xs font-semibold hover:opacity-90 transition-opacity min-h-[38px] cursor-pointer"
-              aria-label={`Open cart with ${cartItemCount} items`}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-chip bg-[--brand] text-white text-xs font-semibold hover:opacity-90 transition-opacity min-h-[44px] min-w-[44px] cursor-pointer"
+              aria-label={`Cart ${cart?.pricing?.formatted?.total || '₹0.00'}, ${cartItemCount} items`}
             >
               <ShoppingBag className="w-4 h-4" />
               <span className="hidden sm:inline">{cart?.pricing?.formatted?.total || '₹0.00'}</span>

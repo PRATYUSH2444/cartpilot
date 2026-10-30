@@ -49,6 +49,7 @@ export interface PricingBreakdown {
   taxPaise: number;
   discountPaise: number;
   totalPaise: number;
+  freeDeliveryThresholdPaise?: number;
   formatted: {
     subtotal: string;
     deliveryFee: string;
@@ -56,6 +57,7 @@ export interface PricingBreakdown {
     tax: string;
     discount: string;
     total: string;
+    freeDeliveryThreshold?: string;
   };
 }
 
@@ -197,6 +199,7 @@ export interface OrderData {
     taxPaise: number;
     discountPaise: number;
     totalPaise: number;
+  freeDeliveryThresholdPaise?: number;
   };
   shippingAddressSnapshot: {
     street: string;
@@ -255,6 +258,7 @@ export interface RecipeBudgetComparison {
   budgetPaise: number;
   subtotalPaise: number;
   totalPaise: number;
+  freeDeliveryThresholdPaise?: number;
   isOverBudget: boolean;
   differencePaise: number;
 }
@@ -275,6 +279,7 @@ export interface OrderProofBundle {
     taxPaise: number;
     discountPaise: number;
     totalPaise: number;
+  freeDeliveryThresholdPaise?: number;
   };
   shippingAddress: {
     street: string;

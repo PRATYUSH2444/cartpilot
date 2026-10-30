@@ -159,8 +159,8 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
                 <span
                   className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
                     isAutoApprovable
-                      ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                      : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                      ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20'
+                      : 'bg-amber-500/10 text-amber-800 border border-amber-500/20'
                   }`}
                 >
                   {isAutoApprovable ? 'Auto-Approvable' : 'Requires Approval'}
@@ -222,7 +222,7 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
               <label className="text-xs font-bold text-ink uppercase tracking-wider font-mono">
                 2. Fine-Tune Canonical Limits
               </label>
-              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+              <span className="text-[10px] font-mono text-emerald-800 dark:text-emerald-300 font-bold">
                 Deterministic Policy
               </span>
             </div>
@@ -235,6 +235,7 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
               </div>
               <input
                 type="range"
+                aria-label="Auto-Approve Up To in Rupees"
                 min="100"
                 max="5000"
                 step="50"
@@ -255,6 +256,7 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
               </div>
               <input
                 type="range"
+                aria-label="Per-Order Hard Cap in Rupees"
                 min="500"
                 max="10000"
                 step="100"
@@ -275,6 +277,7 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
               </div>
               <input
                 type="range"
+                aria-label="Daily Spending Budget in Rupees"
                 min="1000"
                 max="25000"
                 step="250"
@@ -289,7 +292,7 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
 
             <div className="pt-2 flex items-center justify-between">
               {successMsg && (
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 font-mono">
+                <span className="text-xs text-emerald-800 dark:text-emerald-300 font-bold flex items-center gap-1 font-mono">
                   <Check className="w-3.5 h-3.5" /> Mandate updated!
                 </span>
               )}
@@ -297,7 +300,7 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
                 <button
                   onClick={handleSaveCustom}
                   disabled={isSaving}
-                  className="py-2 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-display font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer min-h-[40px]"
+                  className="py-2.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-display font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer min-h-[44px]"
                 >
                   <Lock className="w-3.5 h-3.5" />
                   <span>{isSaving ? 'Updating...' : 'Save Limits'}</span>

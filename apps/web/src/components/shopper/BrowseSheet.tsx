@@ -136,7 +136,7 @@ export const BrowseSheet: React.FC<BrowseSheetProps> = ({
 
   // Free delivery progress
   const subtotalPaise = cart?.pricing.subtotalPaise || 0;
-  const freeDeliveryThresholdPaise = 50000; // ₹500
+  const freeDeliveryThresholdPaise = cart?.pricing.freeDeliveryThresholdPaise || 50000;
   const isFreeDelivery = subtotalPaise >= freeDeliveryThresholdPaise;
   const remainingForFreePaise = Math.max(0, freeDeliveryThresholdPaise - subtotalPaise);
   const freeDeliveryPercent = Math.min(100, Math.round((subtotalPaise / freeDeliveryThresholdPaise) * 100));
@@ -214,7 +214,7 @@ export const BrowseSheet: React.FC<BrowseSheetProps> = ({
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-full font-sans text-xs whitespace-nowrap transition-all cursor-pointer min-h-[36px] ${
+                className={`px-3.5 py-2 rounded-full font-sans text-xs whitespace-nowrap transition-all cursor-pointer min-h-[44px] flex items-center justify-center ${
                   selectedCategory === cat.id
                     ? 'bg-emerald-700 text-white font-bold shadow-xs'
                     : 'bg-paper/70 border border-brd text-mut hover:text-ink hover:border-acc/40'
@@ -286,7 +286,8 @@ export const BrowseSheet: React.FC<BrowseSheetProps> = ({
                           <div className="flex items-center justify-between border border-brd rounded-lg bg-card overflow-hidden">
                             <button
                               onClick={() => onUpdateQuantity(p._id, qty - 1)}
-                              className="p-1 hover:bg-paper text-mut hover:text-ink cursor-pointer min-h-[32px] min-w-[28px] flex items-center justify-center"
+                              aria-label="Decrease quantity"
+                              className="p-1 hover:bg-paper text-mut hover:text-ink cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
                             >
                               <Minus className="w-2.5 h-2.5" />
                             </button>
@@ -294,7 +295,8 @@ export const BrowseSheet: React.FC<BrowseSheetProps> = ({
                             <button
                               onClick={() => onUpdateQuantity(p._id, qty + 1)}
                               disabled={qty >= p.availableStock}
-                              className="p-1 hover:bg-paper text-mut hover:text-ink cursor-pointer disabled:opacity-40 min-h-[32px] min-w-[28px] flex items-center justify-center"
+                              aria-label="Increase quantity"
+                              className="p-1 hover:bg-paper text-mut hover:text-ink cursor-pointer disabled:opacity-40 min-h-[44px] min-w-[44px] flex items-center justify-center"
                             >
                               <Plus className="w-2.5 h-2.5" />
                             </button>
@@ -303,7 +305,7 @@ export const BrowseSheet: React.FC<BrowseSheetProps> = ({
                           <button
                             onClick={() => onAddToCart(p._id, 1)}
                             disabled={p.availableStock <= 0}
-                            className="w-full py-1 px-2 rounded-lg bg-card border border-brd hover:border-acc text-ink hover:text-acc font-semibold text-[10px] flex items-center justify-center gap-1 cursor-pointer min-h-[32px]"
+                            className="w-full py-2 px-2 rounded-lg bg-card border border-brd hover:border-acc text-ink hover:text-acc font-semibold text-xs flex items-center justify-center gap-1 cursor-pointer min-h-[44px]"
                           >
                             <Plus className="w-2.5 h-2.5" /> Add
                           </button>
@@ -405,7 +407,7 @@ export const BrowseSheet: React.FC<BrowseSheetProps> = ({
                           <div className="flex items-center justify-between border border-emerald-600/40 rounded-xl bg-card overflow-hidden">
                             <button
                               onClick={() => onUpdateQuantity(p._id, qty - 1)}
-                              className="p-1.5 hover:bg-paper text-mut hover:text-ink cursor-pointer min-h-[38px] min-w-[34px] flex items-center justify-center"
+                              className="p-1.5 hover:bg-paper text-mut hover:text-ink cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
                               aria-label="Decrease quantity"
                             >
                               <Minus className="w-3.5 h-3.5" />
@@ -416,7 +418,7 @@ export const BrowseSheet: React.FC<BrowseSheetProps> = ({
                             <button
                               onClick={() => onUpdateQuantity(p._id, qty + 1)}
                               disabled={qty >= p.availableStock}
-                              className="p-1.5 hover:bg-paper text-mut hover:text-ink cursor-pointer disabled:opacity-40 min-h-[38px] min-w-[34px] flex items-center justify-center"
+                              className="p-1.5 hover:bg-paper text-mut hover:text-ink cursor-pointer disabled:opacity-40 min-h-[44px] min-w-[44px] flex items-center justify-center"
                               aria-label="Increase quantity"
                             >
                               <Plus className="w-3.5 h-3.5" />
@@ -426,7 +428,7 @@ export const BrowseSheet: React.FC<BrowseSheetProps> = ({
                           <button
                             onClick={() => onAddToCart(p._id, 1)}
                             disabled={isOutOfStock}
-                            className="w-full py-2 px-3 rounded-xl bg-card border border-brd hover:border-acc text-ink hover:text-acc font-display font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer min-h-[38px] disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="w-full py-2 px-3 rounded-xl bg-card border border-brd hover:border-acc text-ink hover:text-acc font-display font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer min-h-[44px] disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             <Plus className="w-3.5 h-3.5" /> Add
                           </button>

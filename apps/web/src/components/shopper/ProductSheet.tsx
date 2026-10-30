@@ -59,10 +59,10 @@ export const ProductSheet: React.FC<ProductSheetProps> = ({
         {/* Header / Close button */}
         <div className="flex items-center justify-between px-6 pt-3 pb-2">
           <div className="flex items-center gap-2">
-            <span className="w-3.5 h-3.5 border border-emerald-600 flex items-center justify-center p-[2px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+            <span className="w-3.5 h-3.5 border border-emerald-700 flex items-center justify-center p-[2px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-700" />
             </span>
-            <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-bold">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-800 dark:text-emerald-300 font-bold">
               100% Vegetarian
             </span>
           </div>
@@ -115,7 +115,7 @@ export const ProductSheet: React.FC<ProductSheetProps> = ({
             {/* Merchant Attribution */}
             <div className="mt-3 p-3 rounded-xl border border-brd bg-paper/60 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 flex items-center justify-center">
                   <Leaf className="w-4 h-4" />
                 </div>
                 <div>
@@ -123,7 +123,7 @@ export const ProductSheet: React.FC<ProductSheetProps> = ({
                   <span className="text-xs font-bold text-ink font-display">Sold by {merchantName}</span>
                 </div>
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-500/20">
                 Verified Seller
               </span>
             </div>
@@ -143,7 +143,7 @@ export const ProductSheet: React.FC<ProductSheetProps> = ({
                     ? 'bg-rose-500/10 text-rose-600 border-rose-500/20'
                     : product.availableStock <= 5
                       ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20'
                 }`}
               >
                 {isOutOfStock

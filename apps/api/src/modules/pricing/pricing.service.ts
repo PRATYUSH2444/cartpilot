@@ -1,3 +1,5 @@
+import { env } from '../../config/env.config.js';
+
 export interface PricingCalculationItem {
   productId: string;
   pricePaise: number;
@@ -11,6 +13,7 @@ export interface CalculatedPricing {
   taxPaise: number;
   discountPaise: number;
   totalPaise: number;
+  freeDeliveryThresholdPaise: number;
   formatted: {
     subtotal: string;
     deliveryFee: string;
@@ -18,12 +21,15 @@ export interface CalculatedPricing {
     tax: string;
     discount: string;
     total: string;
+    freeDeliveryThreshold: string;
   };
 }
 
 export class PricingService {
   // Free delivery threshold: ₹500 (50,000 paise)
-  public static readonly FREE_DELIVERY_THRESHOLD_PAISE = 50000;
+  public static get FREE_DELIVERY_THRESHOLD_PAISE(): number {
+    return env.FREE_DELIVERY_THRESHOLD_PAISE || 50000;
+  }
   // Standard delivery fee: ₹40 (4,000 paise)
   public static readonly STANDARD_DELIVERY_FEE_PAISE = 4000;
   // Grocery GST rate: 5%
@@ -84,6 +90,7 @@ export class PricingService {
       taxPaise,
       discountPaise: sanitizedDiscountPaise,
       totalPaise,
+      freeDeliveryThresholdPaise: this.FREE_DELIVERY_THRESHOLD_PAISE,
       formatted: {
         subtotal: this.formatPaise(subtotalPaise),
         deliveryFee: this.formatPaise(deliveryFeePaise),
@@ -91,6 +98,7 @@ export class PricingService {
         tax: this.formatPaise(taxPaise),
         discount: this.formatPaise(sanitizedDiscountPaise),
         total: this.formatPaise(totalPaise),
+        freeDeliveryThreshold: this.formatPaise(this.FREE_DELIVERY_THRESHOLD_PAISE),
       },
     };
   }

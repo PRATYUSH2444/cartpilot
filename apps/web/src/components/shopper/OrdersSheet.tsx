@@ -65,7 +65,7 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'DELIVERED':
-        return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
+        return 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/30';
       case 'CONFIRMED':
       case 'PACKING':
       case 'OUT_FOR_DELIVERY':
@@ -205,7 +205,7 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
                   <div className="flex items-center gap-2 pt-1">
                     <button
                       onClick={() => onReorder(order)}
-                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-display font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer min-h-[40px]"
+                      className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-display font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer min-h-[44px]"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                       <span>Buy Again</span>
@@ -214,20 +214,23 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
                     <button
                       onClick={() => handleVerifyProof(order._id)}
                       disabled={verifyingOrderId === order._id}
-                      className="py-2 px-3 rounded-xl border border-brd bg-card hover:bg-paper text-ink font-mono text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer min-h-[40px]"
+                      className="py-2.5 px-3 rounded-xl border border-brd bg-card hover:bg-paper text-ink font-mono text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer min-h-[44px]"
                     >
                       <ShieldCheck className="w-3.5 h-3.5 text-acc" />
-                      <span>{verifyingOrderId === order._id ? 'Verifying...' : 'Audit Proof'}</span>
+                      <span>{verifyingOrderId === order._id ? 'Verifying...' : 'Integrity Receipt'}</span>
                     </button>
                   </div>
 
                   {/* Proof Result Drawer if checked */}
                   {proof && (
                     <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 text-xs font-mono space-y-1">
-                      <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                      <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300 font-bold">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Cryptographic Ledger Verification Passed</span>
+                        <span>Order Record Integrity Receipt Verified</span>
                       </div>
+                      <p className="text-[10px] text-mut font-sans pt-0.5">
+                        Verifies order snapshot and audit ledger have not been altered on the server (internal integrity verification).
+                      </p>
                       <div className="text-[10px] text-mut space-y-0.5 pt-1">
                         <div>Verified Events: {proof.totalAuditEventsVerified}</div>
                         <div className="truncate">Snapshot Hash: {proof.canonicalSnapshotHash}</div>

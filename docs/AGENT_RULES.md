@@ -36,7 +36,7 @@ The final demo must visibly show:
 - **N3 Purchase-bound approval**
 - **N4 Budget-aware pack optimizer**
 - **N5 Price-drift guard**
-- **N6 Verifiable order proof**
+- **N6 Integrity receipt** (verifies order record has not been altered on the server; internal integrity verification, not independent proof)
 - **N7 Policy playground**
 - **N8 Agent transparency** ("why this item", price source stamps).
 

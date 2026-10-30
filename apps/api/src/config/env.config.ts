@@ -31,6 +31,7 @@ const envSchema = z
     RESERVATION_SWEEPER_INTERVAL_MS: z.coerce.number().default(60000),
     FEATURE_EMAIL_VERIFICATION: z.coerce.boolean().default(false),
     USE_IN_MEMORY_DB: z.coerce.boolean().default(false),
+    FREE_DELIVERY_THRESHOLD_PAISE: z.coerce.number().default(50000),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV === 'production') {

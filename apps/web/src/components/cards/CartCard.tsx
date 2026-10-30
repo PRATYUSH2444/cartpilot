@@ -29,10 +29,11 @@ export const CartCard: React.FC<CartCardProps> = ({
   isLoading = false,
 }) => {
   const { items, pricing } = cart;
+  const thresholdPaise = pricing.freeDeliveryThresholdPaise || 50000;
   const isFreeDelivery = pricing.deliveryFeePaise === 0 && pricing.subtotalPaise > 0;
-  const neededForFreeDeliveryPaise = Math.max(0, 50000 - pricing.subtotalPaise);
+  const neededForFreeDeliveryPaise = Math.max(0, thresholdPaise - pricing.subtotalPaise);
   const neededForFreeDeliveryRupees = (neededForFreeDeliveryPaise / 100).toFixed(2);
-  const freeDeliveryPercent = Math.min(100, Math.round((pricing.subtotalPaise / 50000) * 100));
+  const freeDeliveryPercent = Math.min(100, Math.round((pricing.subtotalPaise / thresholdPaise) * 100));
 
   return (
     <div className="w-full rounded-2xl border border-brd bg-card/85 dark:bg-card-top/85 backdrop-blur-xl p-5 shadow-lg shadow-black/5 transition-all">

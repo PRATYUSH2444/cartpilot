@@ -375,12 +375,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         </p>
       </div>
 
-      {/* 6. Novelty N6: Tamper-Evident Cryptographic Order Proof */}
+      {/* 6. Novelty N6: Tamper-Evident Integrity Receipt */}
       <div className="p-3.5 rounded-xl border border-purple-500/20 bg-purple-500/5 mb-4">
         <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
           <div className="flex items-center gap-1.5 text-xs font-bold text-ink font-display">
             <ShieldCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-            <span>Tamper-Evident Order Proof (N6)</span>
+            <span>Tamper-Evident Integrity Receipt (N6)</span>
           </div>
           <button
             onClick={handleVerifyProof}
@@ -388,7 +388,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm shadow-purple-600/20 cursor-pointer disabled:opacity-50 min-h-[36px]"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin' : ''}`} />
-            {isVerifying ? 'Auditing Ledger...' : 'Verify Cryptographic Proof'}
+            {isVerifying ? 'Auditing Ledger...' : 'Verify Integrity Receipt'}
           </button>
         </div>
 
@@ -403,7 +403,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           <div className="mt-2.5 pt-2.5 border-t border-purple-500/20 space-y-2 text-xs">
             <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-              <span>{proofResult.message || 'HMAC-SHA256 signature and audit chain verified'}</span>
+              <span>{proofResult.message || 'Order record integrity verified: snapshot and audit chain have not been altered'}</span>
             </div>
 
             <div className="space-y-1.5 font-mono text-[11px]">
@@ -456,8 +456,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </div>
         ) : (
           <p className="text-[11px] text-mut leading-relaxed">
-            Click above to cryptographically verify order contents against the SHA-256 snapshot,
-            confirm HMAC approval authorization, and walk the append-only audit chain.
+            Verify order integrity receipt: checks that the order record, line items, and audit ledger have not been altered since placement (internal server integrity verification, not independent third-party proof).
           </p>
         )}
       </div>

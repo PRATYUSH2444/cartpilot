@@ -213,11 +213,12 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
       {/* Shopper Delivery Note Input */}
       {items.length > 0 && (
         <div className="p-3 border-t border-brd bg-paper/30">
-          <label className="text-[10px] font-semibold text-ink flex items-center gap-1 mb-1 font-mono uppercase">
+          <label htmlFor="context-panel-delivery-note" className="text-[10px] font-semibold text-ink flex items-center gap-1 mb-1 font-mono uppercase">
             <FileText className="w-3 h-3 text-acc" />
             <span>Delivery Note</span>
           </label>
           <input
+            id="context-panel-delivery-note"
             type="text"
             value={cart?.deliveryNote || ''}
             onChange={(e) => onUpdateDeliveryNote(e.target.value)}
