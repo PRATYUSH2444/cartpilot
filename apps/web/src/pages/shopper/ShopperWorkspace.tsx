@@ -17,7 +17,6 @@ import { OrdersSheet } from '../../components/shopper/OrdersSheet';
 import { RulesSheet } from '../../components/shopper/RulesSheet';
 import { AddressModal } from '../../components/shopper/AddressModal';
 import { ProfileModal } from '../../components/shopper/ProfileModal';
-import { IntegrationsModal } from '../../components/shopper/IntegrationsModal';
 import { useAuth } from '../../context/AuthContext';
 import {
   CartData,
@@ -53,8 +52,6 @@ import {
   MapPin,
   Edit2,
   Trash2,
-  Cpu,
-  Key,
 } from 'lucide-react';
 import { API_BASE } from '../../config/api';
 
@@ -151,7 +148,6 @@ export const ShopperWorkspace: React.FC = () => {
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
-  const [isIntegrationsModalOpen, setIsIntegrationsModalOpen] = useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -1258,13 +1254,6 @@ export const ShopperWorkspace: React.FC = () => {
           <span>Rules</span>
         </button>
         <button
-          onClick={() => setIsIntegrationsModalOpen(true)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-xs text-[--mut] hover:bg-[--surface-2] hover:text-[--ink] transition-colors"
-        >
-          <Cpu className="w-4 h-4 text-emerald-500" />
-          <span>AI & Integrations</span>
-        </button>
-        <button
           onClick={() => setIsDark((d) => !d)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-xs text-[--mut] hover:bg-[--surface-2] hover:text-[--ink] transition-colors"
         >
@@ -1357,21 +1346,6 @@ export const ShopperWorkspace: React.FC = () => {
               }`}
             >
               <p>{msg.content}</p>
-
-              {!isUser &&
-                msg.content &&
-                (msg.content.includes('API key') ||
-                  msg.content.includes('AI Provider') ||
-                  msg.content.includes('Generative AI') ||
-                  msg.content.includes('unconfigured')) && (
-                  <button
-                    type="button"
-                    onClick={() => setIsIntegrationsModalOpen(true)}
-                    className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
-                  >
-                    <Key className="w-3.5 h-3.5" /> Configure AI Engine Key
-                  </button>
-                )}
 
               {/* Tool calls trace */}
               {msg.toolCalls && msg.toolCalls.length > 0 && (
@@ -1930,15 +1904,7 @@ export const ShopperWorkspace: React.FC = () => {
         onOpenAddresses={() => setIsAddressModalOpen(true)}
         onOpenOrders={() => setIsOrdersSheetOpen(true)}
         onOpenRules={() => setIsRulesSheetOpen(true)}
-        onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
         onLogout={() => logout()}
-      />
-
-      {/* ── External Integrations & AI Engine Modal ──────────────────────── */}
-      <IntegrationsModal
-        isOpen={isIntegrationsModalOpen}
-        onClose={() => setIsIntegrationsModalOpen(false)}
-        token={token}
       />
     </div>
   );

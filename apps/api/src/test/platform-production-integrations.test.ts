@@ -7,11 +7,14 @@ import { UserModel } from '../modules/users/user.model.js';
 import { AuthService } from '../modules/auth/auth.service.js';
 import { OtpVerificationModel } from '../modules/auth/otp.model.js';
 
-describe('Production Integrations, System Status, OTP, and Location Services', () => {
+describe('Production Integrations, System Status, RBAC Security, OTP, and Location Services', () => {
   const app = createApp();
 
   let user: any;
   let userToken: string;
+
+  let adminUser: any;
+  let adminToken: string;
 
   beforeAll(async () => {
     await setupTestDatabase();
@@ -27,15 +30,41 @@ describe('Production Integrations, System Status, OTP, and Location Services', (
       tokenVersion: 0,
     });
     userToken = AuthService.generateTokens(user).accessToken;
+
+    adminUser = await UserModel.create({
+      name: 'Super Admin',
+      email: 'admin.integrations@cartpilot.test',
+      passwordHash,
+      role: 'ADMIN',
+      isActive: true,
+      tokenVersion: 0,
+    });
+    adminToken = AuthService.generateTokens(adminUser).accessToken;
   });
 
   afterAll(async () => {
     await teardownTestDatabase();
   });
 
-  describe('1. System Integrations Diagnostics', () => {
-    it('should return live integration status for all 6 core services', async () => {
+  describe('1. Role Separation & Admin RBAC Enforcement on System Integrations', () => {
+    it('should reject unauthenticated access to system integrations with 401', async () => {
       const res = await request(app).get('/api/v1/system/integrations');
+      expect(res.status).toBe(401);
+    });
+
+    it('should reject CUSTOMER access to system integrations with 403 Forbidden', async () => {
+      const res = await request(app)
+        .get('/api/v1/system/integrations')
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error?.message || res.body.error).toContain('not authorized');
+    });
+
+    it('should allow ADMIN to retrieve live integration status for all 6 core services', async () => {
+      const res = await request(app)
+        .get('/api/v1/system/integrations')
+        .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -48,11 +77,17 @@ describe('Production Integrations, System Status, OTP, and Location Services', (
       expect(services).toContain('EMAIL');
       expect(services).toContain('SMS');
       expect(services).toContain('MAPS');
+
+      // Verify that no raw credentials or database host addresses are leaked
+      const dbItem = res.body.data.integrations.find((i: any) => i.category === 'DATABASE');
+      expect(dbItem.details).not.toContain('mongodb://');
+      expect(dbItem.details).not.toContain('27017');
     });
 
-    it('should allow setting runtime LLM key dynamically', async () => {
+    it('should allow ADMIN to update runtime LLM key dynamically', async () => {
       const res = await request(app)
         .post('/api/v1/system/integrations/config')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({
           provider: 'gemini',
           apiKey: 'AIzaSyFakeDynamicRuntimeKeyForTestingOnly_123',
@@ -63,9 +98,22 @@ describe('Production Integrations, System Status, OTP, and Location Services', (
       expect(res.body.data.provider).toBe('gemini');
     });
 
-    it('should reject invalid provider in runtime key config', async () => {
+    it('should reject CUSTOMER attempt to configure integrations with 403', async () => {
       const res = await request(app)
         .post('/api/v1/system/integrations/config')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          provider: 'gemini',
+          apiKey: 'hacked_key',
+        });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should reject invalid provider in runtime key config for ADMIN', async () => {
+      const res = await request(app)
+        .post('/api/v1/system/integrations/config')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({
           provider: 'anthropic_unsupported',
           apiKey: 'test_key',
@@ -136,7 +184,6 @@ describe('Production Integrations, System Status, OTP, and Location Services', (
       expect(res.body.data).toBeDefined();
       expect(typeof res.body.data.lat).toBe('number');
       expect(typeof res.body.data.lng).toBe('number');
-      // Latitude for Bangalore is ~12.9
       expect(res.body.data.lat).toBeGreaterThan(12.0);
       expect(res.body.data.lat).toBeLessThan(13.5);
     });

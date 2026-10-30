@@ -22,6 +22,16 @@ import {
   PlayCircle,
   UserPlus,
   KeyRound,
+  Cpu,
+  CreditCard,
+  Mail,
+  MessageSquare,
+  MapPin,
+  Eye,
+  EyeOff,
+  Sparkles,
+  Zap,
+  AlertTriangle,
 } from 'lucide-react';
 import { API_BASE } from '../../config/api';
 
@@ -69,8 +79,18 @@ export const AdminWorkspace: React.FC = () => {
   const [merchantsList, setMerchantsList] = useState<AdminMerchantData[]>([]);
   const [systemHealth, setSystemHealth] = useState<{ status: string; uptime: number } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'audit' | 'policy' | 'approvals' | 'merchants'>('audit');
+  const [activeTab, setActiveTab] = useState<'audit' | 'policy' | 'approvals' | 'merchants' | 'integrations'>('audit');
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Integrations & Cloud Infrastructure State (Super Admin Only)
+  const [integrationsList, setIntegrationsList] = useState<any[]>([]);
+  const [isLoadingIntegrations, setIsLoadingIntegrations] = useState<boolean>(false);
+  const [selectedProvider, setSelectedProvider] = useState<'gemini' | 'openai'>('gemini');
+  const [apiKeyInput, setApiKeyInput] = useState<string>('');
+  const [showKeyInput, setShowKeyInput] = useState<boolean>(false);
+  const [isSavingKey, setIsSavingKey] = useState<boolean>(false);
+  const [isTestingKey, setIsTestingKey] = useState<boolean>(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string; latencyMs?: number } | null>(null);
 
   // Admin Provisioning state
   const [adminName, setAdminName] = useState('');
@@ -138,6 +158,98 @@ export const AdminWorkspace: React.FC = () => {
       setIsLoading(false);
     }
   }, [token]);
+
+  const fetchIntegrations = useCallback(async () => {
+    if (!token) return;
+    setIsLoadingIntegrations(true);
+    try {
+      const res = await fetch(`${API_BASE}/system/integrations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setIntegrationsList(data.data?.integrations || []);
+      } else {
+        showBanner('error', 'Failed to fetch platform integrations status');
+      }
+    } catch {
+      showBanner('error', 'Network error fetching integrations');
+    } finally {
+      setIsLoadingIntegrations(false);
+    }
+  }, [token]);
+
+  const handleTestKey = async () => {
+    if (!token || !apiKeyInput.trim()) {
+      showBanner('error', 'Please enter an API key to test live connectivity');
+      return;
+    }
+    setIsTestingKey(true);
+    setTestResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/system/integrations/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          provider: selectedProvider,
+          apiKey: apiKeyInput.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTestResult(data.data);
+        showBanner('success', `Live connection test passed (${data.data?.latencyMs || 0}ms)`);
+      } else {
+        setTestResult({
+          success: false,
+          message: data.error || data.data?.message || 'Connection test failed',
+        });
+        showBanner('error', 'Live connection test failed');
+      }
+    } catch {
+      setTestResult({ success: false, message: 'Network error communicating with test endpoint' });
+      showBanner('error', 'Network error testing API key');
+    } finally {
+      setIsTestingKey(false);
+    }
+  };
+
+  const handleSaveKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !apiKeyInput.trim()) return;
+    setIsSavingKey(true);
+    try {
+      const res = await fetch(`${API_BASE}/system/integrations/config`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          provider: selectedProvider,
+          apiKey: apiKeyInput.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showBanner(
+          'success',
+          `Activated ${selectedProvider === 'gemini' ? 'Google Gemini' : 'OpenAI'} provider key on server!`
+        );
+        setApiKeyInput('');
+        fetchIntegrations();
+      } else {
+        showBanner('error', data.error || 'Failed to update provider configuration');
+      }
+    } catch {
+      showBanner('error', 'Network error saving provider configuration');
+    } finally {
+      setIsSavingKey(false);
+    }
+  };
 
   useEffect(() => {
     fetchAdminData();
@@ -449,6 +561,20 @@ export const AdminWorkspace: React.FC = () => {
           >
             <Lock className="w-4 h-4" />
             <span>Approvals Queue ({pendingApprovals.length})</span>
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('integrations');
+              fetchIntegrations();
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === 'integrations'
+                ? 'bg-acc text-white shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-paper'
+            }`}
+          >
+            <Cpu className="w-4 h-4" />
+            <span>Integrations & Cloud AI</span>
           </button>
         </div>
 
@@ -806,6 +932,256 @@ export const AdminWorkspace: React.FC = () => {
                 </div>
               ))
             )}
+          </div>
+        )}
+        {/* Tab 5: Central Integrations & Cloud Infrastructure (Super Admin Only) */}
+        {activeTab === 'integrations' && (
+          <div className="space-y-6">
+            <div className="p-6 bg-card border border-brd rounded-2xl shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-brd">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-2xl">
+                    <Zap className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-ink flex items-center gap-2">
+                      Central Integrations & Cloud Infrastructure
+                    </h3>
+                    <p className="text-xs text-mut">
+                      Super Admin control center for Managed Cloud services (MongoDB Atlas, Render API, Gemini/OpenAI, Resend, Twilio, Razorpay)
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchIntegrations}
+                  disabled={isLoadingIntegrations}
+                  className="px-3.5 py-2 rounded-xl border border-brd hover:bg-paper text-xs font-semibold text-ink flex items-center gap-1.5 transition-colors self-start sm:self-auto"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingIntegrations ? 'animate-spin' : ''}`} />
+                  <span>Refresh Status</span>
+                </button>
+              </div>
+
+              {/* Service Cards Grid */}
+              <div>
+                <h4 className="text-xs font-semibold text-mut uppercase tracking-wider mb-3">
+                  Live Managed Cloud Ecosystem ({integrationsList.length} services)
+                </h4>
+                {isLoadingIntegrations && integrationsList.length === 0 ? (
+                  <div className="py-12 flex flex-col items-center justify-center gap-2 text-mut">
+                    <RefreshCw className="w-5 h-5 animate-spin text-acc" />
+                    <span className="text-xs">Querying platform services...</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {integrationsList.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="p-4 rounded-xl border border-brd bg-paper/50 flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2.5">
+                              <div className="p-2 bg-card rounded-lg border border-brd shadow-xs">
+                                {item.category === 'DATABASE' && <Database className="w-4 h-4 text-indigo-500" />}
+                                {item.category === 'AI' && <Cpu className="w-4 h-4 text-emerald-500" />}
+                                {item.category === 'PAYMENTS' && <CreditCard className="w-4 h-4 text-blue-500" />}
+                                {item.category === 'EMAIL' && <Mail className="w-4 h-4 text-amber-500" />}
+                                {item.category === 'SMS' && <MessageSquare className="w-4 h-4 text-teal-500" />}
+                                {item.category === 'MAPS' && <MapPin className="w-4 h-4 text-rose-500" />}
+                              </div>
+                              <div>
+                                <div className="font-semibold text-ink text-xs">{item.service}</div>
+                                <div className="text-[11px] text-mut">{item.provider}</div>
+                              </div>
+                            </div>
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                item.status === 'CONNECTED'
+                                  ? 'bg-emerald-500/15 text-emerald-600 border border-emerald-500/20'
+                                  : item.status === 'CONFIGURED'
+                                  ? 'bg-blue-500/15 text-blue-600 border border-blue-500/20'
+                                  : 'bg-amber-500/15 text-amber-600 border border-amber-500/20'
+                              }`}
+                            >
+                              {item.status === 'CONNECTED' ? (
+                                <CheckCircle2 className="w-3 h-3" />
+                              ) : (
+                                <AlertTriangle className="w-3 h-3" />
+                              )}
+                              {item.status === 'CONNECTED' ? 'Live' : item.status === 'CONFIGURED' ? 'Configured' : 'Setup Required'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-mut mt-2">{item.details}</p>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-brd/60 text-[10px] text-mut font-medium flex items-center justify-between">
+                          <span>Security Boundary:</span>
+                          <span className="font-mono text-emerald-600 dark:text-emerald-400">Server-Side Secret</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Generative AI Provider Configuration */}
+              <div className="pt-6 border-t border-brd space-y-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-emerald-500" />
+                  <div>
+                    <h4 className="font-bold text-sm text-ink">Super Admin Generative AI Control</h4>
+                    <p className="text-xs text-mut">
+                      Select provider and activate live LLM keys with runtime reloading (no server restart required)
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSaveKey} className="space-y-4 max-w-2xl">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProvider('gemini')}
+                      className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all ${
+                        selectedProvider === 'gemini'
+                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 ring-2 ring-emerald-500/20'
+                          : 'border-brd hover:bg-paper text-mut'
+                      }`}
+                    >
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 flex items-center justify-center">
+                        {selectedProvider === 'gemini' && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-ink">Google Gemini</div>
+                        <div className="text-[11px] text-mut">gemini-2.5-flash / Native Function Calling</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProvider('openai')}
+                      className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all ${
+                        selectedProvider === 'openai'
+                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 ring-2 ring-emerald-500/20'
+                          : 'border-brd hover:bg-paper text-mut'
+                      }`}
+                    >
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 flex items-center justify-center">
+                        {selectedProvider === 'openai' && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-ink">OpenAI Platform</div>
+                        <div className="text-[11px] text-mut">gpt-4o-mini / Function Calling</div>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1.5">
+                      {selectedProvider === 'gemini'
+                        ? 'Google AI Studio Secret Key'
+                        : 'OpenAI Platform Secret Key'}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showKeyInput ? 'text' : 'password'}
+                        value={apiKeyInput}
+                        onChange={(e) => setApiKeyInput(e.target.value)}
+                        placeholder={
+                          selectedProvider === 'gemini'
+                            ? 'Paste AIzaSy... key from Google AI Studio'
+                            : 'Paste sk-proj-... key from OpenAI Platform'
+                        }
+                        className="w-full pl-3.5 pr-24 py-2.5 text-xs bg-paper border border-brd rounded-xl font-mono text-ink placeholder:text-mut focus:outline-hidden focus:border-acc"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowKeyInput(!showKeyInput)}
+                          className="p-1.5 text-mut hover:text-ink rounded"
+                        >
+                          {showKeyInput ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {testResult && (
+                    <div
+                      className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
+                        testResult.success
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-200'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-200'
+                      }`}
+                    >
+                      {testResult.success ? (
+                        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-500" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-500" />
+                      )}
+                      <div>
+                        <div className="font-semibold">
+                          {testResult.success
+                            ? `Live Connectivity Verified (${testResult.latencyMs}ms)`
+                            : 'Connectivity Test Failed'}
+                        </div>
+                        <div className="mt-0.5 opacity-90">{testResult.message}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleTestKey}
+                      disabled={isTestingKey || !apiKeyInput.trim()}
+                      className="px-4 py-2 text-xs font-semibold rounded-xl border border-brd hover:bg-paper text-ink disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                    >
+                      {isTestingKey ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Testing...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-3.5 h-3.5 text-emerald-500" /> Test Live Connectivity
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={isSavingKey || !apiKeyInput.trim()}
+                      className="px-5 py-2 text-xs font-semibold rounded-xl bg-acc hover:opacity-90 text-white disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm"
+                    >
+                      {isSavingKey ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Applying...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5" /> Save & Activate Provider
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Security Boundary Notice */}
+              <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-900 dark:text-purple-200 text-xs flex items-start gap-3">
+                <Lock className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold">Enterprise Security & Role Isolation Guarantee:</span>
+                  <p className="mt-0.5 opacity-90">
+                    Integration settings, API credentials, and database addresses are strictly restricted to Super Admin role tokens. Customers and Merchants are physically isolated from these endpoints and will receive 403 Forbidden upon any attempt.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>

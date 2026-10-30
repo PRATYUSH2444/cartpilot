@@ -9,15 +9,10 @@ export interface IntegrationStatus {
   provider: string;
   details: string;
   isLive: boolean;
-  maskedKey?: string;
+  isConfigured: boolean;
 }
 
 export class SystemService {
-  public static maskKey(key?: string): string | undefined {
-    if (!key || key.length < 8) return undefined;
-    return `${key.substring(0, 4)}...${key.substring(key.length - 4)}`;
-  }
-
   public static async getIntegrationsStatus(): Promise<IntegrationStatus[]> {
     const dbState = mongoose.connection.readyState;
     const isDbConnected = dbState === 1;
@@ -29,9 +24,10 @@ export class SystemService {
       status: isDbConnected ? 'CONNECTED' : 'ERROR',
       provider: 'MongoDB',
       details: isDbConnected
-        ? `Connected to ${mongoose.connection.host || 'cluster'}:${mongoose.connection.port || 27017}/${mongoose.connection.name}`
-        : 'Disconnected from database cluster',
+        ? 'Connected to primary database cluster (Operational & Healthy)'
+        : 'Database cluster is unreachable or disconnected',
       isLive: isDbConnected,
+      isConfigured: isDbConnected,
     };
 
     // 2. AI / LLM
@@ -47,9 +43,9 @@ export class SystemService {
         category: 'AI',
         status: 'CONNECTED',
         provider: `Google Gemini (${env.GEMINI_MODEL})`,
-        details: 'Live inference active with native function calling',
+        details: 'Live inference active with native function calling and tool execution',
         isLive: true,
-        maskedKey: this.maskKey(geminiKey),
+        isConfigured: true,
       };
     } else if (env.AI_PROVIDER === 'openai' && hasOpenAI) {
       aiStatus = {
@@ -57,9 +53,9 @@ export class SystemService {
         category: 'AI',
         status: 'CONNECTED',
         provider: `OpenAI (${env.OPENAI_MODEL})`,
-        details: 'Live inference active with native function calling',
+        details: 'Live inference active with native function calling and tool execution',
         isLive: true,
-        maskedKey: this.maskKey(openaiKey),
+        isConfigured: true,
       };
     } else {
       aiStatus = {
@@ -67,8 +63,9 @@ export class SystemService {
         category: 'AI',
         status: 'UNCONFIGURED',
         provider: env.AI_PROVIDER === 'openai' ? 'OpenAI' : 'Google Gemini',
-        details: 'API key is missing or unconfigured. Paste key to enable live inference.',
+        details: 'API key is unconfigured. Configure key in Admin Settings to activate real AI reasoning.',
         isLive: false,
+        isConfigured: false,
       };
     }
 
@@ -84,10 +81,10 @@ export class SystemService {
       status: isLiveRazorpay ? 'CONFIGURED' : 'UNCONFIGURED',
       provider: 'Razorpay',
       details: isLiveRazorpay
-        ? 'Razorpay gateway orders and cryptographic HMAC verification active'
-        : 'Running in simulated test transaction mode (rzp_test keys placeholder)',
+        ? 'Payment gateway active with cryptographic HMAC signature verification'
+        : 'Running in simulated test transaction mode (Placeholder keys)',
       isLive: isLiveRazorpay,
-      maskedKey: this.maskKey(env.RAZORPAY_KEY_ID),
+      isConfigured: isLiveRazorpay,
     };
 
     // 4. Email
@@ -101,10 +98,10 @@ export class SystemService {
       status: hasResend ? 'CONFIGURED' : 'UNCONFIGURED',
       provider: 'Resend',
       details: hasResend
-        ? `Live email delivery active via Resend (${env.RESEND_FROM_EMAIL})`
+        ? 'Transactional email delivery active via Resend provider'
         : 'Console delivery fallback active. Configure RESEND_API_KEY for carrier dispatch.',
       isLive: hasResend,
-      maskedKey: this.maskKey(env.RESEND_API_KEY),
+      isConfigured: hasResend,
     };
 
     // 5. SMS / OTP
@@ -115,9 +112,10 @@ export class SystemService {
       status: hasTwilio ? 'CONFIGURED' : 'UNCONFIGURED',
       provider: 'Twilio',
       details: hasTwilio
-        ? `Carrier SMS dispatch active via ${env.TWILIO_PHONE_NUMBER}`
+        ? 'Carrier SMS dispatch active for mobile verification OTPs'
         : 'Development OTP generation active. Configure Twilio SID & Token for carrier SMS.',
       isLive: hasTwilio,
+      isConfigured: hasTwilio,
     };
 
     // 6. Maps & Geocoding
@@ -131,7 +129,7 @@ export class SystemService {
         ? 'Google Maps Geocoding & Distance Matrix active'
         : 'OpenStreetMap Nominatim active (No API key needed, real coordinates)',
       isLive: true,
-      maskedKey: this.maskKey(env.GOOGLE_MAPS_API_KEY),
+      isConfigured: true,
     };
 
     return [dbStatus, aiStatus, paymentStatus, emailStatus, smsStatus, mapsStatus];

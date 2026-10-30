@@ -23,12 +23,12 @@ export class OpenAIProvider implements LLMProvider {
     tools: AgentToolDeclaration[],
     systemPrompt: string
   ): Promise<LLMResponse> {
-    if (!this.apiKey || this.apiKey.trim().length === 0) {
-      const errorMsg =
-        'Live OpenAI inference is currently unconfigured. Please provide a valid OPENAI_API_KEY in apps/api/.env or configure it via the Integrations panel.';
-      logger.warn(errorMsg);
+    if (!this.apiKey || this.apiKey.trim().length === 0 || this.apiKey === 'your_openai_api_key_here') {
+      logger.warn(
+        'Live OpenAI inference is unconfigured: OPENAI_API_KEY is missing or placeholder. Return customer-friendly maintenance notice.'
+      );
       return {
-        text: `⚠️ **AI Provider Notice**: ${errorMsg}`,
+        text: 'Hello! I am currently undergoing brief maintenance while our catalog systems sync. In the meantime, you can explore all fresh vegetarian products, categories, and recipes directly from the Browse menu!',
         isSimulated: false,
         provider: 'openai',
       };

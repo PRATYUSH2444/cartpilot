@@ -24,9 +24,9 @@ export class GeminiProvider implements LLMProvider {
     systemPrompt: string
   ): Promise<LLMResponse> {
     if (!this.apiKey || this.apiKey.trim().length === 0 || this.apiKey === 'your_gemini_api_key_here') {
-      const errorMsg =
-        'Live Gemini inference is currently unconfigured. Please provide a valid GEMINI_API_KEY in apps/api/.env or configure it via the Integrations panel to enable real LLM inference.';
-      logger.warn(errorMsg);
+      logger.warn(
+        'Live Gemini inference is unconfigured: GEMINI_API_KEY is missing or placeholder. Return customer-friendly maintenance notice.'
+      );
 
       if (env.NODE_ENV === 'production') {
         throw new AppError(
@@ -37,7 +37,7 @@ export class GeminiProvider implements LLMProvider {
       }
 
       return {
-        text: `⚠️ **AI Provider Notice**: ${errorMsg}`,
+        text: 'Hello! I am currently undergoing brief maintenance while our catalog systems sync. In the meantime, you can explore all fresh vegetarian products, categories, and recipes directly from the Browse menu!',
         isSimulated: false,
         provider: 'gemini',
       };

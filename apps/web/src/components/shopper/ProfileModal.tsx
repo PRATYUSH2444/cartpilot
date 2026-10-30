@@ -16,7 +16,6 @@ import {
   Leaf,
   Bell,
   Lock,
-  Cpu,
 } from 'lucide-react';
 import { UserProfile, UserGender, INotificationPreferences } from '../../types';
 import { API_BASE } from '../../config/api';
@@ -28,7 +27,6 @@ interface ProfileModalProps {
   onOpenAddresses?: () => void;
   onOpenOrders?: () => void;
   onOpenRules?: () => void;
-  onOpenIntegrations?: () => void;
   onLogout?: () => void;
 }
 
@@ -39,7 +37,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onOpenAddresses,
   onOpenOrders,
   onOpenRules,
-  onOpenIntegrations,
   onLogout,
 }) => {
   const [activeTab, setActiveTab] = useState<'PROFILE' | 'SECURITY' | 'PREFERENCES'>('PROFILE');
@@ -676,7 +673,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             <h4 className="text-[11px] font-semibold text-mut uppercase tracking-wider mb-2">
               Account Shortcuts
             </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {onOpenAddresses && (
                 <button
                   type="button"
@@ -705,16 +702,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 >
                   <Shield className="w-4 h-4 text-purple-600" />
                   <span>Rules</span>
-                </button>
-              )}
-              {onOpenIntegrations && (
-                <button
-                  type="button"
-                  onClick={() => { onClose(); onOpenIntegrations(); }}
-                  className="p-2.5 rounded-xl border border-brd hover:border-acc/40 hover:bg-acc/5 text-left flex items-center gap-2 text-xs text-ink transition-colors"
-                >
-                  <Cpu className="w-4 h-4 text-emerald-600" />
-                  <span>AI & Cloud</span>
                 </button>
               )}
             </div>
