@@ -15,7 +15,7 @@ import {
   resetPassword,
 } from './auth.controller.js';
 import { validate } from '../../common/middleware/validate.js';
-import { authenticate, requireRole } from '../../common/middleware/auth.js';
+import { authenticate, authenticateOptional, requireRole } from '../../common/middleware/auth.js';
 import { authRateLimiter } from '../../common/middleware/rate-limiter.js';
 import {
   registerSchema,
@@ -37,8 +37,8 @@ authRouter.post('/refresh', validate(refreshSchema), refresh);
 authRouter.post('/forgot-password', authRateLimiter, validate(forgotPasswordSchema), forgotPassword);
 authRouter.post('/reset-password', authRateLimiter, validate(resetPasswordSchema), resetPassword);
 
-// Authenticated Session & Account Management
-authRouter.post('/logout', authenticate, logout);
+// Authenticated Session & Account Management (logout accepts optional auth to cleanly clear expired sessions)
+authRouter.post('/logout', authenticateOptional, logout);
 authRouter.post('/logout-all', authenticate, logoutAll);
 authRouter.get('/me', authenticate, getMe);
 authRouter.get('/sessions', authenticate, getSessions);

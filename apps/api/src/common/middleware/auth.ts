@@ -139,3 +139,74 @@ export function requireMerchantPermission(permission: MerchantPermission) {
     next();
   };
 }
+
+/**
+ * Role & permission gate for order fulfillment simulation:
+ * - Admins can advance any order.
+ * - Merchant staff members must possess the 'orders.update' permission.
+ * - Store owners, managers, and shoppers (for their own orders in demo simulation) are authorized.
+ * - OrderService.getOrderById strictly enforces tenant isolation and owner matching.
+ */
+export function requireOrderFulfillmentPermission(
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+): void {
+  if (!req.user) {
+    throw new UnauthorizedError('User authentication required');
+  }
+
+  if (req.user.role === 'ADMIN') {
+    return next();
+  }
+
+  if (req.user.role === 'MERCHANT' && req.user.isStaff) {
+    if (!req.user.staffPermissions || !req.user.staffPermissions.includes('orders.update')) {
+      throw new ForbiddenError(
+        "You do not have permission to perform this action. Required permission: 'orders.update'."
+      );
+    }
+  }
+
+  next();
+}
+
+/**
+ * Optional authentication middleware:
+ * Populates req.user if a valid Bearer token is provided, but does not throw if missing or expired.
+ * Useful for teardown/logout endpoints that should clear cookies regardless of token expiry.
+ */
+export async function authenticateOptional(
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+): Promise<void> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as TokenPayload;
+    const user = await UserModel.findById(decoded.userId).select('tokenVersion isActive isSuspended');
+    if (user && user.isActive && !user.isSuspended && user.tokenVersion === decoded.tokenVersion) {
+      req.user = {
+        id: decoded.userId,
+        userId: decoded.userId,
+        email: decoded.email,
+        role: decoded.role,
+        merchantId: decoded.merchantId,
+        isStaff: decoded.isStaff,
+        staffPermissions: decoded.staffPermissions,
+      };
+    }
+    next();
+  } catch {
+    next();
+  }
+}

@@ -136,7 +136,12 @@ export const MerchantWorkspace: React.FC = () => {
       });
       if (staffRes.ok) {
         const sData = await staffRes.json();
-        setStaffList(sData.data || []);
+        const list = Array.isArray(sData.data)
+          ? sData.data
+          : Array.isArray(sData.data?.staff)
+            ? sData.data.staff
+            : [];
+        setStaffList(list);
       }
     } catch {
       showBanner('error', 'Failed to refresh merchant portal data');
@@ -519,7 +524,7 @@ export const MerchantWorkspace: React.FC = () => {
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Staff & Permissions ({staffList.length})</span>
+            <span>Staff & Permissions ({Array.isArray(staffList) ? staffList.length : 0})</span>
           </button>
         </div>
 
@@ -909,17 +914,17 @@ export const MerchantWorkspace: React.FC = () => {
             {/* Existing Staff Members List */}
             <div className="bg-card border border-brd rounded-2xl overflow-hidden shadow-sm">
               <div className="p-4 border-b border-brd">
-                <h3 className="font-bold text-sm text-ink">Active Store Staff ({staffList.length})</h3>
+                <h3 className="font-bold text-sm text-ink">Active Store Staff ({Array.isArray(staffList) ? staffList.length : 0})</h3>
                 <p className="text-xs text-mut">Authorized operators with role-gated store capabilities</p>
               </div>
 
-              {staffList.length === 0 ? (
+              {!Array.isArray(staffList) || staffList.length === 0 ? (
                 <div className="p-8 text-center text-mut text-xs">
                   No staff members invited yet. Use the form above to add operators to your store.
                 </div>
               ) : (
                 <div className="divide-y divide-brd">
-                  {staffList.map((staff) => (
+                  {(Array.isArray(staffList) ? staffList : []).map((staff) => (
                     <div
                       key={staff.id}
                       className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-paper/30 transition-colors"

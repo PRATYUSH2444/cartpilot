@@ -107,7 +107,7 @@ const QUICK_REPLIES_AFTER_PROPOSAL = [
 ];
 
 export const ShopperWorkspace: React.FC = () => {
-  const { token, user, logout } = useAuth();
+  const { token, user, logout, refreshSession } = useAuth();
 
   const [isDark, setIsDark] = useState<boolean>(() =>
     document.documentElement.classList.contains('dark')
@@ -374,6 +374,14 @@ export const ShopperWorkspace: React.FC = () => {
           fetch(`${API_BASE}/orders`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE}/catalog?limit=50`),
         ]);
+
+        if (cartRes.status === 401 || mandateRes.status === 401 || orderRes.status === 401) {
+          const refreshed = await refreshSession();
+          if (!refreshed) {
+            logout();
+          }
+          return;
+        }
 
         if (cartRes.ok) {
           const d = await cartRes.json();
