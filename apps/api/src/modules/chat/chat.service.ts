@@ -104,6 +104,8 @@ export class ChatService {
                 items: order.items,
                 pricingSnapshot: order.pricingSnapshot,
                 deliveryNote: order.deliveryNote,
+        shippingAddressSnapshot: order.shippingAddressSnapshot,
+        _id: order._id,
               };
             }
           } else if (msg.resourceType === 'payment') {
@@ -298,6 +300,8 @@ export class ChatService {
         items: order.items,
         pricingSnapshot: order.pricingSnapshot,
         deliveryNote: order.deliveryNote,
+        shippingAddressSnapshot: order.shippingAddressSnapshot,
+        _id: order._id,
       };
       if (!content) {
         content = `Order #${order.orderNumber} confirmed (${order.items.length} items, ₹${(order.pricingSnapshot.totalPaise / 100).toFixed(2)})`;

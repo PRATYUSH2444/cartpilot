@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { SessionEndedModal } from './components/SessionEndedModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
@@ -39,8 +40,9 @@ const RootRedirect: React.FC = () => {
 
 export function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <ErrorBoundary fallbackTitle="Application Workspace Encountered an Error">
+      <AuthProvider>
+        <BrowserRouter>
         {/* Session expiry re-auth dialog */}
         <SessionEndedModal />
 
@@ -97,6 +99,7 @@ export function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

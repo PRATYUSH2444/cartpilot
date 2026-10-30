@@ -5,6 +5,7 @@ import { CartCard } from '../../components/cards/CartCard';
 import { ApprovalCard } from '../../components/cards/ApprovalCard';
 import { PaymentCard } from '../../components/cards/PaymentCard';
 import { OrderCard } from '../../components/cards/OrderCard';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { DecisionLamp } from '../../components/DecisionLamp';
 import { DeliveryChip } from '../../components/shopper/DeliveryChip';
 import { StickyCartBar } from '../../components/shopper/StickyCartBar';
@@ -1264,11 +1265,13 @@ export const ShopperWorkspace: React.FC = () => {
 
           {msg.cardType === 'order' && Boolean(msg.cardData) && (
             <div className="w-full max-w-lg">
-              <OrderCard
-                order={msg.cardData as OrderData}
-                onAdvanceFulfillment={handleAdvanceFulfillment}
-                isLoading={isLoading}
-              />
+              <ErrorBoundary fallbackTitle="Could not display order card">
+                <OrderCard
+                  order={msg.cardData as OrderData}
+                  onAdvanceFulfillment={handleAdvanceFulfillment}
+                  isLoading={isLoading}
+                />
+              </ErrorBoundary>
             </div>
           )}
 
