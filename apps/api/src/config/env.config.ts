@@ -24,9 +24,21 @@ const envSchema = z
     RAZORPAY_KEY_SECRET: z.string().default('rzp_test_secret_placeholder'),
     RAZORPAY_WEBHOOK_SECRET: z.string().default('rzp_test_webhook_placeholder'),
 
-    AI_PROVIDER: z.enum(['gemini', 'openai', 'mock']).default('mock'),
+    AI_PROVIDER: z.enum(['gemini', 'openai', 'mock']).default('gemini'),
     GEMINI_API_KEY: z.string().optional(),
-    AI_TIMEOUT_MS: z.coerce.number().default(15000),
+    GEMINI_MODEL: z.string().default('gemini-1.5-flash'),
+    OPENAI_API_KEY: z.string().optional(),
+    OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+    AI_TIMEOUT_MS: z.coerce.number().default(20000),
+
+    RESEND_API_KEY: z.string().optional(),
+    RESEND_FROM_EMAIL: z.string().default('CartPilot <onboarding@resend.dev>'),
+
+    TWILIO_ACCOUNT_SID: z.string().optional(),
+    TWILIO_AUTH_TOKEN: z.string().optional(),
+    TWILIO_PHONE_NUMBER: z.string().optional(),
+
+    GOOGLE_MAPS_API_KEY: z.string().optional(),
 
     RESERVATION_SWEEPER_INTERVAL_MS: z.coerce.number().default(60000),
     FEATURE_EMAIL_VERIFICATION: z.coerce.boolean().default(false),

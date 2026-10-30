@@ -5,18 +5,17 @@ import {
   LLMResponse,
   AgentToolCall,
 } from './llm-provider.interface.js';
-import { MockLLMProvider } from './mock-llm.provider.js';
 import { logger } from '../../common/logging/logger.js';
 import { env } from '../../config/env.config.js';
 import { AppError } from '../../common/errors/app-error.js';
 
 export class GeminiProvider implements LLMProvider {
   private readonly apiKey: string;
-  private readonly fallbackProvider: MockLLMProvider;
+  private readonly model: string;
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || '';
-    this.fallbackProvider = new MockLLMProvider();
+  constructor(apiKey?: string, model?: string) {
+    this.apiKey = apiKey || env.GEMINI_API_KEY || '';
+    this.model = model || env.GEMINI_MODEL || 'gemini-1.5-flash';
   }
 
   public async generateResponse(
@@ -24,7 +23,11 @@ export class GeminiProvider implements LLMProvider {
     tools: AgentToolDeclaration[],
     systemPrompt: string
   ): Promise<LLMResponse> {
-    if (!this.apiKey || this.apiKey.trim().length === 0) {
+    if (!this.apiKey || this.apiKey.trim().length === 0 || this.apiKey === 'your_gemini_api_key_here') {
+      const errorMsg =
+        'Live Gemini inference is currently unconfigured. Please provide a valid GEMINI_API_KEY in apps/api/.env or configure it via the Integrations panel to enable real LLM inference.';
+      logger.warn(errorMsg);
+
       if (env.NODE_ENV === 'production') {
         throw new AppError(
           'AI_CONFIGURATION_ERROR',
@@ -32,19 +35,23 @@ export class GeminiProvider implements LLMProvider {
           500
         );
       }
-      logger.info('No GEMINI_API_KEY configured; utilizing resilient mock LLM engine');
-      return this.fallbackProvider.generateResponse(messages, tools, systemPrompt);
+
+      return {
+        text: `⚠️ **AI Provider Notice**: ${errorMsg}`,
+        isSimulated: false,
+        provider: 'gemini',
+      };
     }
 
     try {
-      // Convert tools to Gemini function declarations
+      // 1. Convert tools to Gemini function declarations
       const functionDeclarations = tools.map((t) => ({
         name: t.name,
         description: t.description,
         parameters: t.parameters,
       }));
 
-      // Convert conversation history to Gemini contents format
+      // 2. Convert conversation history to Gemini contents format
       const contents = messages
         .filter((m) => m.role !== 'system')
         .map((m) => {
@@ -92,10 +99,10 @@ export class GeminiProvider implements LLMProvider {
           parts: [{ text: systemPrompt }],
         },
         contents,
-        tools: [{ functionDeclarations }],
+        tools: functionDeclarations.length > 0 ? [{ functionDeclarations }] : undefined,
       };
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,22 +111,32 @@ export class GeminiProvider implements LLMProvider {
 
       if (!response.ok) {
         const errorText = await response.text();
+        logger.error(
+          { status: response.status, errorText },
+          'Gemini API call failed'
+        );
+
+        let parsedError = errorText;
+        try {
+          const errJson = JSON.parse(errorText);
+          parsedError = errJson.error?.message || errorText;
+        } catch {
+          // ignore parse error
+        }
+
         if (env.NODE_ENV === 'production') {
-          logger.error(
-            { status: response.status, errorText },
-            'Gemini API call failed in production environment'
-          );
           throw new AppError(
             'AI_SERVICE_UNAVAILABLE',
-            'Conversational AI service is temporarily unavailable. Please try again.',
+            `Conversational AI service error from Gemini API: ${parsedError}`,
             503
           );
         }
-        logger.warn(
-          { status: response.status, errorText },
-          'Gemini API call failed, falling back to mock provider in development'
-        );
-        return this.fallbackProvider.generateResponse(messages, tools, systemPrompt);
+
+        return {
+          text: `⚠️ **Gemini API Error (${response.status})**: ${parsedError}. Please verify that GEMINI_API_KEY is active and has access to ${this.model}.`,
+          isSimulated: false,
+          provider: 'gemini',
+        };
       }
 
       const data = (await response.json()) as any;
@@ -148,18 +165,14 @@ export class GeminiProvider implements LLMProvider {
         isSimulated: false,
         provider: 'gemini',
       };
-    } catch (err) {
-      if (env.NODE_ENV === 'production') {
-        logger.error({ err }, 'Error communicating with Gemini API in production environment');
-        if (err instanceof AppError) throw err;
-        throw new AppError(
-          'AI_SERVICE_UNAVAILABLE',
-          'Conversational AI service is temporarily unavailable. Please try again.',
-          503
-        );
-      }
-      logger.error({ err }, 'Error communicating with Gemini API, falling back to mock provider');
-      return this.fallbackProvider.generateResponse(messages, tools, systemPrompt);
+    } catch (err: any) {
+      logger.error({ err }, 'Error communicating with Gemini API');
+      if (err instanceof AppError) throw err;
+      throw new AppError(
+        'AI_SERVICE_UNAVAILABLE',
+        `Conversational AI service error: ${err.message || 'Unknown network error'}`,
+        503
+      );
     }
   }
 }

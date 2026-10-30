@@ -3,8 +3,10 @@ import mongoose from 'mongoose';
 import { PaymentModel } from './payment.model.js';
 import { ProcessedWebhookEventModel } from './webhook-event.model.js';
 import { OrderModel, IOrder } from '../orders/order.model.js';
+import { UserModel } from '../users/user.model.js';
 import { InventoryService } from '../inventory/inventory.service.js';
 import { CartModel } from '../cart/cart.model.js';
+import { EmailService } from '../../integrations/email/email-adapter.js';
 import { env } from '../../config/env.config.js';
 import { AppError, NotFoundError, BadRequestError } from '../../common/errors/app-error.js';
 import { logger } from '../../common/logging/logger.js';
@@ -242,6 +244,26 @@ export class PaymentService {
       { orderId: order._id, orderNumber: order.orderNumber },
       'Payment verified successfully; order confirmed'
     );
+
+    // Asynchronously dispatch real order confirmation email via configured adapter
+    void (async () => {
+      try {
+        const user = await UserModel.findById(order.userId);
+        if (user?.email) {
+          await EmailService.getAdapter().sendOrderConfirmationEmail(user.email, {
+            orderNumber: order.orderNumber,
+            totalPaise: order.pricingSnapshot.totalPaise,
+            formattedTotal: `₹${(order.pricingSnapshot.totalPaise / 100).toFixed(2)}`,
+            itemsCount: order.items.reduce((acc: number, i) => acc + i.quantity, 0),
+            deliveryStreet: order.shippingAddressSnapshot.street,
+            deliveryCity: order.shippingAddressSnapshot.city,
+            deliveryPincode: order.shippingAddressSnapshot.postalCode,
+          });
+        }
+      } catch (err) {
+        logger.error({ err, orderId: order._id }, 'Failed to send order confirmation email');
+      }
+    })();
 
     return order;
   }

@@ -320,3 +320,40 @@ export async function resetPassword(
     next(error);
   }
 }
+
+export async function sendPhoneOtp(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { phone, purpose } = req.body;
+    const { OtpService } = await import('./otp.service.js');
+    const result = await OtpService.sendOtp(phone, purpose);
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyPhoneOtp(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { phone, code, purpose } = req.body;
+    const userId = (req as AuthenticatedRequest).user?.id;
+    const { OtpService } = await import('./otp.service.js');
+    const result = await OtpService.verifyOtp(phone, code, purpose, userId);
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}

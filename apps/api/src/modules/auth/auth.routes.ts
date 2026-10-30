@@ -13,6 +13,8 @@ import {
   getMe,
   forgotPassword,
   resetPassword,
+  sendPhoneOtp,
+  verifyPhoneOtp,
 } from './auth.controller.js';
 import { validate } from '../../common/middleware/validate.js';
 import { authenticate, authenticateOptional, requireRole } from '../../common/middleware/auth.js';
@@ -36,6 +38,10 @@ authRouter.post('/login', authRateLimiter, validate(loginSchema), login);
 authRouter.post('/refresh', validate(refreshSchema), refresh);
 authRouter.post('/forgot-password', authRateLimiter, validate(forgotPasswordSchema), forgotPassword);
 authRouter.post('/reset-password', authRateLimiter, validate(resetPasswordSchema), resetPassword);
+
+// Phone OTP Verification Flow
+authRouter.post('/phone/send-otp', authRateLimiter, sendPhoneOtp);
+authRouter.post('/phone/verify-otp', authRateLimiter, authenticateOptional, verifyPhoneOtp);
 
 // Authenticated Session & Account Management (logout accepts optional auth to cleanly clear expired sessions)
 authRouter.post('/logout', authenticateOptional, logout);

@@ -16,6 +16,7 @@ import {
   Leaf,
   Bell,
   Lock,
+  Cpu,
 } from 'lucide-react';
 import { UserProfile, UserGender, INotificationPreferences } from '../../types';
 import { API_BASE } from '../../config/api';
@@ -27,6 +28,7 @@ interface ProfileModalProps {
   onOpenAddresses?: () => void;
   onOpenOrders?: () => void;
   onOpenRules?: () => void;
+  onOpenIntegrations?: () => void;
   onLogout?: () => void;
 }
 
@@ -37,6 +39,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onOpenAddresses,
   onOpenOrders,
   onOpenRules,
+  onOpenIntegrations,
   onLogout,
 }) => {
   const [activeTab, setActiveTab] = useState<'PROFILE' | 'SECURITY' | 'PREFERENCES'>('PROFILE');
@@ -57,6 +60,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     push: true,
     inApp: true,
   });
+
+  // Phone OTP Verification state
+  const [isPhoneVerified, setIsPhoneVerified] = useState<boolean>(false);
+  const [showOtpInput, setShowOtpInput] = useState<boolean>(false);
+  const [otpCode, setOtpCode] = useState<string>('');
+  const [isSendingOtp, setIsSendingOtp] = useState<boolean>(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState<boolean>(false);
+  const [otpNotice, setOtpNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Password Change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -80,6 +91,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           setProfile(u);
           setName(u.name || '');
           setPhone(u.phone || '');
+          setIsPhoneVerified(Boolean(u.isPhoneVerified));
           setGender(u.gender || 'PREFER_NOT_TO_SAY');
           setDateOfBirth(u.dateOfBirth ? u.dateOfBirth.split('T')[0] : '');
           setDietaryPrefs(u.dietaryPreferences || ['VEGETARIAN']);
@@ -98,6 +110,62 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
     fetchProfile();
   }, [isOpen, token]);
+
+  const handleSendOtp = async () => {
+    if (!token || !phone.trim()) return;
+    setIsSendingOtp(true);
+    setOtpNotice(null);
+    try {
+      const res = await fetch(`${API_BASE}/auth/phone/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ phone: phone.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setShowOtpInput(true);
+        setOtpNotice({ type: 'success', text: '6-digit OTP dispatched to your mobile number' });
+      } else {
+        setOtpNotice({ type: 'error', text: data.error || 'Failed to send OTP' });
+      }
+    } catch {
+      setOtpNotice({ type: 'error', text: 'Network error sending verification code' });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!token || !otpCode.trim()) return;
+    setIsVerifyingOtp(true);
+    setOtpNotice(null);
+    try {
+      const res = await fetch(`${API_BASE}/auth/phone/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ phone: phone.trim(), code: otpCode.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsPhoneVerified(true);
+        setShowOtpInput(false);
+        setOtpCode('');
+        setOtpNotice({ type: 'success', text: 'Phone number verified successfully!' });
+      } else {
+        setOtpNotice({ type: 'error', text: data.error || 'Invalid or expired OTP code' });
+      }
+    } catch {
+      setOtpNotice({ type: 'error', text: 'Network error verifying code' });
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,59 +288,56 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-brd px-6 bg-card">
+        <div className="flex border-b border-brd px-6 bg-card-top/20 gap-6">
           <button
             type="button"
             onClick={() => { setActiveTab('PROFILE'); setStatusMessage(null); }}
-            className={`py-3 px-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 transition-colors ${
+            className={`py-3 text-xs font-semibold border-b-2 transition-all ${
               activeTab === 'PROFILE'
                 ? 'border-acc text-acc'
                 : 'border-transparent text-mut hover:text-ink'
             }`}
           >
-            <User className="w-4 h-4" />
-            Profile Details
+            Personal Details
           </button>
           <button
             type="button"
             onClick={() => { setActiveTab('PREFERENCES'); setStatusMessage(null); }}
-            className={`py-3 px-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 transition-colors ${
+            className={`py-3 text-xs font-semibold border-b-2 transition-all ${
               activeTab === 'PREFERENCES'
                 ? 'border-acc text-acc'
                 : 'border-transparent text-mut hover:text-ink'
             }`}
           >
-            <Bell className="w-4 h-4" />
-            Preferences
+            Preferences & Diet
           </button>
           <button
             type="button"
             onClick={() => { setActiveTab('SECURITY'); setStatusMessage(null); }}
-            className={`py-3 px-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 transition-colors ${
+            className={`py-3 text-xs font-semibold border-b-2 transition-all ${
               activeTab === 'SECURITY'
                 ? 'border-acc text-acc'
                 : 'border-transparent text-mut hover:text-ink'
             }`}
           >
-            <Shield className="w-4 h-4" />
             Security & Login
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-4">
+        {/* Modal Content */}
+        <div className="p-6 overflow-y-auto flex-1 space-y-6">
           {statusMessage && (
             <div
-              className={`p-3 rounded-xl border flex items-center gap-2 text-xs ${
+              className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
                 statusMessage.type === 'success'
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                  : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 text-emerald-800 dark:text-emerald-300'
+                  : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 text-rose-800 dark:text-rose-300'
               }`}
             >
               {statusMessage.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
               ) : (
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <AlertCircle className="w-4 h-4 shrink-0" />
               )}
               <span>{statusMessage.text}</span>
             </div>
@@ -281,27 +346,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           {isLoading ? (
             <div className="py-12 flex flex-col items-center justify-center gap-2 text-mut">
               <Loader2 className="w-6 h-6 animate-spin text-acc" />
-              <span className="text-xs">Loading profile information...</span>
+              <span className="text-xs">Loading profile data...</span>
             </div>
           ) : activeTab === 'PROFILE' ? (
             <form onSubmit={handleSaveProfile} className="space-y-4">
-              {/* Email (Read-Only) */}
-              <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Email Address</label>
-                <div className="flex items-center gap-2 px-3 py-2 bg-card-top/50 border border-brd rounded-xl text-xs text-mut">
-                  <Mail className="w-4 h-4 text-mut" />
-                  <span className="flex-1 font-mono">{profile?.email}</span>
-                  <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                    Verified
-                  </span>
-                </div>
-              </div>
-
               {/* Full Name */}
               <div>
-                <label className="block text-xs font-semibold text-ink mb-1">
-                  Full Name <span className="text-rose-500">*</span>
-                </label>
+                <label className="block text-xs font-semibold text-ink mb-1">Full Name</label>
                 <div className="relative">
                   <User className="w-4 h-4 text-mut absolute left-3 top-2.5" />
                   <input
@@ -309,25 +360,107 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Your full name"
+                    placeholder="Enter your name"
                     className="w-full pl-9 pr-3 py-2 bg-card border border-brd rounded-xl text-xs text-ink placeholder:text-mut focus:outline-hidden focus:border-acc"
                   />
                 </div>
               </div>
 
-              {/* Phone */}
+              {/* Email (Readonly) */}
               <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Phone Number</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-ink">Email Address</label>
+                  <span className="text-[10px] text-mut uppercase tracking-wider font-semibold">
+                    Primary Identifier
+                  </span>
+                </div>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-mut absolute left-3 top-2.5" />
+                  <input
+                    type="email"
+                    disabled
+                    value={profile?.email || ''}
+                    className="w-full pl-9 pr-3 py-2 bg-card-top/30 border border-brd/60 rounded-xl text-xs text-mut cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {/* Phone with Verification */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-ink">Phone Number</label>
+                  {isPhoneVerified ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Verified
+                    </span>
+                  ) : phone.trim().length >= 10 ? (
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={isSendingOtp}
+                      className="text-[11px] font-semibold text-acc hover:underline flex items-center gap-1 disabled:opacity-50"
+                    >
+                      {isSendingOtp && <Loader2 className="w-3 h-3 animate-spin" />}
+                      Verify via OTP
+                    </button>
+                  ) : null}
+                </div>
                 <div className="relative">
                   <Phone className="w-4 h-4 text-mut absolute left-3 top-2.5" />
                   <input
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      if (e.target.value !== profile?.phone) {
+                        setIsPhoneVerified(false);
+                      }
+                    }}
                     placeholder="+91 98765 43210"
                     className="w-full pl-9 pr-3 py-2 bg-card border border-brd rounded-xl text-xs text-ink placeholder:text-mut focus:outline-hidden focus:border-acc"
                   />
                 </div>
+
+                {showOtpInput && (
+                  <div className="mt-2.5 p-3 rounded-xl bg-paper/80 border border-brd space-y-2">
+                    <div className="text-[11px] text-mut">Enter 6-digit verification code sent to {phone}:</div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                        placeholder="123456"
+                        className="w-32 px-3 py-1.5 text-center font-mono tracking-widest text-sm bg-card border border-brd rounded-lg text-ink focus:outline-none focus:border-acc"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyOtp}
+                        disabled={isVerifyingOtp || otpCode.length < 6}
+                        className="px-3.5 py-1.5 rounded-lg bg-acc text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center gap-1.5"
+                      >
+                        {isVerifyingOtp && <Loader2 className="w-3 h-3 animate-spin" />}
+                        Verify
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowOtpInput(false)}
+                        className="text-xs text-mut hover:text-ink px-2 py-1"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {otpNotice && (
+                      <div
+                        className={`text-[11px] ${
+                          otpNotice.type === 'success' ? 'text-emerald-600' : 'text-rose-600'
+                        }`}
+                      >
+                        {otpNotice.text}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Gender and Date of Birth */}
@@ -359,57 +492,54 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </div>
               </div>
 
-              {/* Save Button */}
               <div className="pt-3 border-t border-brd flex justify-end">
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-acc hover:bg-acc/90 text-paper dark:text-ink transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-acc hover:opacity-90 text-white transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
                 >
                   {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                  Save Profile Changes
+                  Save Personal Details
                 </button>
               </div>
             </form>
           ) : activeTab === 'PREFERENCES' ? (
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              {/* Vegetarian Catalog Invariant Notice */}
-              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-semibold text-xs mb-1">
-                  <Leaf className="w-4 h-4" />
-                  CartPilot 100% Vegetarian Invariant
-                </div>
-                <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80">
-                  All products available on CartPilot are strictly vegetarian and FSSAI certified. No non-vegetarian items can be ordered or suggested.
-                </p>
-              </div>
-
-              {/* Additional Dietary Tags */}
+            <form onSubmit={handleSaveProfile} className="space-y-6">
+              {/* Dietary Invariant Display */}
               <div>
-                <label className="block text-xs font-semibold text-ink mb-2">Dietary Preferences</label>
-                <div className="flex flex-wrap gap-2">
-                  {['VEGETARIAN', 'VEGAN', 'JAIN', 'ORGANIC_ONLY', 'GLUTEN_FREE'].map((diet) => {
-                    const isSelected = dietaryPrefs.includes(diet);
+                <label className="block text-xs font-semibold text-ink mb-1">Dietary Preference</label>
+                <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/30 rounded-xl flex items-start gap-2.5">
+                  <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+                  <div className="text-xs">
+                    <span className="font-semibold text-emerald-900 dark:text-emerald-200">
+                      100% Certified Vegetarian Platform Invariant
+                    </span>
+                    <p className="text-emerald-700 dark:text-emerald-300 text-[11px] mt-0.5">
+                      CartPilot strictly enforces pure vegetarian, cruelty-free grocery catalogs across all merchants.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {['VEGETARIAN', 'VEGAN', 'JAIN', 'ORGANIC_ONLY', 'GLUTEN_FREE'].map((tag) => {
+                    const active = dietaryPrefs.includes(tag);
                     return (
                       <button
-                        key={diet}
+                        key={tag}
                         type="button"
                         onClick={() => {
-                          if (diet === 'VEGETARIAN') return; // Cannot uncheck vegetarian
-                          setDietaryPrefs(
-                            isSelected
-                              ? dietaryPrefs.filter((d) => d !== diet)
-                              : [...dietaryPrefs, diet]
+                          if (tag === 'VEGETARIAN') return;
+                          setDietaryPrefs((prev) =>
+                            active ? prev.filter((p) => p !== tag) : [...prev, tag]
                           );
                         }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                          isSelected
-                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                          active
+                            ? 'bg-acc/10 border-acc text-acc'
                             : 'bg-card border-brd text-mut hover:text-ink'
                         }`}
                       >
-                        {diet.replace('_', ' ')}
-                        {diet === 'VEGETARIAN' && ' (Required)'}
+                        {tag === 'VEGETARIAN' ? '🌱 100% Vegetarian (Mandatory)' : tag.replace('_', ' ')}
                       </button>
                     );
                   })}
@@ -417,55 +547,70 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </div>
 
               {/* Notification Preferences */}
-              <div className="pt-2 border-t border-brd space-y-3">
-                <label className="block text-xs font-semibold text-ink">Notification Channels</label>
-                <div className="space-y-2">
-                  {[
-                    { key: 'email', label: 'Email Order Summaries & Receipts' },
-                    { key: 'sms', label: 'SMS Delivery Status Updates' },
-                    { key: 'push', label: 'Push Notifications (Order arrived, Agent alerts)' },
-                    { key: 'inApp', label: 'In-App Notifications' },
-                  ].map((item) => (
-                    <label key={item.key} className="flex items-center justify-between p-2.5 rounded-xl bg-card border border-brd cursor-pointer hover:bg-card-top transition-colors">
-                      <span className="text-xs text-ink font-medium">{item.label}</span>
-                      <input
-                        type="checkbox"
-                        checked={notifications[item.key as keyof INotificationPreferences]}
-                        onChange={(e) =>
-                          setNotifications({
-                            ...notifications,
-                            [item.key]: e.target.checked,
-                          })
-                        }
-                        className="w-4 h-4 rounded-sm text-acc focus:ring-acc"
-                      />
-                    </label>
-                  ))}
+              <div className="pt-4 border-t border-brd space-y-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Bell className="w-4 h-4 text-acc" />
+                  <h4 className="text-xs font-semibold text-ink">Order & Assistant Notifications</h4>
                 </div>
+
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-brd hover:bg-card-top/20 cursor-pointer">
+                  <div>
+                    <div className="text-xs font-medium text-ink">Email Notifications</div>
+                    <div className="text-[11px] text-mut">Order invoices, dispatch updates & policy audit reports</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.email}
+                    onChange={(e) => setNotifications({ ...notifications, email: e.target.checked })}
+                    className="w-4 h-4 accent-acc rounded"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-brd hover:bg-card-top/20 cursor-pointer">
+                  <div>
+                    <div className="text-xs font-medium text-ink">SMS Alerts</div>
+                    <div className="text-[11px] text-mut">Express delivery dispatch and driver arrival OTPs</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.sms}
+                    onChange={(e) => setNotifications({ ...notifications, sms: e.target.checked })}
+                    className="w-4 h-4 accent-acc rounded"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-brd hover:bg-card-top/20 cursor-pointer">
+                  <div>
+                    <div className="text-xs font-medium text-ink">Push Notifications</div>
+                    <div className="text-[11px] text-mut">Autonomous assistant approval requests and cart alerts</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.push}
+                    onChange={(e) => setNotifications({ ...notifications, push: e.target.checked })}
+                    className="w-4 h-4 accent-acc rounded"
+                  />
+                </label>
               </div>
 
-              {/* Save Button */}
               <div className="pt-3 border-t border-brd flex justify-end">
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-acc hover:bg-acc/90 text-paper dark:text-ink transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-acc hover:opacity-90 text-white transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
                 >
                   {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                  Update Preferences
+                  Save Preferences
                 </button>
               </div>
             </form>
           ) : (
             <form onSubmit={handleChangePassword} className="space-y-4">
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-700 dark:text-amber-400">
-                <Lock className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold">Security Session Invalidation</p>
-                  <p className="text-[11px] mt-0.5 text-amber-800/80 dark:text-amber-300/80">
-                    Changing your password will automatically invalidate your active tokens on all other devices.
-                  </p>
-                </div>
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
+                <Lock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <span>
+                  Changing your password increments your account security version and safely revokes all existing refresh tokens across other browsers.
+                </span>
               </div>
 
               <div>
@@ -477,25 +622,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     required
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Enter current password"
+                    placeholder="Enter current account password"
                     className="w-full pl-9 pr-3 py-2 bg-card border border-brd rounded-xl text-xs text-ink placeholder:text-mut focus:outline-hidden focus:border-acc"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-ink mb-1">
-                  New Password (min. 8 characters)
-                </label>
+                <label className="block text-xs font-semibold text-ink mb-1">New Password</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-mut absolute left-3 top-2.5" />
                   <input
                     type="password"
                     required
-                    minLength={8}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new strong password"
+                    placeholder="Minimum 8 characters"
                     className="w-full pl-9 pr-3 py-2 bg-card border border-brd rounded-xl text-xs text-ink placeholder:text-mut focus:outline-hidden focus:border-acc"
                   />
                 </div>
@@ -534,7 +676,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             <h4 className="text-[11px] font-semibold text-mut uppercase tracking-wider mb-2">
               Account Shortcuts
             </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {onOpenAddresses && (
                 <button
                   type="button"
@@ -562,7 +704,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   className="p-2.5 rounded-xl border border-brd hover:border-acc/40 hover:bg-acc/5 text-left flex items-center gap-2 text-xs text-ink transition-colors"
                 >
                   <Shield className="w-4 h-4 text-purple-600" />
-                  <span>Spending Rules</span>
+                  <span>Rules</span>
+                </button>
+              )}
+              {onOpenIntegrations && (
+                <button
+                  type="button"
+                  onClick={() => { onClose(); onOpenIntegrations(); }}
+                  className="p-2.5 rounded-xl border border-brd hover:border-acc/40 hover:bg-acc/5 text-left flex items-center gap-2 text-xs text-ink transition-colors"
+                >
+                  <Cpu className="w-4 h-4 text-emerald-600" />
+                  <span>AI & Cloud</span>
                 </button>
               )}
             </div>
