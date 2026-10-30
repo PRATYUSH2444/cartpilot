@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../../common/middleware/auth.js';
 import { ChatService } from './chat.service.js';
-import { CreateSessionInput, SendMessageInput } from './chat.schema.js';
+import { CreateSessionInput, UpdateSessionInput, SendMessageInput } from './chat.schema.js';
 
 export class ChatController {
   public async createSession(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -15,7 +15,8 @@ export class ChatController {
   }
 
   public async getSessions(req: AuthenticatedRequest, res: Response): Promise<void> {
-    const sessions = await ChatService.getUserSessions(req.user!.id);
+    const includeArchived = req.query.includeArchived === 'true';
+    const sessions = await ChatService.getUserSessions(req.user!.id, includeArchived);
 
     res.status(200).json({
       success: true,
@@ -30,6 +31,28 @@ export class ChatController {
     res.status(200).json({
       success: true,
       data: result,
+    });
+  }
+
+  public async updateSession(req: AuthenticatedRequest, res: Response): Promise<void> {
+    const sessionId = req.params.id as string;
+    const { title, isArchived } = req.body as UpdateSessionInput;
+
+    const updated = await ChatService.updateSession(sessionId, req.user!.id, { title, isArchived });
+
+    res.status(200).json({
+      success: true,
+      data: updated,
+    });
+  }
+
+  public async deleteSession(req: AuthenticatedRequest, res: Response): Promise<void> {
+    const sessionId = req.params.id as string;
+    await ChatService.deleteSession(sessionId, req.user!.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Chat session deleted successfully',
     });
   }
 

@@ -325,3 +325,62 @@ export interface ProofVerificationResult {
   totalAuditEventsVerified: number;
   message: string;
 }
+
+
+export type UserGender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
+export type AddressType = 'HOME' | 'WORK' | 'OTHER';
+
+export interface INotificationPreferences {
+  email: boolean;
+  sms: boolean;
+  push: boolean;
+  inApp: boolean;
+}
+
+export interface UserAddress {
+  _id: string;
+  userId: string;
+  fullName: string;
+  phone: string;
+  houseFlat: string;
+  apartmentStreet: string;
+  areaLocality: string;
+  landmark?: string;
+  city: string;
+  state: string;
+  pincode: string;
+  addressType: AddressType;
+  deliveryInstructions?: string;
+  latitude?: number;
+  longitude?: number;
+  isDefault: boolean;
+  isServiceable: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  phone?: string;
+  avatarUrl?: string;
+  dateOfBirth?: string;
+  gender?: UserGender;
+  dietaryPreferences: string[];
+  notificationPreferences: INotificationPreferences;
+  isEmailVerified: boolean;
+  isPhoneVerified: boolean;
+  defaultAddress?: UserAddress | null;
+  createdAt: string;
+}
+
+export interface ServiceabilityInfo {
+  isServiceable: boolean;
+  pincode: string;
+  estimatedMinutes: number;
+  deliveryFeePaise: number;
+  freeDeliveryThresholdPaise: number;
+  message: string;
+}

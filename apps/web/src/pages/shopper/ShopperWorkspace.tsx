@@ -15,6 +15,8 @@ import { BrowseSheet } from '../../components/shopper/BrowseSheet';
 import { ContextPanel } from '../../components/shopper/ContextPanel';
 import { OrdersSheet } from '../../components/shopper/OrdersSheet';
 import { RulesSheet } from '../../components/shopper/RulesSheet';
+import { AddressModal } from '../../components/shopper/AddressModal';
+import { ProfileModal } from '../../components/shopper/ProfileModal';
 import { useAuth } from '../../context/AuthContext';
 import {
   CartData,
@@ -25,6 +27,7 @@ import {
   LampStatus,
   ToolCallItem,
   Product,
+  UserAddress,
 } from '../../types';
 import {
   Bot,
@@ -46,6 +49,9 @@ import {
   LogOut,
   Menu,
   Search,
+  MapPin,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { API_BASE } from '../../config/api';
 
@@ -139,6 +145,9 @@ export const ShopperWorkspace: React.FC = () => {
     { _id: string; title: string; updatedAt?: string }[]
   >([]);
   const [sessionSearch, setSessionSearch] = useState('');
+  const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -402,6 +411,21 @@ export const ShopperWorkspace: React.FC = () => {
 
         await evaluatePolicy(token);
 
+        // Addresses
+        try {
+          const addrRes = await fetch(`${API_BASE}/addresses`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (addrRes.ok) {
+            const addrData = await addrRes.json();
+            const addrs: UserAddress[] = addrData.data || [];
+            const def = addrs.find((a) => a.isDefault) || addrs[0] || null;
+            setSelectedAddress(def);
+          }
+        } catch (e) {
+          console.warn('Addresses fetch failed:', e);
+        }
+
         // Chat sessions
         const sessionRes = await fetch(`${API_BASE}/chat/sessions`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -410,8 +434,15 @@ export const ShopperWorkspace: React.FC = () => {
         let session = null;
         if (sessionRes.ok) {
           const sData = await sessionRes.json();
-          setChatSessions(sData.data || []);
-          session = sData.data?.[0];
+          const sessList = sData.data || [];
+          setChatSessions(sessList);
+
+          const savedId = localStorage.getItem('cartpilot_active_session_id');
+          if (savedId && sessList.some((s: any) => s._id === savedId)) {
+            session = sessList.find((s: any) => s._id === savedId);
+          } else {
+            session = sessList[0];
+          }
         }
 
         if (!session) {
@@ -429,6 +460,7 @@ export const ShopperWorkspace: React.FC = () => {
 
         if (session) {
           setActiveChatSessionId(session._id);
+          localStorage.setItem('cartpilot_active_session_id', session._id);
           const detailRes = await fetch(`${API_BASE}/chat/sessions/${session._id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -459,6 +491,45 @@ export const ShopperWorkspace: React.FC = () => {
     init();
   }, [token, evaluatePolicy]);
 
+  // Load session messages on switch
+  const loadSessionMessages = useCallback(async (sessionId: string) => {
+    if (!token || !sessionId) return;
+    try {
+      const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const dData = await res.json();
+        if (dData.data?.messages) {
+          setMessages(
+            dData.data.messages.map((m: ServerChatMessage) => ({
+              id: m._id,
+              sender: m.sender.toLowerCase() as 'user' | 'agent' | 'system',
+              content: m.content,
+              timestamp: new Date(m.createdAt).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              toolCalls: m.toolCalls,
+              cardType: m.cardType,
+              cardData: m.cardData,
+            }))
+          );
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load session messages:', err);
+    }
+  }, [token]);
+
+  // Switch Active Session
+  const handleSwitchSession = async (sessionId: string) => {
+    setActiveChatSessionId(sessionId);
+    localStorage.setItem('cartpilot_active_session_id', sessionId);
+    setSidebarOpen(false);
+    await loadSessionMessages(sessionId);
+  };
+
   // Create New Chat Session
   const handleNewChat = async () => {
     if (!token) return;
@@ -473,12 +544,65 @@ export const ShopperWorkspace: React.FC = () => {
         const newSession = data.data;
         setChatSessions((prev) => [newSession, ...prev]);
         setActiveChatSessionId(newSession._id);
-        setMessages([]);
+        localStorage.setItem('cartpilot_active_session_id', newSession._id);
         setSidebarOpen(false);
-        showBanner('success', 'New session started');
+        await loadSessionMessages(newSession._id);
+        showBanner('success', 'New conversation started');
       }
     } catch {
       showBanner('error', 'Could not create new session');
+    }
+  };
+
+  // Rename Session
+  const handleRenameSession = async (sessionId: string, currentTitle: string) => {
+    if (!token) return;
+    const newTitle = window.prompt('Enter new session title:', currentTitle);
+    if (!newTitle || !newTitle.trim() || newTitle.trim() === currentTitle) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title: newTitle.trim() }),
+      });
+      if (res.ok) {
+        setChatSessions((prev) =>
+          prev.map((s) => (s._id === sessionId ? { ...s, title: newTitle.trim() } : s))
+        );
+        showBanner('success', 'Conversation renamed');
+      }
+    } catch {
+      showBanner('error', 'Failed to rename conversation');
+    }
+  };
+
+  // Delete Session
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!token) return;
+    if (!window.confirm('Delete this conversation? All messages will be permanently removed.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const remaining = chatSessions.filter((s) => s._id !== sessionId);
+        setChatSessions(remaining);
+        showBanner('success', 'Conversation deleted');
+        if (activeChatSessionId === sessionId) {
+          if (remaining.length > 0) {
+            handleSwitchSession(remaining[0]._id);
+          } else {
+            handleNewChat();
+          }
+        }
+      }
+    } catch {
+      showBanner('error', 'Failed to delete conversation');
     }
   };
 
@@ -655,13 +779,15 @@ export const ShopperWorkspace: React.FC = () => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           deliveryAddress: {
-            line1: 'Flat 402, Green Glen Heights, Outer Ring Road',
-            city: 'Bengaluru',
-            state: 'Karnataka',
-            postalCode: '560103',
+            line1: selectedAddress
+              ? `${selectedAddress.houseFlat}, ${selectedAddress.apartmentStreet}${selectedAddress.areaLocality ? `, ${selectedAddress.areaLocality}` : ''}`
+              : 'Flat 402, Green Glen Heights, Outer Ring Road',
+            city: selectedAddress?.city || 'Bengaluru',
+            state: selectedAddress?.state || 'Karnataka',
+            postalCode: selectedAddress?.pincode || '560103',
             country: 'India',
           },
-          notes: 'Deliver before noon; zero meat/egg guarantee acknowledged',
+          notes: selectedAddress?.deliveryInstructions || 'Deliver swiftly; zero meat/egg guarantee acknowledged',
         }),
       });
 
@@ -1053,27 +1179,61 @@ export const ShopperWorkspace: React.FC = () => {
           <p className="text-center text-[--mut] text-xs py-4">No sessions yet</p>
         ) : (
           filteredSessions.map((s) => (
-            <button
+            <div
               key={s._id}
-              onClick={() => {
-                setActiveChatSessionId(s._id);
-                setSidebarOpen(false);
-              }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-xs transition-colors mb-0.5 group ${
+              className={`w-full flex items-center justify-between gap-1 px-3 py-2 rounded-xl text-left text-xs transition-colors mb-1 group ${
                 s._id === activeChatSessionId
-                  ? 'bg-[--brand-soft] text-[--brand]'
+                  ? 'bg-[--brand-soft] text-[--brand] font-semibold'
                   : 'text-[--mut] hover:bg-[--surface-2] hover:text-[--ink]'
               }`}
             >
-              <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="flex-1 truncate font-medium">{s.title}</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchSession(s._id)}
+                className="flex-1 flex items-center gap-2 truncate text-left cursor-pointer min-h-[36px]"
+              >
+                <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">{s.title}</span>
+              </button>
+
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRenameSession(s._id, s.title);
+                  }}
+                  className="p-1 text-[--mut] hover:text-[--ink] rounded-md transition-colors"
+                  title="Rename conversation"
+                >
+                  <Edit2 className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteSession(s._id);
+                  }}
+                  className="p-1 text-[--mut] hover:text-rose-500 rounded-md transition-colors"
+                  title="Delete conversation"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
           ))
         )}
       </div>
 
       {/* Bottom nav links */}
       <div className="border-t border-[--line] px-2 py-3 space-y-0.5">
+        <button
+          onClick={() => setIsAddressModalOpen(true)}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-xs text-[--mut] hover:bg-[--surface-2] hover:text-[--ink] transition-colors"
+        >
+          <MapPin className="w-4 h-4 text-acc" />
+          <span>Delivery Addresses</span>
+        </button>
         <button
           onClick={() => setIsOrdersSheetOpen(true)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-xs text-[--mut] hover:bg-[--surface-2] hover:text-[--ink] transition-colors"
@@ -1104,13 +1264,20 @@ export const ShopperWorkspace: React.FC = () => {
 
       {/* User profile */}
       <div className="border-t border-[--line] p-4 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-chip bg-[--brand] flex items-center justify-center text-white font-heading font-bold text-sm flex-shrink-0">
-          {userInitial}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[--ink] text-xs font-semibold truncate">{user?.name || 'User'}</div>
-          <div className="text-[--mut] text-[10px] truncate">{user?.email}</div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsProfileModalOpen(true)}
+          className="flex-1 flex items-center gap-3 text-left hover:opacity-80 transition-opacity min-w-0 cursor-pointer"
+          title="Manage Profile & Account"
+        >
+          <div className="w-8 h-8 rounded-chip bg-[--brand] flex items-center justify-center text-white font-heading font-bold text-sm flex-shrink-0">
+            {userInitial}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[--ink] text-xs font-semibold truncate">{user?.name || 'User'}</div>
+            <div className="text-[--mut] text-[10px] truncate">{user?.email}</div>
+          </div>
+        </button>
         <button
           onClick={() => logout()}
           className="p-1.5 text-[--mut] hover:text-[--stop] transition-colors"
@@ -1397,12 +1564,33 @@ export const ShopperWorkspace: React.FC = () => {
               <Menu className="w-5 h-5" />
             </button>
             <DeliveryChip
-              address="Indiranagar, Bengaluru · 560038"
-              etaText="Delivery in about 30 min (estimated, simulated)"
+              address={
+                selectedAddress
+                  ? `${selectedAddress.areaLocality || selectedAddress.apartmentStreet}, ${selectedAddress.city} · ${selectedAddress.pincode}`
+                  : 'Indiranagar, Bengaluru · 560038'
+              }
+              etaText={
+                selectedAddress?.isServiceable
+                  ? 'Delivery in about 20 min (estimated, simulated)'
+                  : 'Delivery in about 30 min (estimated, simulated)'
+              }
+              onClickAddress={() => setIsAddressModalOpen(true)}
             />
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0 z-20">
+            {/* Address shortcut on medium/larger screens */}
+            <button
+              onClick={() => setIsAddressModalOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-chip border border-brd bg-paper hover:bg-card-top text-ink text-xs font-semibold cursor-pointer min-h-[44px] min-w-[44px]"
+              title="Change Delivery Location"
+            >
+              <MapPin className="w-3.5 h-3.5 text-acc" />
+              <span className="max-w-[120px] truncate capitalize">
+                {selectedAddress?.addressType ? selectedAddress.addressType.toLowerCase() : 'Address'}
+              </span>
+            </button>
+
             {/* Quick Browse button on mobile/tablet/laptop */}
             <button
               data-testid="header-browse-btn"
@@ -1427,6 +1615,15 @@ export const ShopperWorkspace: React.FC = () => {
                   {cartItemCount}
                 </span>
               )}
+            </button>
+
+            {/* Profile Avatar Button */}
+            <button
+              onClick={() => setIsProfileModalOpen(true)}
+              className="w-8 h-8 rounded-full bg-acc/10 border border-acc/20 text-acc flex items-center justify-center font-bold text-xs hover:bg-acc/20 transition-colors min-h-[44px] min-w-[44px] cursor-pointer"
+              title="My Account & Profile"
+            >
+              {userInitial}
             </button>
           </div>
         </div>
@@ -1689,6 +1886,26 @@ export const ShopperWorkspace: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ── Address Selector & Management Modal ────────────────────────────── */}
+      <AddressModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        token={token}
+        selectedAddressId={selectedAddress?._id}
+        onSelectAddress={(addr) => setSelectedAddress(addr)}
+      />
+
+      {/* ── Customer Account & Profile Modal ──────────────────────────────── */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        token={token}
+        onOpenAddresses={() => setIsAddressModalOpen(true)}
+        onOpenOrders={() => setIsOrdersSheetOpen(true)}
+        onOpenRules={() => setIsRulesSheetOpen(true)}
+        onLogout={() => logout()}
+      />
     </div>
   );
 };

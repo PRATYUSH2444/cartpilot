@@ -59,10 +59,68 @@ export class ChatService {
   /**
    * Retrieves all chat sessions belonging to the user.
    */
-  public static async getUserSessions(userId: string): Promise<IChatSession[]> {
+  public static async getUserSessions(userId: string, includeArchived = false): Promise<IChatSession[]> {
     const userObjectId = new mongoose.Types.ObjectId(userId);
-    const sessions = await ChatSessionModel.find({ userId: userObjectId }).sort({ updatedAt: -1 });
+    const filter: any = { userId: userObjectId };
+    if (!includeArchived) {
+      filter.isArchived = { $ne: true };
+    }
+    const sessions = await ChatSessionModel.find(filter).sort({ updatedAt: -1 });
     return sessions;
+  }
+
+  /**
+   * Updates a session's title or archived status, enforcing user ownership.
+   */
+  public static async updateSession(
+    sessionId: string,
+    userId: string,
+    updates: { title?: string; isArchived?: boolean }
+  ): Promise<IChatSession> {
+    if (!mongoose.Types.ObjectId.isValid(sessionId)) {
+      throw new BadRequestError('Invalid session ID format');
+    }
+
+    const session = await ChatSessionModel.findById(sessionId);
+    if (!session) {
+      throw new NotFoundError('Chat session not found');
+    }
+
+    if (session.userId.toString() !== userId) {
+      throw new ForbiddenError('You do not have access to this chat session');
+    }
+
+    if (updates.title !== undefined) {
+      session.title = updates.title.trim();
+    }
+    if (updates.isArchived !== undefined) {
+      session.isArchived = updates.isArchived;
+    }
+
+    session.updatedAt = new Date();
+    await session.save();
+    return session;
+  }
+
+  /**
+   * Deletes a chat session and cascades deletion of its messages, enforcing user ownership.
+   */
+  public static async deleteSession(sessionId: string, userId: string): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(sessionId)) {
+      throw new BadRequestError('Invalid session ID format');
+    }
+
+    const session = await ChatSessionModel.findById(sessionId);
+    if (!session) {
+      throw new NotFoundError('Chat session not found');
+    }
+
+    if (session.userId.toString() !== userId) {
+      throw new ForbiddenError('You do not have access to this chat session');
+    }
+
+    await ChatMessageModel.deleteMany({ sessionId: session._id });
+    await ChatSessionModel.findByIdAndDelete(session._id);
   }
 
   /**
@@ -104,8 +162,8 @@ export class ChatService {
                 items: order.items,
                 pricingSnapshot: order.pricingSnapshot,
                 deliveryNote: order.deliveryNote,
-        shippingAddressSnapshot: order.shippingAddressSnapshot,
-        _id: order._id,
+                shippingAddressSnapshot: order.shippingAddressSnapshot,
+                _id: order._id,
               };
             }
           } else if (msg.resourceType === 'payment') {

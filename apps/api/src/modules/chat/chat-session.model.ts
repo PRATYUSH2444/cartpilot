@@ -4,6 +4,7 @@ export interface IChatSession extends Document {
   _id: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   title: string;
+  isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +23,11 @@ const ChatSessionSchema = new Schema<IChatSession>(
       trim: true,
       default: 'New Grocery Shopping Session',
     },
+    isArchived: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -31,6 +37,7 @@ const ChatSessionSchema = new Schema<IChatSession>(
 
 ChatSessionSchema.index({ userId: 1, createdAt: -1 });
 ChatSessionSchema.index({ userId: 1, updatedAt: -1 });
+ChatSessionSchema.index({ userId: 1, isArchived: 1 });
 
 export const ChatSessionModel: Model<IChatSession> =
   mongoose.models.ChatSession || mongoose.model<IChatSession>('ChatSession', ChatSessionSchema);

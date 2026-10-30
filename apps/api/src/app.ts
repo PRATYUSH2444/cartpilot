@@ -21,6 +21,8 @@ import { approvalRouter } from './modules/approvals/approval.routes.js';
 import { auditRouter } from './modules/audit/audit.routes.js';
 import { recipeRouter } from './modules/recipe/recipe.routes.js';
 import { chatRouter } from './modules/chat/chat.routes.js';
+import { addressRouter } from './modules/users/address.routes.js';
+import { userRouter } from './modules/users/user.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -81,6 +83,8 @@ export function createApp(): Express {
   app.use('/api/v1/audit', auditRouter);
   app.use('/api/v1/recipe', recipeRouter);
   app.use('/api/v1/chat', chatRouter);
+  app.use('/api/v1/addresses', addressRouter);
+  app.use('/api/v1/users', userRouter);
 
   // 404 Catch-All Handler
   app.use((req: Request, _res: Response, next: NextFunction) => {

@@ -1,6 +1,14 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export type UserRole = 'CUSTOMER' | 'MERCHANT' | 'ADMIN';
+export type UserGender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
+
+export interface INotificationPreferences {
+  email: boolean;
+  sms: boolean;
+  push: boolean;
+  inApp: boolean;
+}
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
@@ -9,6 +17,12 @@ export interface IUser extends Document {
   name: string;
   role: UserRole;
   phone?: string;
+  avatarUrl?: string;
+  dateOfBirth?: Date;
+  gender?: UserGender;
+  dietaryPreferences: string[];
+  notificationPreferences: INotificationPreferences;
+  defaultAddressId?: mongoose.Types.ObjectId;
   isActive: boolean;
   refreshTokenHash?: string;
   resetPasswordTokenHash?: string;
@@ -21,6 +35,7 @@ export interface IUser extends Document {
   isEmailVerified: boolean;
   emailVerificationTokenHash?: string | null;
   emailVerificationExpires?: Date | null;
+  isPhoneVerified: boolean;
   mustChangePassword: boolean;
   isStaff: boolean;
   createdAt: Date;
@@ -56,6 +71,31 @@ const UserSchema = new Schema<IUser>(
     phone: {
       type: String,
       trim: true,
+    },
+    avatarUrl: {
+      type: String,
+      trim: true,
+    },
+    dateOfBirth: {
+      type: Date,
+    },
+    gender: {
+      type: String,
+      enum: ['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'],
+    },
+    dietaryPreferences: {
+      type: [String],
+      default: ['VEGETARIAN'],
+    },
+    notificationPreferences: {
+      email: { type: Boolean, default: true },
+      sms: { type: Boolean, default: true },
+      push: { type: Boolean, default: true },
+      inApp: { type: Boolean, default: true },
+    },
+    defaultAddressId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Address',
     },
     isActive: {
       type: Boolean,
@@ -109,6 +149,11 @@ const UserSchema = new Schema<IUser>(
     emailVerificationExpires: {
       type: Date,
       default: null,
+    },
+    isPhoneVerified: {
+      type: Boolean,
+      default: false,
+      required: true,
     },
     mustChangePassword: {
       type: Boolean,
