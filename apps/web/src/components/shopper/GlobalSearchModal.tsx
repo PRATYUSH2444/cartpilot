@@ -55,8 +55,6 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     'chawal',
   ]);
 
-  if (!isOpen) return null;
-
   const handleRecentClick = (text: string) => {
     setQuery(text);
   };
@@ -65,7 +63,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     setRecentSearches([]);
   };
 
-  // Filtered results
+  // Filtered results - hooks must always execute unconditionally
   const matchingProducts = useMemo(() => {
     if (!query.trim()) return [];
     const q = query.toLowerCase().trim();
@@ -96,6 +94,9 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     const q = query.toLowerCase().trim();
     return chatSessions.filter((s) => s.title.toLowerCase().includes(q)).slice(0, 4);
   }, [chatSessions, query]);
+
+  // Early return placed AFTER all hooks adhering strictly to React Rules of Hooks
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col justify-start">
