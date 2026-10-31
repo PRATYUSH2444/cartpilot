@@ -113,6 +113,28 @@ export async function getMyStore(
   }
 }
 
+export async function updateMyStore(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user || !req.user.merchantId) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'No merchant store linked' } });
+      return;
+    }
+
+    const updated = await MerchantService.updateStore(req.user.merchantId, req.body);
+    res.status(200).json({
+      success: true,
+      data: updated,
+      message: 'Store profile updated successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function inviteStaff(
   req: AuthenticatedRequest,
   res: Response,

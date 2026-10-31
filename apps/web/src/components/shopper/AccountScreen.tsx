@@ -12,6 +12,7 @@ import {
   Sun,
   Edit2,
   CheckCircle2,
+  Zap,
 } from 'lucide-react';
 import { OrderData } from '../../types';
 
@@ -28,6 +29,7 @@ interface AccountScreenProps {
   onOpenAddresses: () => void;
   onOpenRules: () => void;
   onOpenProfileModal: () => void;
+  onOpenIntegrations?: () => void;
   onLogout: () => void;
   isDark: boolean;
   onToggleTheme: () => void;
@@ -40,6 +42,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   onOpenAddresses,
   onOpenRules,
   onOpenProfileModal,
+  onOpenIntegrations,
   onLogout,
   isDark,
   onToggleTheme,
@@ -193,6 +196,34 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
             </div>
             <ChevronRight className="w-4 h-4 text-[--mut]" />
           </button>
+
+          {/* AI & Ecosystem Integrations */}
+          {onOpenIntegrations && (
+            <button
+              onClick={onOpenIntegrations}
+              className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-[--surface-2] transition-colors cursor-pointer group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 flex items-center justify-center">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-[--ink] group-hover:text-[--brand] block">
+                    AI Engine &amp; Integrations
+                  </span>
+                  <span className="text-[10px] text-[--mut]">
+                    Google Gemini, OpenAI, database &amp; payment keys
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                  Live Status
+                </span>
+                <ChevronRight className="w-4 h-4 text-[--mut]" />
+              </div>
+            </button>
+          )}
 
           {/* Theme Toggle */}
           <button

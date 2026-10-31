@@ -5,6 +5,7 @@ import {
   getMerchantProducts,
   applyMerchant,
   getMyStore,
+  updateMyStore,
   inviteStaff,
   acceptStaffInvite,
   listStaff,
@@ -35,6 +36,7 @@ merchantRouter.post('/staff/accept-invite', authRateLimiter, validate(acceptStaf
 
 // Merchant Store & Staff Operations
 merchantRouter.get('/my-store', authenticate, requireRole('MERCHANT'), getMyStore);
+merchantRouter.patch('/my-store', authenticate, requireRole('MERCHANT'), updateMyStore);
 merchantRouter.get('/staff', authenticate, requireRole('MERCHANT'), listStaff);
 merchantRouter.post(
   '/staff/invite',

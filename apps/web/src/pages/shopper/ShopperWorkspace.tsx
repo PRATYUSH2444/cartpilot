@@ -29,6 +29,7 @@ import { OrdersSheet } from '../../components/shopper/OrdersSheet';
 import { RulesSheet } from '../../components/shopper/RulesSheet';
 import { ProfileModal } from '../../components/shopper/ProfileModal';
 import { ContextPanel } from '../../components/shopper/ContextPanel';
+import { IntegrationsModal } from '../../components/IntegrationsModal';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface ServerChatMessage {
@@ -82,6 +83,7 @@ export const ShopperWorkspace: React.FC = () => {
   const [isOrdersSheetOpen, setIsOrdersSheetOpen] = useState(false);
   const [isRulesSheetOpen, setIsRulesSheetOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isIntegrationsModalOpen, setIsIntegrationsModalOpen] = useState(false);
   const [isContextPanelCollapsed, setIsContextPanelCollapsed] = useState(false);
 
   const [feedbackBanner, setFeedbackBanner] = useState<{
@@ -770,6 +772,7 @@ export const ShopperWorkspace: React.FC = () => {
               onOpenAddresses={() => setIsAddressModalOpen(true)}
               onOpenRules={() => setIsRulesSheetOpen(true)}
               onOpenProfileModal={() => setIsProfileModalOpen(true)}
+              onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
               onLogout={() => logout()}
               isDark={isDark}
               onToggleTheme={() => setIsDark((d) => !d)}
@@ -822,6 +825,7 @@ export const ShopperWorkspace: React.FC = () => {
         onOpenAddresses={() => setIsAddressModalOpen(true)}
         onOpenRules={() => setIsRulesSheetOpen(true)}
         onOpenAccount={() => setActiveMobileTab('account')}
+        onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
         activeOrdersCount={
           orders.filter(
             (o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED' && o.status !== 'FAILED'
@@ -944,6 +948,13 @@ export const ShopperWorkspace: React.FC = () => {
         onGetStarted={() => setIsSplashScreenOpen(false)}
         onSignIn={() => setIsSplashScreenOpen(false)}
         onClose={() => setIsSplashScreenOpen(false)}
+      />
+
+      {/* ── Integrations & Real AI Engine Modal ────────────────────────────── */}
+      <IntegrationsModal
+        isOpen={isIntegrationsModalOpen}
+        onClose={() => setIsIntegrationsModalOpen(false)}
+        token={token}
       />
 
       {/* ── Feedback Banner ───────────────────────────────────────────────── */}

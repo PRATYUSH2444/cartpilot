@@ -11,6 +11,7 @@ import {
   Trash2,
   Edit2,
   Leaf,
+  Zap,
 } from 'lucide-react';
 
 interface ChatSessionItem {
@@ -32,6 +33,7 @@ interface ConversationDrawerProps {
   onOpenAddresses: () => void;
   onOpenRules: () => void;
   onOpenAccount: () => void;
+  onOpenIntegrations?: () => void;
   activeOrdersCount?: number;
 }
 
@@ -48,6 +50,7 @@ export const ConversationDrawer: React.FC<ConversationDrawerProps> = ({
   onOpenAddresses,
   onOpenRules,
   onOpenAccount,
+  onOpenIntegrations,
   activeOrdersCount = 0,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -309,6 +312,24 @@ export const ConversationDrawer: React.FC<ConversationDrawerProps> = ({
             <User className="w-4 h-4 text-[--mut]" />
             <span>My Account</span>
           </button>
+
+          {onOpenIntegrations && (
+            <button
+              onClick={() => {
+                onOpenIntegrations();
+                onClose();
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-500/15 transition-colors cursor-pointer mt-1"
+            >
+              <div className="flex items-center gap-2.5">
+                <Zap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span className="font-semibold">AI &amp; Integrations</span>
+              </div>
+              <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-[10px]">
+                Setup
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -59,6 +59,53 @@ export class MerchantService {
     return merchant;
   }
 
+  /**
+   * Update merchant store details (profile, online status, contact, address, delivery pincodes).
+   */
+  static async updateStore(
+    merchantId: string,
+    updates: Partial<{
+      businessName: string;
+      description: string;
+      contactPhone: string;
+      contactEmail: string;
+      isActive: boolean;
+      serviceAreaPincodes: string[];
+      address: {
+        street: string;
+        city: string;
+        state: string;
+        postalCode: string;
+      };
+    }>
+  ): Promise<IMerchant> {
+    if (!mongoose.Types.ObjectId.isValid(merchantId)) {
+      throw new BadRequestError('Invalid merchant ID format');
+    }
+    const merchant = await MerchantModel.findById(merchantId);
+    if (!merchant) {
+      throw new NotFoundError('Merchant store not found');
+    }
+
+    if (updates.businessName !== undefined) merchant.businessName = updates.businessName.trim();
+    if (updates.description !== undefined) merchant.description = updates.description.trim();
+    if (updates.contactPhone !== undefined) merchant.contactPhone = updates.contactPhone.trim();
+    if (updates.contactEmail !== undefined) merchant.contactEmail = updates.contactEmail.trim().toLowerCase();
+    if (updates.isActive !== undefined) merchant.isActive = updates.isActive;
+    if (updates.serviceAreaPincodes !== undefined) merchant.serviceAreaPincodes = updates.serviceAreaPincodes;
+    if (updates.address !== undefined) {
+      merchant.address = {
+        street: updates.address.street ?? merchant.address.street,
+        city: updates.address.city ?? merchant.address.city,
+        state: updates.address.state ?? merchant.address.state,
+        postalCode: updates.address.postalCode ?? merchant.address.postalCode,
+      };
+    }
+
+    await merchant.save();
+    return merchant;
+  }
+
   static async getMerchantBySlug(slug: string): Promise<IMerchant> {
     const merchant = await MerchantModel.findOne({ slug: slug.toLowerCase(), isActive: true, status: 'APPROVED' });
     if (!merchant) {
