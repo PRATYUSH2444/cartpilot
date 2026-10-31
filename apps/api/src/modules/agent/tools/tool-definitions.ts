@@ -4,6 +4,7 @@ import { CartService } from '../../cart/cart.service.js';
 import { RecipeService } from '../../recipe/recipe.service.js';
 import { PricingService } from '../../pricing/pricing.service.js';
 import { ProductCategory } from '../../catalog/product.model.js';
+import { productCategoryEnum } from '../../catalog/catalog.schema.js';
 import { BadRequestError } from '../../../common/errors/app-error.js';
 
 export interface ToolDefinition<TInput = any, TOutput = any> {
@@ -17,9 +18,7 @@ export interface ToolDefinition<TInput = any, TOutput = any> {
 // 1. searchCatalog Tool
 const SearchCatalogInputSchema = z.object({
   query: z.string().min(1, 'Search query cannot be empty').trim(),
-  category: z
-    .enum(['GRAINS', 'PULSES', 'DAIRY', 'VEGETABLES', 'SPICES', 'OILS', 'CONDIMENTS'])
-    .optional(),
+  category: productCategoryEnum.optional(),
   limit: z.coerce.number().int().min(1).max(20).default(6),
 });
 
@@ -34,7 +33,27 @@ export const searchCatalogTool: ToolDefinition = {
       query: { type: 'string', description: 'Search term or product alias' },
       category: {
         type: 'string',
-        enum: ['GRAINS', 'PULSES', 'DAIRY', 'VEGETABLES', 'SPICES', 'OILS', 'CONDIMENTS'],
+        enum: [
+          'GRAINS',
+          'PULSES',
+          'DAIRY',
+          'VEGETABLES',
+          'SPICES',
+          'OILS',
+          'CONDIMENTS',
+          'FRUITS_VEGETABLES',
+          'DAIRY_BREAKFAST',
+          'ATTA_RICE_DAL',
+          'SNACKS_MUNCHIES',
+          'COLD_DRINKS_JUICES',
+          'BAKERY',
+          'INSTANT_FROZEN_FOOD',
+          'MASALA_DRY_FRUITS',
+          'PERSONAL_CARE',
+          'HOUSEHOLD_ESSENTIALS',
+          'BABY_CARE',
+          'PET_CARE',
+        ],
         description: 'Optional category filter',
       },
       limit: { type: 'integer', description: 'Max items to return (1-20)', default: 6 },

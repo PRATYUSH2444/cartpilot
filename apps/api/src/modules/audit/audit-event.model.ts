@@ -13,7 +13,8 @@ export type AuditResourceType =
   | 'USER'
   | 'MERCHANT'
   | 'SESSION'
-  | 'STAFF';
+  | 'STAFF'
+  | 'PRODUCT';
 
 export type AuditEventType =
   | 'USER_REGISTERED'
@@ -29,6 +30,10 @@ export type AuditEventType =
   | 'AUTH_TOKEN_REUSE_DETECTED'
   | 'MERCHANT_APPLICATION_SUBMITTED'
   | 'MERCHANT_STATUS_UPDATED'
+  | 'MERCHANT_PRODUCT_CREATED'
+  | 'MERCHANT_PRODUCT_UPDATED'
+  | 'MERCHANT_PRODUCT_ARCHIVED'
+  | 'INVENTORY_STOCK_ADJUSTED'
   | 'STAFF_INVITED'
   | 'STAFF_INVITATION_ACCEPTED'
   | 'STAFF_REVOKED'
@@ -114,6 +119,7 @@ const auditEventSchema = new Schema<AuditEventDocument>(
         'MERCHANT',
         'SESSION',
         'STAFF',
+        'PRODUCT',
       ],
       required: true,
     },

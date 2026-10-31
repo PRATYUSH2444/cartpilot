@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { MerchantModel, IMerchant, MerchantStatus } from './merchant.model.js';
-import { ProductModel, IProduct } from '../catalog/product.model.js';
+import { ProductModel, IProduct, ProductCategory, PackageUnit } from '../catalog/product.model.js';
 import { UserModel } from '../users/user.model.js';
 import { MerchantUserModel, MerchantPermission } from './merchant-user.model.js';
 import { StaffInvitationModel } from './staff-invitation.model.js';
@@ -529,6 +529,239 @@ export class MerchantService {
       resourceId: staffUserId,
       resourceType: 'STAFF',
       payload: { merchantId, staffUserId },
+    });
+  }
+
+  /**
+   * Add a new product SKU to merchant store inventory.
+   * Strictly enforces 100% vegetarian invariant and positive integer paise.
+   */
+  static async addProduct(
+    merchantId: string,
+    actorUserId: string,
+    input: {
+      name: string;
+      description: string;
+      category: ProductCategory;
+      pricePaise: number;
+      packageSize: number;
+      packageUnit: PackageUnit;
+      availableStock: number;
+      aliases?: string[];
+      imageUrl?: string;
+    }
+  ): Promise<IProduct> {
+    if (!mongoose.Types.ObjectId.isValid(merchantId)) {
+      throw new BadRequestError('Invalid merchant ID format');
+    }
+    const merchant = await MerchantModel.findById(merchantId);
+    if (!merchant || merchant.status !== 'APPROVED') {
+      throw new BadRequestError('Merchant store not found or not approved');
+    }
+
+    if (!input.name || input.name.trim().length === 0) {
+      throw new BadRequestError('Product name is required');
+    }
+
+    if (!Number.isInteger(input.pricePaise) || input.pricePaise <= 0) {
+      throw new BadRequestError('Product price must be a positive integer in paise (₹1.00 = 100 paise)');
+    }
+
+    if (!Number.isInteger(input.availableStock) || input.availableStock < 0) {
+      throw new BadRequestError('Available stock must be a non-negative integer');
+    }
+
+    const baseSlug = input.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    const slug = `${baseSlug}-${Date.now().toString(36)}`;
+
+    const normalizedAliases = (input.aliases || [])
+      .map((a) => a.toLowerCase().trim())
+      .filter((a) => a.length > 0);
+
+    const product = await ProductModel.create({
+      merchantId: new mongoose.Types.ObjectId(merchantId),
+      name: input.name.trim(),
+      slug,
+      description: (input.description || input.name).trim(),
+      category: input.category,
+      pricePaise: input.pricePaise,
+      packageSize: input.packageSize || 1,
+      packageUnit: input.packageUnit || 'PIECE',
+      availableStock: input.availableStock,
+      reservedStock: 0,
+      aliases: normalizedAliases,
+      isVegetarian: true, // Non-negotiable pure vegetarian invariant
+      isActive: true,
+      imageUrl: input.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500',
+    });
+
+    await auditService.recordEvent({
+      eventType: 'MERCHANT_PRODUCT_CREATED',
+      actorId: actorUserId,
+      actorRole: 'MERCHANT',
+      resourceId: product._id.toString(),
+      resourceType: 'PRODUCT',
+      payload: { merchantId, productId: product._id.toString(), name: product.name, pricePaise: product.pricePaise },
+    });
+
+    return product;
+  }
+
+  /**
+   * Update product SKU details with tenant boundary verification.
+   */
+  static async updateProduct(
+    merchantId: string,
+    actorUserId: string,
+    productId: string,
+    input: {
+      name?: string;
+      description?: string;
+      category?: ProductCategory;
+      pricePaise?: number;
+      packageSize?: number;
+      packageUnit?: PackageUnit;
+      aliases?: string[];
+      imageUrl?: string;
+      isActive?: boolean;
+    }
+  ): Promise<IProduct> {
+    if (!mongoose.Types.ObjectId.isValid(productId) || !mongoose.Types.ObjectId.isValid(merchantId)) {
+      throw new BadRequestError('Invalid product or merchant ID format');
+    }
+
+    const product = await ProductModel.findOne({
+      _id: new mongoose.Types.ObjectId(productId),
+      merchantId: new mongoose.Types.ObjectId(merchantId),
+    });
+
+    if (!product) {
+      throw new NotFoundError('Product not found in your merchant store inventory');
+    }
+
+    if (input.pricePaise !== undefined) {
+      if (!Number.isInteger(input.pricePaise) || input.pricePaise <= 0) {
+        throw new BadRequestError('Price must be a positive integer in paise');
+      }
+      product.pricePaise = input.pricePaise;
+    }
+
+    if (input.name !== undefined) product.name = input.name.trim();
+    if (input.description !== undefined) product.description = input.description.trim();
+    if (input.category !== undefined) product.category = input.category;
+    if (input.packageSize !== undefined) product.packageSize = input.packageSize;
+    if (input.packageUnit !== undefined) product.packageUnit = input.packageUnit;
+    if (input.imageUrl !== undefined) product.imageUrl = input.imageUrl;
+    if (input.isActive !== undefined) product.isActive = input.isActive;
+    if (input.aliases !== undefined) {
+      product.aliases = input.aliases.map((a) => a.toLowerCase().trim()).filter((a) => a.length > 0);
+    }
+
+    product.isVegetarian = true; // Invariant preserved
+    await product.save();
+
+    await auditService.recordEvent({
+      eventType: 'MERCHANT_PRODUCT_UPDATED',
+      actorId: actorUserId,
+      actorRole: 'MERCHANT',
+      resourceId: product._id.toString(),
+      resourceType: 'PRODUCT',
+      payload: { merchantId, productId, updates: input },
+    });
+
+    return product;
+  }
+
+  /**
+   * Adjust product inventory stock with atomic validation and non-negative invariant.
+   */
+  static async adjustProductStock(
+    merchantId: string,
+    actorUserId: string,
+    productId: string,
+    adjustment: number,
+    reason?: string
+  ): Promise<IProduct> {
+    if (!mongoose.Types.ObjectId.isValid(productId) || !mongoose.Types.ObjectId.isValid(merchantId)) {
+      throw new BadRequestError('Invalid product or merchant ID format');
+    }
+
+    if (!Number.isInteger(adjustment) || adjustment === 0) {
+      throw new BadRequestError('Stock adjustment must be a non-zero integer');
+    }
+
+    const product = await ProductModel.findOne({
+      _id: new mongoose.Types.ObjectId(productId),
+      merchantId: new mongoose.Types.ObjectId(merchantId),
+    });
+
+    if (!product) {
+      throw new NotFoundError('Product not found in your merchant store inventory');
+    }
+
+    const newStock = product.availableStock + adjustment;
+    if (newStock < 0) {
+      throw new BadRequestError(
+        `Insufficient stock for adjustment. Current stock is ${product.availableStock}, attempted delta is ${adjustment}`
+      );
+    }
+
+    product.availableStock = newStock;
+    await product.save();
+
+    await auditService.recordEvent({
+      eventType: 'INVENTORY_STOCK_ADJUSTED',
+      actorId: actorUserId,
+      actorRole: 'MERCHANT',
+      resourceId: product._id.toString(),
+      resourceType: 'INVENTORY',
+      payload: {
+        merchantId,
+        productId,
+        previousStock: product.availableStock - adjustment,
+        adjustment,
+        newStock,
+        reason: reason || 'Merchant manual stock update',
+      },
+    });
+
+    return product;
+  }
+
+  /**
+   * Archive / deactivate a product from merchant store catalog.
+   */
+  static async archiveProduct(
+    merchantId: string,
+    actorUserId: string,
+    productId: string
+  ): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(productId) || !mongoose.Types.ObjectId.isValid(merchantId)) {
+      throw new BadRequestError('Invalid product or merchant ID format');
+    }
+
+    const product = await ProductModel.findOne({
+      _id: new mongoose.Types.ObjectId(productId),
+      merchantId: new mongoose.Types.ObjectId(merchantId),
+    });
+
+    if (!product) {
+      throw new NotFoundError('Product not found in your merchant store inventory');
+    }
+
+    product.isActive = false;
+    await product.save();
+
+    await auditService.recordEvent({
+      eventType: 'MERCHANT_PRODUCT_ARCHIVED',
+      actorId: actorUserId,
+      actorRole: 'MERCHANT',
+      resourceId: product._id.toString(),
+      resourceType: 'PRODUCT',
+      payload: { merchantId, productId },
     });
   }
 }

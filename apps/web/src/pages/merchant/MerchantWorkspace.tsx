@@ -24,6 +24,8 @@ import {
   FileText,
   Receipt,
   ShoppingBag,
+  Plus,
+  X,
 } from 'lucide-react';
 import { API_BASE } from '../../config/api';
 
@@ -84,6 +86,18 @@ export const MerchantWorkspace: React.FC = () => {
     email: string;
   } | null>(null);
   const [hasCopiedInvite, setHasCopiedInvite] = useState(false);
+
+  // Add Product Modal State
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductCategory, setNewProductCategory] = useState('FRUITS_VEGETABLES');
+  const [newProductPriceRupees, setNewProductPriceRupees] = useState('');
+  const [newProductPackageSize, setNewProductPackageSize] = useState('1');
+  const [newProductPackageUnit, setNewProductPackageUnit] = useState('KG');
+  const [newProductStock, setNewProductStock] = useState('50');
+  const [newProductDescription, setNewProductDescription] = useState('');
+  const [newProductAliases, setNewProductAliases] = useState('');
 
   const toggleTheme = () => {
     const newDark = !isDark;
@@ -159,7 +173,7 @@ export const MerchantWorkspace: React.FC = () => {
     setAdvancingOrderId(orderId);
 
     try {
-      const res = await fetch(`${API_BASE}/orders/${orderId}/simulate-step`, {
+      const res = await fetch(`${API_BASE}/orders/${orderId}/advance-status`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -181,6 +195,115 @@ export const MerchantWorkspace: React.FC = () => {
       showBanner('error', 'Network error simulating fulfillment advancement');
     } finally {
       setAdvancingOrderId(null);
+    }
+  };
+
+  const handleAddProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+
+    const priceRupees = parseFloat(newProductPriceRupees);
+    if (isNaN(priceRupees) || priceRupees <= 0) {
+      showBanner('error', 'Please enter a valid positive price in ₹');
+      return;
+    }
+    const pricePaise = Math.round(priceRupees * 100);
+
+    const stock = parseInt(newProductStock, 10);
+    if (isNaN(stock) || stock < 0) {
+      showBanner('error', 'Available stock must be a non-negative number');
+      return;
+    }
+
+    const packageSize = parseFloat(newProductPackageSize) || 1;
+
+    setIsSubmittingProduct(true);
+    try {
+      const aliasesArray = newProductAliases
+        .split(',')
+        .map((a) => a.trim().toLowerCase())
+        .filter((a) => a.length > 0);
+
+      const res = await fetch(`${API_BASE}/merchants/my-store/products`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: newProductName.trim(),
+          category: newProductCategory,
+          pricePaise,
+          packageSize,
+          packageUnit: newProductPackageUnit,
+          availableStock: stock,
+          description: newProductDescription.trim() || newProductName.trim(),
+          aliases: aliasesArray,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        showBanner('success', `Product "${data.data.name}" added to catalog`);
+        setIsAddProductOpen(false);
+        setNewProductName('');
+        setNewProductPriceRupees('');
+        setNewProductDescription('');
+        setNewProductAliases('');
+        fetchMerchantData();
+      } else {
+        showBanner('error', data.error?.message || 'Failed to add product');
+      }
+    } catch {
+      showBanner('error', 'Network error adding product');
+    } finally {
+      setIsSubmittingProduct(false);
+    }
+  };
+
+  const handleAdjustStock = async (productId: string, delta: number) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE}/merchants/my-store/products/${productId}/stock`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ adjustment: delta, reason: 'Merchant quick stock adjustment' }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setProducts((prev) =>
+          prev.map((p) => (p._id === productId ? { ...p, availableStock: data.data.availableStock } : p))
+        );
+        showBanner('success', `Stock updated: ${data.data.name} now has ${data.data.availableStock} units`);
+      } else {
+        showBanner('error', data.error?.message || 'Failed to update stock');
+      }
+    } catch {
+      showBanner('error', 'Network error adjusting stock');
+    }
+  };
+
+  const handleArchiveProduct = async (productId: string, productName: string) => {
+    if (!token || !window.confirm(`Archive "${productName}" from your store catalog?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/merchants/my-store/products/${productId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        setProducts((prev) => prev.filter((p) => p._id !== productId));
+        showBanner('success', `Product "${productName}" archived`);
+      } else {
+        const data = await res.json();
+        showBanner('error', data.error?.message || 'Failed to archive product');
+      }
+    } catch {
+      showBanner('error', 'Network error archiving product');
     }
   };
 
@@ -531,16 +654,25 @@ export const MerchantWorkspace: React.FC = () => {
         {/* Tab 1: Store Inventory Grid */}
         {activeTab === 'inventory' && (
           <div className="bg-card border border-brd rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-4 border-b border-brd flex items-center justify-between">
+            <div className="p-4 border-b border-brd flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <h3 className="font-bold text-sm text-ink">Organic Certified Catalog</h3>
+                <h3 className="font-bold text-sm text-ink">Store Inventory & Catalog</h3>
                 <p className="text-xs text-mut">
                   Zero meat, fish, poultry, or egg products allowed by deterministic gateway
                 </p>
               </div>
-              <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-paper border border-brd text-ink">
-                {products.length} SKUs Active
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs px-2.5 py-1.5 rounded-md bg-paper border border-brd text-ink">
+                  {products.length} SKUs Active
+                </span>
+                <button
+                  onClick={() => setIsAddProductOpen(true)}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add SKU</span>
+                </button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -552,6 +684,7 @@ export const MerchantWorkspace: React.FC = () => {
                     <th className="py-2.5 px-4">Price</th>
                     <th className="py-2.5 px-4">Available Stock</th>
                     <th className="py-2.5 px-4">Status</th>
+                    <th className="py-2.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brd">
@@ -561,7 +694,7 @@ export const MerchantWorkspace: React.FC = () => {
                       <tr key={p._id} className="hover:bg-paper/30 transition-colors">
                         <td className="py-3 px-4">
                           <span className="font-semibold text-ink block">{p.name}</span>
-                          <span className="text-[10px] text-mut">{p.packageUnit}</span>
+                          <span className="text-[10px] text-mut">{p.packageSize} {p.packageUnit}</span>
                         </td>
                         <td className="py-3 px-4">
                           <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-paper border border-brd text-mut">
@@ -585,6 +718,31 @@ export const MerchantWorkspace: React.FC = () => {
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                             Vegetarian
                           </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleAdjustStock(p._id, 10)}
+                              title="Add 10 units"
+                              className="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-paper hover:bg-emerald-500/10 hover:text-emerald-500 border border-brd transition-colors"
+                            >
+                              +10
+                            </button>
+                            <button
+                              onClick={() => handleAdjustStock(p._id, 50)}
+                              title="Add 50 units"
+                              className="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-paper hover:bg-emerald-500/10 hover:text-emerald-500 border border-brd transition-colors"
+                            >
+                              +50
+                            </button>
+                            <button
+                              onClick={() => handleArchiveProduct(p._id, p.name)}
+                              title="Archive product"
+                              className="p-1 text-mut hover:text-rose-500 hover:bg-rose-500/10 rounded transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -657,7 +815,15 @@ export const MerchantWorkspace: React.FC = () => {
                               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                             ) : (
                               <>
-                                <span>Advance Step</span>
+                                <span>
+                                  {order.status === 'CONFIRMED'
+                                    ? 'Pack Order'
+                                    : order.status === 'PACKING'
+                                      ? 'Dispatch for Delivery'
+                                      : order.status === 'OUT_FOR_DELIVERY'
+                                        ? 'Mark Delivered'
+                                        : 'Advance Step'}
+                                </span>
                                 <ArrowRight className="w-3.5 h-3.5" />
                               </>
                             )}
@@ -962,6 +1128,178 @@ export const MerchantWorkspace: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Add Product Modal */}
+      {isAddProductOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-card border border-brd rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div className="p-4 border-b border-brd flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-ink">Add New Product SKU</h3>
+                  <p className="text-[11px] text-mut">100% pure certified vegetarian catalog</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAddProductOpen(false)}
+                className="p-1 rounded-lg hover:bg-paper text-mut hover:text-ink transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddProduct} className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-ink mb-1">Product Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Kashmiri Saffron Box, Organic Cow Milk"
+                  value={newProductName}
+                  onChange={(e) => setNewProductName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-brd bg-paper text-xs text-ink focus:outline-none focus:border-acc"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">Category *</label>
+                  <select
+                    value={newProductCategory}
+                    onChange={(e) => setNewProductCategory(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-brd bg-paper text-xs text-ink focus:outline-none focus:border-acc"
+                  >
+                    <option value="FRUITS_VEGETABLES">Fruits & Vegetables</option>
+                    <option value="DAIRY_BREAKFAST">Dairy & Breakfast</option>
+                    <option value="ATTA_RICE_DAL">Atta, Rice & Dal</option>
+                    <option value="SNACKS_MUNCHIES">Snacks & Munchies</option>
+                    <option value="COLD_DRINKS_JUICES">Cold Drinks & Juices</option>
+                    <option value="BAKERY">Bakery</option>
+                    <option value="INSTANT_FROZEN_FOOD">Instant & Frozen Food</option>
+                    <option value="MASALA_DRY_FRUITS">Masala & Dry Fruits</option>
+                    <option value="OILS">Oils & Ghee</option>
+                    <option value="PERSONAL_CARE">Personal Care</option>
+                    <option value="HOUSEHOLD_ESSENTIALS">Household Essentials</option>
+                    <option value="BABY_CARE">Baby Care</option>
+                    <option value="PET_CARE">Pet Care</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">Price (₹) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    required
+                    placeholder="99.00"
+                    value={newProductPriceRupees}
+                    onChange={(e) => setNewProductPriceRupees(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-brd bg-paper text-xs text-ink font-mono focus:outline-none focus:border-acc"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">Package Size</label>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    required
+                    value={newProductPackageSize}
+                    onChange={(e) => setNewProductPackageSize(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-brd bg-paper text-xs text-ink font-mono focus:outline-none focus:border-acc"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">Unit</label>
+                  <select
+                    value={newProductPackageUnit}
+                    onChange={(e) => setNewProductPackageUnit(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-brd bg-paper text-xs text-ink focus:outline-none focus:border-acc"
+                  >
+                    <option value="KG">KG</option>
+                    <option value="G">G</option>
+                    <option value="L">L</option>
+                    <option value="ML">ML</option>
+                    <option value="PIECE">PIECE</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">Initial Stock</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    value={newProductStock}
+                    onChange={(e) => setNewProductStock(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-brd bg-paper text-xs text-ink font-mono focus:outline-none focus:border-acc"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink mb-1">Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Fresh organic farm produce..."
+                  value={newProductDescription}
+                  onChange={(e) => setNewProductDescription(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-brd bg-paper text-xs text-ink focus:outline-none focus:border-acc"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink mb-1">
+                  Vernacular Search Aliases (comma separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. kaju, cashews, dry fruits"
+                  value={newProductAliases}
+                  onChange={(e) => setNewProductAliases(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-brd bg-paper text-xs text-ink focus:outline-none focus:border-acc"
+                />
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>Certified 100% vegetarian product invariant enforced automatically.</span>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-brd">
+                <button
+                  type="button"
+                  onClick={() => setIsAddProductOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-brd bg-paper hover:bg-card text-xs font-semibold text-ink"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingProduct}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-colors disabled:opacity-50"
+                >
+                  {isSubmittingProduct ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving SKU...</span>
+                    </>
+                  ) : (
+                    <span>Save to Catalog</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

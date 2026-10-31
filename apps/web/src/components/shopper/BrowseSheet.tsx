@@ -24,12 +24,19 @@ interface BrowseSheetProps {
 
 const CATEGORIES = [
   { id: 'ALL', label: 'All Items' },
-  { id: 'VEGETABLES', label: 'Vegetables' },
-  { id: 'DAIRY', label: 'Dairy' },
-  { id: 'GRAINS', label: 'Grains & Atta' },
-  { id: 'PULSES', label: 'Pulses & Dal' },
-  { id: 'SPICES', label: 'Spices' },
+  { id: 'FRUITS_VEGETABLES', label: 'Fruits & Vegetables' },
+  { id: 'DAIRY_BREAKFAST', label: 'Dairy & Breakfast' },
+  { id: 'ATTA_RICE_DAL', label: 'Atta, Rice & Dal' },
+  { id: 'SNACKS_MUNCHIES', label: 'Snacks & Munchies' },
+  { id: 'COLD_DRINKS_JUICES', label: 'Cold Drinks & Juices' },
+  { id: 'BAKERY', label: 'Bakery' },
+  { id: 'INSTANT_FROZEN_FOOD', label: 'Instant & Frozen' },
+  { id: 'MASALA_DRY_FRUITS', label: 'Masala & Dry Fruits' },
   { id: 'OILS', label: 'Oils & Ghee' },
+  { id: 'PERSONAL_CARE', label: 'Personal Care' },
+  { id: 'HOUSEHOLD_ESSENTIALS', label: 'Household' },
+  { id: 'BABY_CARE', label: 'Baby Care' },
+  { id: 'PET_CARE', label: 'Pet Care' },
 ];
 
 // Common Indian grocery vernacular aliases for quick search
@@ -96,9 +103,25 @@ export const BrowseSheet: React.FC<BrowseSheetProps> = ({
 
     // Filter by category
     if (selectedCategory !== 'ALL') {
-      result = result.filter(
-        (p) => p.category?.toUpperCase() === selectedCategory.toUpperCase()
-      );
+      result = result.filter((p) => {
+        const cat = p.category?.toUpperCase() || '';
+        if (selectedCategory === 'FRUITS_VEGETABLES') {
+          return cat === 'FRUITS_VEGETABLES' || cat === 'VEGETABLES';
+        }
+        if (selectedCategory === 'DAIRY_BREAKFAST') {
+          return cat === 'DAIRY_BREAKFAST' || cat === 'DAIRY';
+        }
+        if (selectedCategory === 'ATTA_RICE_DAL') {
+          return cat === 'ATTA_RICE_DAL' || cat === 'GRAINS' || cat === 'PULSES';
+        }
+        if (selectedCategory === 'MASALA_DRY_FRUITS') {
+          return cat === 'MASALA_DRY_FRUITS' || cat === 'SPICES';
+        }
+        if (selectedCategory === 'OILS') {
+          return cat === 'OILS' || cat === 'CONDIMENTS';
+        }
+        return cat === selectedCategory.toUpperCase();
+      });
     }
 
     // Filter by query and aliases

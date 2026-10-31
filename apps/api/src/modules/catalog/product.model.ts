@@ -1,7 +1,25 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export type ProductCategory =
-  'GRAINS' | 'PULSES' | 'DAIRY' | 'VEGETABLES' | 'SPICES' | 'OILS' | 'CONDIMENTS';
+  | 'GRAINS'
+  | 'PULSES'
+  | 'DAIRY'
+  | 'VEGETABLES'
+  | 'SPICES'
+  | 'OILS'
+  | 'CONDIMENTS'
+  | 'FRUITS_VEGETABLES'
+  | 'DAIRY_BREAKFAST'
+  | 'ATTA_RICE_DAL'
+  | 'SNACKS_MUNCHIES'
+  | 'COLD_DRINKS_JUICES'
+  | 'BAKERY'
+  | 'INSTANT_FROZEN_FOOD'
+  | 'MASALA_DRY_FRUITS'
+  | 'PERSONAL_CARE'
+  | 'HOUSEHOLD_ESSENTIALS'
+  | 'BABY_CARE'
+  | 'PET_CARE';
 
 export type PackageUnit = 'G' | 'KG' | 'ML' | 'L' | 'PIECE';
 
@@ -51,7 +69,27 @@ const ProductSchema = new Schema<IProduct>(
     },
     category: {
       type: String,
-      enum: ['GRAINS', 'PULSES', 'DAIRY', 'VEGETABLES', 'SPICES', 'OILS', 'CONDIMENTS'],
+      enum: [
+        'GRAINS',
+        'PULSES',
+        'DAIRY',
+        'VEGETABLES',
+        'SPICES',
+        'OILS',
+        'CONDIMENTS',
+        'FRUITS_VEGETABLES',
+        'DAIRY_BREAKFAST',
+        'ATTA_RICE_DAL',
+        'SNACKS_MUNCHIES',
+        'COLD_DRINKS_JUICES',
+        'BAKERY',
+        'INSTANT_FROZEN_FOOD',
+        'MASALA_DRY_FRUITS',
+        'PERSONAL_CARE',
+        'HOUSEHOLD_ESSENTIALS',
+        'BABY_CARE',
+        'PET_CARE',
+      ],
       required: true,
       index: true,
     },

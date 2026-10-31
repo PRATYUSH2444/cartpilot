@@ -260,3 +260,152 @@ export async function adminUpdateMerchantStatus(
     next(error);
   }
 }
+
+export async function addMyProduct(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+      return;
+    }
+
+    let merchantId = req.user.merchantId;
+    if (!merchantId) {
+      const { MerchantUserModel } = await import('./merchant-user.model.js');
+      const mapping = await MerchantUserModel.findOne({ userId: req.user.id });
+      merchantId = mapping?.merchantId?.toString();
+    }
+
+    if (!merchantId) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'No merchant store linked to this user' } });
+      return;
+    }
+
+    const product = await MerchantService.addProduct(merchantId, req.user.id, req.body);
+    res.status(201).json({
+      success: true,
+      data: product,
+      message: 'Product added to merchant catalog successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateMyProduct(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+      return;
+    }
+
+    let merchantId = req.user.merchantId;
+    if (!merchantId) {
+      const { MerchantUserModel } = await import('./merchant-user.model.js');
+      const mapping = await MerchantUserModel.findOne({ userId: req.user.id });
+      merchantId = mapping?.merchantId?.toString();
+    }
+
+    if (!merchantId) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'No merchant store linked to this user' } });
+      return;
+    }
+
+    const { productId } = req.params;
+    const product = await MerchantService.updateProduct(merchantId, req.user.id, productId as string, req.body);
+    res.status(200).json({
+      success: true,
+      data: product,
+      message: 'Product updated successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function adjustMyProductStock(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+      return;
+    }
+
+    let merchantId = req.user.merchantId;
+    if (!merchantId) {
+      const { MerchantUserModel } = await import('./merchant-user.model.js');
+      const mapping = await MerchantUserModel.findOne({ userId: req.user.id });
+      merchantId = mapping?.merchantId?.toString();
+    }
+
+    if (!merchantId) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'No merchant store linked to this user' } });
+      return;
+    }
+
+    const { productId } = req.params;
+    const { adjustment, delta, reason } = req.body;
+    const stockAdjustment = adjustment !== undefined ? Number(adjustment) : Number(delta);
+
+    const product = await MerchantService.adjustProductStock(
+      merchantId,
+      req.user.id,
+      productId as string,
+      stockAdjustment,
+      reason
+    );
+
+    res.status(200).json({
+      success: true,
+      data: product,
+      message: `Stock updated to ${product.availableStock} units`,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function archiveMyProduct(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
+      return;
+    }
+
+    let merchantId = req.user.merchantId;
+    if (!merchantId) {
+      const { MerchantUserModel } = await import('./merchant-user.model.js');
+      const mapping = await MerchantUserModel.findOne({ userId: req.user.id });
+      merchantId = mapping?.merchantId?.toString();
+    }
+
+    if (!merchantId) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'No merchant store linked to this user' } });
+      return;
+    }
+
+    const { productId } = req.params;
+    await MerchantService.archiveProduct(merchantId, req.user.id, productId as string);
+
+    res.status(200).json({
+      success: true,
+      data: { message: 'Product archived from merchant catalog' },
+    });
+  } catch (error) {
+    next(error);
+  }
+}

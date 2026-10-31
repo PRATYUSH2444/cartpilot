@@ -11,6 +11,10 @@ import {
   revokeStaff,
   adminListMerchants,
   adminUpdateMerchantStatus,
+  addMyProduct,
+  updateMyProduct,
+  adjustMyProductStock,
+  archiveMyProduct,
 } from './merchant.controller.js';
 import { validate } from '../../common/middleware/validate.js';
 import { authenticate, requireRole } from '../../common/middleware/auth.js';
@@ -40,6 +44,12 @@ merchantRouter.post(
   inviteStaff
 );
 merchantRouter.delete('/staff/:staffUserId', authenticate, requireRole('MERCHANT'), revokeStaff);
+
+// Merchant Product & Inventory Management (Tenant Isolated)
+merchantRouter.post('/my-store/products', authenticate, requireRole('MERCHANT'), addMyProduct);
+merchantRouter.patch('/my-store/products/:productId', authenticate, requireRole('MERCHANT'), updateMyProduct);
+merchantRouter.patch('/my-store/products/:productId/stock', authenticate, requireRole('MERCHANT'), adjustMyProductStock);
+merchantRouter.delete('/my-store/products/:productId', authenticate, requireRole('MERCHANT'), archiveMyProduct);
 
 // Public individual store & catalog inspection
 merchantRouter.get('/:id', getMerchant);
