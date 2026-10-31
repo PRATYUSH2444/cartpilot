@@ -79,21 +79,28 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({
 
       {/* Right: Actions, Store Online Toggle, Date, Notifications, Profile */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Store Online / Offline Toggle */}
-        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60">
-          <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
-            {isStoreOnline ? 'Store Online' : 'Store Offline'}
-          </span>
+        {/* Store Online / Offline Toggle matching target mockup */}
+        <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-100">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isStoreOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+              }`}
+            />
+            <span className="hidden sm:inline">
+              {isStoreOnline ? 'Accepting Orders' : 'Store Paused'}
+            </span>
+          </div>
           <button
             onClick={onToggleStoreOnline}
             disabled={isUpdatingOnline}
             className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
               isStoreOnline ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'
             } ${isUpdatingOnline ? 'opacity-50 cursor-wait' : ''}`}
-            title="Toggle store active status"
+            title="Toggle store order acceptance"
           >
             <span
-              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
                 isStoreOnline ? 'translate-x-4' : 'translate-x-0'
               }`}
             />

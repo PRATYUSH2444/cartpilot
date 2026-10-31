@@ -77,6 +77,25 @@ export class MerchantService {
         state: string;
         postalCode: string;
       };
+      deliverySettings: Partial<{
+        standardPrepMinutes: number;
+        currentPrepMinutes: number;
+        estimatedTravelMinutes: number;
+        totalDeliveryMinutes: number;
+        orderAcceptanceMode: 'OPEN' | 'PAUSED' | 'CLOSED';
+        workloadPreset: 'NOT_BUSY' | 'NORMAL' | 'BUSY' | 'VERY_BUSY' | 'CUSTOM';
+        maxActiveOrders: number;
+        autoWorkloadCalculation: boolean;
+        deliveryRadiusKm: number;
+        minOrderPaise: number;
+        deliveryFeePaise: number;
+        operatingHours: {
+          openTime: string;
+          closeTime: string;
+          lunchBreakStart?: string;
+          lunchBreakEnd?: string;
+        };
+      }>;
     }>
   ): Promise<IMerchant> {
     if (!mongoose.Types.ObjectId.isValid(merchantId)) {
@@ -99,6 +118,31 @@ export class MerchantService {
         city: updates.address.city ?? merchant.address.city,
         state: updates.address.state ?? merchant.address.state,
         postalCode: updates.address.postalCode ?? merchant.address.postalCode,
+      };
+    }
+    if (updates.deliverySettings !== undefined) {
+      const existing = (merchant.deliverySettings as any) || {
+        standardPrepMinutes: 15,
+        currentPrepMinutes: 30,
+        estimatedTravelMinutes: 15,
+        totalDeliveryMinutes: 45,
+        orderAcceptanceMode: 'OPEN',
+        workloadPreset: 'NORMAL',
+        maxActiveOrders: 8,
+        autoWorkloadCalculation: true,
+        deliveryRadiusKm: 5,
+        minOrderPaise: 10000,
+        deliveryFeePaise: 4000,
+        operatingHours: { openTime: '07:00', closeTime: '22:00' },
+      };
+      const prep = updates.deliverySettings.currentPrepMinutes ?? existing.currentPrepMinutes;
+      const travel = updates.deliverySettings.estimatedTravelMinutes ?? existing.estimatedTravelMinutes;
+      merchant.deliverySettings = {
+        ...existing,
+        ...updates.deliverySettings,
+        currentPrepMinutes: prep,
+        estimatedTravelMinutes: travel,
+        totalDeliveryMinutes: prep + travel,
       };
     }
 

@@ -1,9 +1,14 @@
 import { Product, OrderData } from '../../types';
 
+export type MerchantPrimaryTab = 'home' | 'orders' | 'products' | 'delivery' | 'shop';
+
 export type MerchantTab =
-  | 'overview'
+  | 'home'
   | 'orders'
   | 'products'
+  | 'delivery'
+  | 'shop'
+  | 'overview'
   | 'inventory'
   | 'categories'
   | 'fulfilment'
@@ -17,6 +22,26 @@ export type MerchantTab =
   | 'notifications'
   | 'security'
   | 'support';
+
+export interface MerchantDeliverySettings {
+  standardPrepMinutes: number;
+  currentPrepMinutes: number;
+  estimatedTravelMinutes: number;
+  totalDeliveryMinutes: number;
+  orderAcceptanceMode: 'OPEN' | 'PAUSED' | 'CLOSED';
+  workloadPreset: 'NOT_BUSY' | 'NORMAL' | 'BUSY' | 'VERY_BUSY' | 'CUSTOM';
+  maxActiveOrders: number;
+  autoWorkloadCalculation: boolean;
+  deliveryRadiusKm: number;
+  minOrderPaise: number;
+  deliveryFeePaise: number;
+  operatingHours?: {
+    openTime: string;
+    closeTime: string;
+    lunchBreakStart?: string;
+    lunchBreakEnd?: string;
+  };
+}
 
 export interface MerchantStoreData {
   _id: string;
@@ -38,6 +63,7 @@ export interface MerchantStoreData {
   isVegetarianCertified?: boolean;
   isActive: boolean;
   rating?: number;
+  deliverySettings?: MerchantDeliverySettings;
 }
 
 export interface StaffMemberData {

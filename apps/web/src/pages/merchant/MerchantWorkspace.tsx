@@ -12,21 +12,13 @@ import { MerchantSidebar } from '../../components/merchant/MerchantSidebar';
 import { MerchantHeader } from '../../components/merchant/MerchantHeader';
 import { MerchantCommandPalette } from '../../components/merchant/MerchantCommandPalette';
 import { MerchantNotificationsDrawer } from '../../components/merchant/MerchantNotificationsDrawer';
-import { MerchantOverviewView } from '../../components/merchant/MerchantOverviewView';
+import { MerchantHomeView } from '../../components/merchant/MerchantHomeView';
+import { MerchantDeliveryView } from '../../components/merchant/MerchantDeliveryView';
+import { MerchantShopView } from '../../components/merchant/MerchantShopView';
 import { MerchantOrdersView } from '../../components/merchant/MerchantOrdersView';
 import { MerchantOrderDetailDrawer } from '../../components/merchant/MerchantOrderDetailDrawer';
 import { MerchantProductsView } from '../../components/merchant/MerchantProductsView';
 import { MerchantProductFormModal } from '../../components/merchant/MerchantProductFormModal';
-import { MerchantInventoryView } from '../../components/merchant/MerchantInventoryView';
-import { MerchantFulfilmentView } from '../../components/merchant/MerchantFulfilmentView';
-import { MerchantCategoriesView } from '../../components/merchant/MerchantCategoriesView';
-import { MerchantCustomersView } from '../../components/merchant/MerchantCustomersView';
-import { MerchantAnalyticsView } from '../../components/merchant/MerchantAnalyticsView';
-import { MerchantFinanceView } from '../../components/merchant/MerchantFinanceView';
-import { MerchantMarketingView } from '../../components/merchant/MerchantMarketingView';
-import { MerchantStoreProfileView } from '../../components/merchant/MerchantStoreProfileView';
-import { MerchantStaffView } from '../../components/merchant/MerchantStaffView';
-import { MerchantSettingsView } from '../../components/merchant/MerchantSettingsView';
 import { IntegrationsModal } from '../../components/IntegrationsModal';
 import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 
@@ -37,7 +29,7 @@ export const MerchantWorkspace: React.FC = () => {
   });
 
   // State
-  const [activeTab, setActiveTab] = useState<MerchantTab>('overview');
+  const [activeTab, setActiveTab] = useState<MerchantTab>('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -294,7 +286,7 @@ export const MerchantWorkspace: React.FC = () => {
   };
 
   // Handle Staff Invitation
-  const handleInviteStaff = async (name: string, email: string, permissions: string[]) => {
+  const handleInviteStaff = async (name: string, email: string, permissions: string[], role?: string) => {
     if (!token) return null;
     setIsInvitingStaff(true);
 
@@ -305,7 +297,7 @@ export const MerchantWorkspace: React.FC = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, email, permissions }),
+        body: JSON.stringify({ name, email, permissions, role }),
       });
 
       const data = await res.json();
@@ -348,6 +340,60 @@ export const MerchantWorkspace: React.FC = () => {
     } catch {
       showBanner('error', 'Network error revoking staff access');
     }
+  };
+
+  const [isSavingDelivery, setIsSavingDelivery] = useState(false);
+
+  // Handle Delivery Settings Save
+  const handleSaveDeliverySettings = async (deliverySettings: any) => {
+    if (!token) return;
+    setIsSavingDelivery(true);
+    try {
+      const res = await fetch(`${API_BASE}/merchants/my-store`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ deliverySettings }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setStore(data.data);
+        showBanner('success', 'Delivery settings and operating hours saved successfully');
+      } else {
+        showBanner('error', data.error?.message || 'Failed to update delivery settings');
+      }
+    } catch {
+      showBanner('error', 'Network error updating delivery settings');
+    } finally {
+      setIsSavingDelivery(false);
+    }
+  };
+
+  // Handle Quick Workload Preset Change from Home View
+  const handleUpdateDeliveryPreset = async (
+    preset: 'NOT_BUSY' | 'NORMAL' | 'BUSY' | 'VERY_BUSY',
+    prepMinutes: number
+  ) => {
+    const travel = store?.deliverySettings?.estimatedTravelMinutes || 15;
+    const updatedSettings = {
+      ...(store?.deliverySettings || {}),
+      workloadPreset: preset,
+      currentPrepMinutes: prepMinutes,
+      totalDeliveryMinutes: prepMinutes + travel,
+    };
+    await handleSaveDeliverySettings(updatedSettings);
+  };
+
+  // Handle Order Acceptance Toggle (OPEN / PAUSED / CLOSED)
+  const handleToggleAcceptance = async (mode: 'OPEN' | 'PAUSED' | 'CLOSED') => {
+    const updatedSettings = {
+      ...(store?.deliverySettings || {}),
+      orderAcceptanceMode: mode,
+    };
+    await handleSaveDeliverySettings(updatedSettings);
   };
 
   const pendingOrdersCount = orders.filter(
@@ -442,17 +488,19 @@ export const MerchantWorkspace: React.FC = () => {
                 <span className="animate-spin mr-2">⏳</span> Loading merchant workspace...
               </div>
             )}
-            {activeTab === 'overview' && (
-              <MerchantOverviewView
+            {(activeTab === 'home' || activeTab === 'overview') && (
+              <MerchantHomeView
                 store={store}
                 orders={orders}
                 products={products}
                 onNavigate={(tab) => setActiveTab(tab)}
                 onSelectOrder={(id) => setSelectedOrderId(id)}
+                onUpdateDeliveryPreset={handleUpdateDeliveryPreset}
+                onToggleAcceptance={handleToggleAcceptance}
               />
             )}
 
-            {activeTab === 'orders' && (
+            {(activeTab === 'orders' || activeTab === 'fulfilment') && (
               <MerchantOrdersView
                 orders={orders}
                 onSelectOrder={(id) => setSelectedOrderId(id)}
@@ -462,7 +510,7 @@ export const MerchantWorkspace: React.FC = () => {
               />
             )}
 
-            {activeTab === 'products' && (
+            {(activeTab === 'products' || activeTab === 'inventory' || activeTab === 'categories') && (
               <MerchantProductsView
                 products={products}
                 onOpenAddProduct={() => {
@@ -475,65 +523,36 @@ export const MerchantWorkspace: React.FC = () => {
                 }}
                 onAdjustStock={handleAdjustStock}
                 onArchiveProduct={handleArchiveProduct}
+                onQuickAddProduct={handleProductSubmit}
               />
             )}
 
-            {activeTab === 'inventory' && (
-              <MerchantInventoryView
-                products={products}
-                onAdjustStock={handleAdjustStock}
-              />
-            )}
-
-            {activeTab === 'fulfilment' && (
-              <MerchantFulfilmentView
-                orders={orders}
-                onSelectOrder={(id) => setSelectedOrderId(id)}
-                onAdvanceStatus={handleAdvanceStatus}
-                isAdvancing={isAdvancingOrder}
-              />
-            )}
-
-            {activeTab === 'categories' && (
-              <MerchantCategoriesView products={products} />
-            )}
-
-            {activeTab === 'customers' && <MerchantCustomersView />}
-
-            {activeTab === 'analytics' && (
-              <MerchantAnalyticsView products={products} orders={orders} />
-            )}
-
-            {activeTab === 'finance' && <MerchantFinanceView />}
-
-            {activeTab === 'marketing' && <MerchantMarketingView />}
-
-            {(activeTab === 'store-profile' || activeTab === 'delivery-settings') && (
-              <MerchantStoreProfileView
+            {(activeTab === 'delivery' || activeTab === 'delivery-settings') && (
+              <MerchantDeliveryView
                 store={store}
-                onSaveProfile={handleSaveStoreProfile}
-                isSaving={isSavingProfile}
+                onSaveDeliverySettings={handleSaveDeliverySettings}
+                isSaving={isSavingDelivery}
               />
             )}
 
-            {activeTab === 'staff' && (
-              <MerchantStaffView
+            {(activeTab === 'shop' ||
+              activeTab === 'store-profile' ||
+              activeTab === 'staff' ||
+              activeTab === 'customers' ||
+              activeTab === 'finance' ||
+              activeTab === 'analytics' ||
+              activeTab === 'marketing' ||
+              activeTab === 'notifications' ||
+              activeTab === 'security' ||
+              activeTab === 'support') && (
+              <MerchantShopView
+                store={store}
                 staffList={staffList}
+                onSaveProfile={handleSaveStoreProfile}
+                isSavingProfile={isSavingProfile}
                 onInviteStaff={handleInviteStaff}
                 onRevokeStaff={handleRevokeStaff}
-                isInviting={isInvitingStaff}
-              />
-            )}
-
-            {(activeTab === 'notifications' || activeTab === 'security' || activeTab === 'support') && (
-              <MerchantSettingsView
-                initialSubTab={
-                  activeTab === 'security'
-                    ? 'security'
-                    : activeTab === 'support'
-                    ? 'support'
-                    : 'notifications'
-                }
+                isInvitingStaff={isInvitingStaff}
               />
             )}
           </main>
