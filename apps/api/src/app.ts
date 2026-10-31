@@ -2,9 +2,8 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import { env } from './config/env.config.js';
 import { requestIdMiddleware } from './common/middleware/request-id.js';
-import { csrfGuard } from './common/middleware/csrf-guard.js';
+import { csrfGuard, isAllowedOrigin } from './common/middleware/csrf-guard.js';
 import { errorHandler } from './common/middleware/error-handler.js';
 import { NotFoundError } from './common/errors/app-error.js';
 import { healthRouter } from './modules/health/health.routes.js';
@@ -35,7 +34,14 @@ export function createApp(): Express {
   // CORS Configuration
   app.use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: (requestOrigin, callback) => {
+        // Permit requests with no origin (e.g. mobile apps, curl, server-to-server) or verified origins
+        if (!requestOrigin || isAllowedOrigin(requestOrigin)) {
+          callback(null, true);
+        } else {
+          callback(null, false);
+        }
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'idempotency-key'],

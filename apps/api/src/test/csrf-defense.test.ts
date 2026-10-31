@@ -49,6 +49,26 @@ describe('Preflight (d): CSRF Defense & Cross-Origin Rejection Tests', () => {
     expect(res.status).not.toBe(403);
   });
 
+  it('allows state-changing POST request from private network LAN mobile origins (e.g. 192.168.x.x)', async () => {
+    const res = await request(app)
+      .post('/api/v1/cart/items')
+      .set('Origin', 'http://192.168.1.43:5173')
+      .send({ productId: '507f1f77bcf86cd799439011', quantity: 1 });
+
+    expect(res.status).not.toBe(403);
+  });
+
+  it('rejects state-changing POST request from public unapproved external IP', async () => {
+    const res = await request(app)
+      .post('/api/v1/cart/items')
+      .set('Origin', 'http://198.51.100.25:5173')
+      .send({ productId: '507f1f77bcf86cd799439011', quantity: 1 });
+
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
   it('allows safe read-only GET requests from any origin', async () => {
     const res = await request(app)
       .get('/api/v1/health')
