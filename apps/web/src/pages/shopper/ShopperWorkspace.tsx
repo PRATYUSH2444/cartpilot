@@ -1,22 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { RulesCard } from '../../components/cards/RulesCard';
-import { ItemsCard, ProposalPayload } from '../../components/cards/ItemsCard';
-import { CartCard } from '../../components/cards/CartCard';
-import { ApprovalCard } from '../../components/cards/ApprovalCard';
-import { PaymentCard } from '../../components/cards/PaymentCard';
-import { OrderCard } from '../../components/cards/OrderCard';
-import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { DecisionLamp } from '../../components/DecisionLamp';
-import { DeliveryChip } from '../../components/shopper/DeliveryChip';
-import { StickyCartBar } from '../../components/shopper/StickyCartBar';
-import { BottomTabBar, TabKey } from '../../components/shopper/BottomTabBar';
-import { ProductSheet } from '../../components/shopper/ProductSheet';
-import { BrowseSheet } from '../../components/shopper/BrowseSheet';
-import { ContextPanel } from '../../components/shopper/ContextPanel';
-import { OrdersSheet } from '../../components/shopper/OrdersSheet';
-import { RulesSheet } from '../../components/shopper/RulesSheet';
-import { AddressModal } from '../../components/shopper/AddressModal';
-import { ProfileModal } from '../../components/shopper/ProfileModal';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
   CartData,
@@ -29,31 +11,25 @@ import {
   Product,
   UserAddress,
 } from '../../types';
-import {
-  Bot,
-  User,
-  ShoppingBag,
-  X,
-  AlertCircle,
-  CheckCircle2,
-  Lock,
-  Plus,
-  MessageSquare,
-  Send,
-  Square,
-  Loader2,
-  Leaf,
-  Settings,
-  Package,
-  Shield,
-  LogOut,
-  Menu,
-  Search,
-  MapPin,
-  Edit2,
-  Trash2,
-} from 'lucide-react';
 import { API_BASE } from '../../config/api';
+import { BottomTabBar, TabKey } from '../../components/shopper/BottomTabBar';
+import { HomeScreen } from '../../components/shopper/HomeScreen';
+import { BrowseScreen } from '../../components/shopper/BrowseScreen';
+import { AIShopScreen } from '../../components/shopper/AIShopScreen';
+import { CartScreen } from '../../components/shopper/CartScreen';
+import { AccountScreen } from '../../components/shopper/AccountScreen';
+import { ConversationDrawer } from '../../components/shopper/ConversationDrawer';
+import { CheckoutModal } from '../../components/shopper/CheckoutModal';
+import { LiveTrackingModal } from '../../components/shopper/LiveTrackingModal';
+import { GlobalSearchModal } from '../../components/shopper/GlobalSearchModal';
+import { SplashScreen } from '../../components/shopper/SplashScreen';
+import { ProductSheet } from '../../components/shopper/ProductSheet';
+import { AddressModal } from '../../components/shopper/AddressModal';
+import { OrdersSheet } from '../../components/shopper/OrdersSheet';
+import { RulesSheet } from '../../components/shopper/RulesSheet';
+import { ProfileModal } from '../../components/shopper/ProfileModal';
+import { ContextPanel } from '../../components/shopper/ContextPanel';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface ServerChatMessage {
   _id: string;
@@ -65,101 +41,53 @@ interface ServerChatMessage {
   cardData?: unknown;
 }
 
-interface PaymentOrderState {
-  order: OrderData;
-  razorpay: {
-    orderId: string;
-    amountPaise: number;
-    currency: string;
-    keyId: string;
-  };
-}
-
-const EXAMPLE_PROMPTS = [
-  {
-    emoji: '🍲',
-    label: 'Quick Paneer Pulao for 4',
-    prompt: 'Make Paneer Pulao for 4 people with all ingredients listed',
-  },
-  {
-    emoji: '🍛',
-    label: 'Spicy Dal Tadka, serves 2',
-    prompt: 'Dal Tadka recipe with ingredients for 2 servings',
-  },
-  {
-    emoji: '📖',
-    label: 'Weekly groceries under ₹1,200',
-    prompt: 'Weekly vegetarian grocery list under ₹1200',
-  },
-  {
-    emoji: '🧄',
-    label: 'Aloo Matar curry, feeds 6',
-    prompt: 'Aloo Matar curry ingredients for 6 people',
-  },
-];
-
-const QUICK_REPLIES_DEFAULT = [
-  { label: 'Quick Paneer Pulao', prompt: 'Make Paneer Pulao for 4 people with ingredients' },
-  { label: 'Dal Tadka', prompt: 'Dal Tadka recipe with grocery items for 2 people' },
-  { label: 'Veg Biryani', prompt: 'Vegetable Biryani ingredients for 4 servings' },
-  { label: 'Aloo Matar', prompt: 'Aloo Matar curry ingredients for 6 people' },
-];
-
-const QUICK_REPLIES_AFTER_PROPOSAL = [
-  { label: 'Add all to cart', prompt: 'Add all suggested items to my cart' },
-  { label: 'Change servings', prompt: 'Change the servings count' },
-  { label: 'Make it cheaper', prompt: 'Find cheaper alternatives for this recipe' },
-  { label: 'Add spices', prompt: 'Add spices and masalas for this recipe' },
-];
-
 export const ShopperWorkspace: React.FC = () => {
   const { token, user, logout, refreshSession } = useAuth();
 
   const [isDark, setIsDark] = useState<boolean>(() =>
     document.documentElement.classList.contains('dark')
   );
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Active navigation tab
+  const [activeMobileTab, setActiveMobileTab] = useState<TabKey>('home');
+  const [selectedBrowseCategory, setSelectedBrowseCategory] = useState<string>('ALL');
+
+  // Core state
   const [cart, setCart] = useState<CartData | null>(null);
   const [orders, setOrders] = useState<OrderData[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [mandate, setMandate] = useState<MandateData | null>(null);
   const [policyEval, setPolicyEval] = useState<PolicyEvaluation | null>(null);
-  const [activePaymentOrder, setActivePaymentOrder] = useState<PaymentOrderState | null>(null);
-  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState<boolean>(false);
-  const [isMandateModalOpen, setIsMandateModalOpen] = useState<boolean>(false);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isProductSheetOpen, setIsProductSheetOpen] = useState<boolean>(false);
-  const [isBrowseSheetOpen, setIsBrowseSheetOpen] = useState<boolean>(false);
-  const [isOrdersSheetOpen, setIsOrdersSheetOpen] = useState<boolean>(false);
-  const [isRulesSheetOpen, setIsRulesSheetOpen] = useState<boolean>(false);
-  const [isContextPanelCollapsed, setIsContextPanelCollapsed] = useState<boolean>(false);
-  const [activeMobileTab, setActiveMobileTab] = useState<TabKey>('chat');
+  const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
+
+  // Chat state
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [composerText, setComposerText] = useState('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [feedbackBanner, setFeedbackBanner] = useState<{
-    type: 'success' | 'error';
-    message: string;
-  } | null>(null);
   const [activeChatSessionId, setActiveChatSessionId] = useState<string>('');
   const [chatSessions, setChatSessions] = useState<
     { _id: string; title: string; updatedAt?: string }[]
   >([]);
-  const [sessionSearch, setSessionSearch] = useState('');
-  const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
-  const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Modals & Overlays state
+  const [isConversationDrawerOpen, setIsConversationDrawerOpen] = useState(false);
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [isLiveTrackingOpen, setIsLiveTrackingOpen] = useState(false);
+  const [trackedOrder, setTrackedOrder] = useState<OrderData | null>(null);
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+  const [isSplashScreenOpen, setIsSplashScreenOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [isOrdersSheetOpen, setIsOrdersSheetOpen] = useState(false);
+  const [isRulesSheetOpen, setIsRulesSheetOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isContextPanelCollapsed, setIsContextPanelCollapsed] = useState(false);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-
-  const [composerText, setComposerText] = useState('');
-  const composerRef = useRef<HTMLTextAreaElement>(null);
-
-  // Determine quick replies based on last agent message
-  const lastAgentMsg = [...messages].reverse().find((m) => m.sender === 'agent');
-  const quickReplies =
-    lastAgentMsg?.cardType === 'items' ? QUICK_REPLIES_AFTER_PROPOSAL : QUICK_REPLIES_DEFAULT;
+  const [feedbackBanner, setFeedbackBanner] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   // Sync theme
   useEffect(() => {
@@ -170,17 +98,16 @@ export const ShopperWorkspace: React.FC = () => {
     }
   }, [isDark]);
 
-  // Auto-scroll chat
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const showBanner = (type: 'success' | 'error', message: string) => {
+    setFeedbackBanner({ type, message });
+    setTimeout(() => setFeedbackBanner(null), 4000);
+  };
 
-  // Derive current Decision Lamp state from backend policy evaluation
+  // Policy derivation
   const deriveLampState = (): {
     status: LampStatus;
     reasonCode: string;
     reasonText: string;
-    remedies?: PolicyEvaluation['remedies'];
   } => {
     if (!cart || cart.items.length === 0) {
       return { status: 'none', reasonCode: 'EMPTY_CART', reasonText: 'Cart is empty.' };
@@ -191,7 +118,6 @@ export const ShopperWorkspace: React.FC = () => {
           status: 'go',
           reasonCode: policyEval.reasonCode,
           reasonText: policyEval.explanation,
-          remedies: policyEval.remedies,
         };
       }
       if (
@@ -202,161 +128,18 @@ export const ShopperWorkspace: React.FC = () => {
           status: 'ask',
           reasonCode: policyEval.reasonCode,
           reasonText: policyEval.explanation,
-          remedies: policyEval.remedies,
         };
       }
       return {
         status: 'stop',
         reasonCode: policyEval.reasonCode,
         reasonText: policyEval.explanation,
-        remedies: policyEval.remedies,
       };
     }
     return { status: 'none', reasonCode: 'POLICY_UNRESOLVED', reasonText: 'Evaluating policies…' };
   };
 
   const currentLamp = deriveLampState();
-
-  const showBanner = (type: 'success' | 'error', message: string) => {
-    setFeedbackBanner({ type, message });
-    setTimeout(() => setFeedbackBanner(null), 4000);
-  };
-
-  // Novelty N1: Mandate Preset Activation
-  const handleSelectPreset = async (presetKey: string) => {
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_BASE}/mandates/preset/${presetKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setMandate(data.data.mandate);
-        await evaluatePolicy(token);
-        showBanner('success', `Activated "${data.data.preset.name}" spending mandate preset`);
-      } else {
-        showBanner('error', 'Failed to activate preset');
-      }
-    } catch {
-      showBanner('error', 'Network error activating preset');
-    }
-  };
-
-  // Novelty N2: 1-Tap Policy Remedy Application
-  const handleApplyRemedy = async (action: string, requiredCapPaise?: number) => {
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_BASE}/policy/apply-remedy`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action, requiredCapPaise }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPolicyEval(data.data.policy);
-        const mRes = await fetch(`${API_BASE}/mandate`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (mRes.ok) {
-          const mData = await mRes.json();
-          setMandate(mData.data.mandate);
-        }
-        showBanner('success', data.data.message || 'Policy remedy applied successfully');
-      } else {
-        showBanner('error', 'Failed to apply remedy');
-      }
-    } catch {
-      showBanner('error', 'Network error applying remedy');
-    }
-  };
-
-  const handleSelectTab = (tab: TabKey) => {
-    setActiveMobileTab(tab);
-    if (tab === 'chat') {
-      setIsBrowseSheetOpen(false);
-      setIsCartDrawerOpen(false);
-      setIsOrdersSheetOpen(false);
-      setIsRulesSheetOpen(false);
-    } else if (tab === 'browse') {
-      setIsBrowseSheetOpen(true);
-      setIsCartDrawerOpen(false);
-      setIsOrdersSheetOpen(false);
-      setIsRulesSheetOpen(false);
-    } else if (tab === 'cart') {
-      setIsCartDrawerOpen(true);
-      setIsBrowseSheetOpen(false);
-      setIsOrdersSheetOpen(false);
-      setIsRulesSheetOpen(false);
-    } else if (tab === 'orders') {
-      setIsOrdersSheetOpen(true);
-      setIsBrowseSheetOpen(false);
-      setIsCartDrawerOpen(false);
-      setIsRulesSheetOpen(false);
-    } else if (tab === 'rules') {
-      setIsRulesSheetOpen(true);
-      setIsBrowseSheetOpen(false);
-      setIsCartDrawerOpen(false);
-      setIsOrdersSheetOpen(false);
-    }
-  };
-
-  const handleReorder = async (pastOrder: OrderData) => {
-    if (!token || !pastOrder.items || pastOrder.items.length === 0) return;
-    try {
-      setIsLoading(true);
-      const toAdd = pastOrder.items.map((i) => ({
-        productId: i.productId,
-        quantity: i.quantity,
-      }));
-      await handleAddProposedItems(toAdd);
-      setIsOrdersSheetOpen(false);
-      setIsCartDrawerOpen(true);
-      showBanner('success', `Added ${toAdd.length} items from #${pastOrder.orderNumber} to cart`);
-    } catch {
-      showBanner('error', 'Failed to reorder items');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleUpdateCustomLimits = async (
-    autoApprovePaise: number,
-    perOrderPaise: number,
-    dailyPaise: number
-  ) => {
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_BASE}/mandate`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          autoApproveUpToPaise: autoApprovePaise,
-          perOrderCapPaise: perOrderPaise,
-          dailyBudgetPaise: dailyPaise,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setMandate(data.data.mandate);
-        await evaluatePolicy(token);
-        showBanner('success', 'Custom spending mandate limits saved');
-      } else {
-        showBanner('error', 'Failed to update spending limits');
-      }
-    } catch {
-      showBanner('error', 'Network error saving limits');
-    }
-  };
-
-  const handleViewProductInChat = (prod: Product) => {
-    setIsProductSheetOpen(false);
-    setComposerText(`Tell me recipe ideas and nutritional benefits for ${prod.name}`);
-    composerRef.current?.focus();
-  };
 
   const evaluatePolicy = useCallback(async (authToken: string) => {
     try {
@@ -402,7 +185,11 @@ export const ShopperWorkspace: React.FC = () => {
         }
         if (orderRes.ok) {
           const d = await orderRes.json();
-          setOrders(d.data || []);
+          const ords = d.data || [];
+          setOrders(ords);
+          if (ords.length > 0) {
+            setTrackedOrder(ords[0]);
+          }
         }
         if (catalogRes.ok) {
           const d = await catalogRes.json();
@@ -411,7 +198,7 @@ export const ShopperWorkspace: React.FC = () => {
 
         await evaluatePolicy(token);
 
-        // Addresses
+        // Fetch addresses
         try {
           const addrRes = await fetch(`${API_BASE}/addresses`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -426,7 +213,7 @@ export const ShopperWorkspace: React.FC = () => {
           console.warn('Addresses fetch failed:', e);
         }
 
-        // Chat sessions
+        // Fetch Chat sessions
         const sessionRes = await fetch(`${API_BASE}/chat/sessions`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -449,7 +236,7 @@ export const ShopperWorkspace: React.FC = () => {
           const createRes = await fetch(`${API_BASE}/chat/sessions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ title: 'CartPilot Grocery Shopping' }),
+            body: JSON.stringify({ title: 'Weekly Grocery Shopping' }),
           });
           if (createRes.ok) {
             const cData = await createRes.json();
@@ -492,45 +279,45 @@ export const ShopperWorkspace: React.FC = () => {
   }, [token, evaluatePolicy]);
 
   // Load session messages on switch
-  const loadSessionMessages = useCallback(async (sessionId: string) => {
-    if (!token || !sessionId) return;
-    try {
-      const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const dData = await res.json();
-        if (dData.data?.messages) {
-          setMessages(
-            dData.data.messages.map((m: ServerChatMessage) => ({
-              id: m._id,
-              sender: m.sender.toLowerCase() as 'user' | 'agent' | 'system',
-              content: m.content,
-              timestamp: new Date(m.createdAt).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-              toolCalls: m.toolCalls,
-              cardType: m.cardType,
-              cardData: m.cardData,
-            }))
-          );
+  const loadSessionMessages = useCallback(
+    async (sessionId: string) => {
+      if (!token || !sessionId) return;
+      try {
+        const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const dData = await res.json();
+          if (dData.data?.messages) {
+            setMessages(
+              dData.data.messages.map((m: ServerChatMessage) => ({
+                id: m._id,
+                sender: m.sender.toLowerCase() as 'user' | 'agent' | 'system',
+                content: m.content,
+                timestamp: new Date(m.createdAt).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+                toolCalls: m.toolCalls,
+                cardType: m.cardType,
+                cardData: m.cardData,
+              }))
+            );
+          }
         }
+      } catch (err) {
+        console.warn('Failed to load session messages:', err);
       }
-    } catch (err) {
-      console.warn('Failed to load session messages:', err);
-    }
-  }, [token]);
+    },
+    [token]
+  );
 
-  // Switch Active Session
   const handleSwitchSession = async (sessionId: string) => {
     setActiveChatSessionId(sessionId);
     localStorage.setItem('cartpilot_active_session_id', sessionId);
-    setSidebarOpen(false);
     await loadSessionMessages(sessionId);
   };
 
-  // Create New Chat Session
   const handleNewChat = async () => {
     if (!token) return;
     try {
@@ -545,8 +332,7 @@ export const ShopperWorkspace: React.FC = () => {
         setChatSessions((prev) => [newSession, ...prev]);
         setActiveChatSessionId(newSession._id);
         localStorage.setItem('cartpilot_active_session_id', newSession._id);
-        setSidebarOpen(false);
-        await loadSessionMessages(newSession._id);
+        setMessages([]);
         showBanner('success', 'New conversation started');
       }
     } catch {
@@ -554,7 +340,6 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
-  // Rename Session
   const handleRenameSession = async (sessionId: string, currentTitle: string) => {
     if (!token) return;
     const newTitle = window.prompt('Enter new session title:', currentTitle);
@@ -577,7 +362,6 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
-  // Delete Session
   const handleDeleteSession = async (sessionId: string) => {
     if (!token) return;
     if (!window.confirm('Delete this conversation? All messages will be permanently removed.')) {
@@ -606,8 +390,8 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
-  // Add Item to Cart
-  const handleAddToCart = async (productId: string, quantity: number = 1) => {
+  // Cart operations
+  const handleAddToCart = async (productId: string, quantity: number) => {
     if (!token) return;
     setIsLoading(true);
     try {
@@ -620,42 +404,13 @@ export const ShopperWorkspace: React.FC = () => {
         const data = await res.json();
         setCart(data.data);
         await evaluatePolicy(token);
-        showBanner('success', 'Item added to cart');
+        showBanner('success', 'Added to cart');
       } else {
         const errData = await res.json();
         showBanner('error', errData.error?.message || 'Failed to add item');
       }
     } catch {
-      showBanner('error', 'Network error adding to cart');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAddProposedItems = async (
-    itemsToAdd?: Array<{ productId: string; quantity: number }>
-  ) => {
-    if (!token || !itemsToAdd || itemsToAdd.length === 0) return;
-    setIsLoading(true);
-    try {
-      for (const item of itemsToAdd) {
-        await fetch(`${API_BASE}/cart/items`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ productId: item.productId, quantity: item.quantity }),
-        });
-      }
-      const cartRes = await fetch(`${API_BASE}/cart`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (cartRes.ok) {
-        const cData = await cartRes.json();
-        setCart(cData.data);
-        await evaluatePolicy(token);
-      }
-      showBanner('success', `Added ${itemsToAdd.length} ingredients to cart!`);
-    } catch {
-      showBanner('error', 'Failed to add proposed items');
+      showBanner('error', 'Network error adding item');
     } finally {
       setIsLoading(false);
     }
@@ -665,6 +420,10 @@ export const ShopperWorkspace: React.FC = () => {
     if (!token) return;
     setIsLoading(true);
     try {
+      if (quantity <= 0) {
+        await handleRemoveItem(productId);
+        return;
+      }
       const res = await fetch(`${API_BASE}/cart/items/${productId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -674,33 +433,11 @@ export const ShopperWorkspace: React.FC = () => {
         const data = await res.json();
         setCart(data.data);
         await evaluatePolicy(token);
-      } else {
-        const errData = await res.json();
-        showBanner('error', errData.error?.message || 'Update failed');
       }
     } catch {
-      showBanner('error', 'Network error updating cart item');
+      showBanner('error', 'Network error updating quantity');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleUpdateDeliveryNote = async (deliveryNote: string) => {
-    if (!token) return;
-    if (cart) {
-      setCart({ ...cart, deliveryNote });
-    }
-    try {
-      await fetch(`${API_BASE}/cart/delivery-note`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ deliveryNote }),
-      });
-    } catch (err) {
-      console.error('Failed to update delivery note', err);
     }
   };
 
@@ -716,7 +453,7 @@ export const ShopperWorkspace: React.FC = () => {
         const data = await res.json();
         setCart(data.data);
         await evaluatePolicy(token);
-        showBanner('success', 'Item removed from cart');
+        showBanner('success', 'Item removed');
       }
     } catch {
       showBanner('error', 'Failed to remove item');
@@ -746,284 +483,50 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
-  const persistCardToChat = async (
-    type: 'rules' | 'items' | 'cart' | 'approval' | 'payment' | 'order' | 'proof',
-    resourceId?: string,
-    content?: string
-  ) => {
-    if (!token || !activeChatSessionId || !resourceId) return;
+  const handleAddProposedItems = async (items: Array<{ productId: string; quantity: number }>) => {
+    if (!token || items.length === 0) return;
+    setIsLoading(true);
     try {
-      await fetch(`${API_BASE}/chat/sessions/${activeChatSessionId}/cards`, {
-        method: 'POST',
+      for (const item of items) {
+        await fetch(`${API_BASE}/cart/items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(item),
+        });
+      }
+      const cartRes = await fetch(`${API_BASE}/cart`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (cartRes.ok) {
+        const cData = await cartRes.json();
+        setCart(cData.data);
+        await evaluatePolicy(token);
+      }
+      showBanner('success', `Added ${items.length} proposed ingredients to cart!`);
+    } catch {
+      showBanner('error', 'Failed to add items to cart');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateDeliveryNote = async (deliveryNote: string) => {
+    if (!token) return;
+    if (cart) {
+      setCart({ ...cart, deliveryNote });
+    }
+    try {
+      await fetch(`${API_BASE}/cart/delivery-note`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          type,
-          resourceId,
-          content,
-        }),
+        body: JSON.stringify({ deliveryNote }),
       });
     } catch (e) {
-      console.warn('Failed to persist card message:', e);
+      console.warn('Delivery note update failed:', e);
     }
   };
 
-  const handleInitiateCheckout = async () => {
-    if (!cart || cart.items.length === 0 || !token) {
-      showBanner('error', 'Cart is empty');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/checkout/initiate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          deliveryAddress: {
-            line1: selectedAddress
-              ? `${selectedAddress.houseFlat}, ${selectedAddress.apartmentStreet}${selectedAddress.areaLocality ? `, ${selectedAddress.areaLocality}` : ''}`
-              : 'Flat 402, Green Glen Heights, Outer Ring Road',
-            city: selectedAddress?.city || 'Bengaluru',
-            state: selectedAddress?.state || 'Karnataka',
-            postalCode: selectedAddress?.pincode || '560103',
-            country: 'India',
-          },
-          notes: selectedAddress?.deliveryInstructions || 'Deliver swiftly; zero meat/egg guarantee acknowledged',
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const { order, razorpay } = data.data;
-        setActivePaymentOrder({ order, razorpay });
-        setIsCartDrawerOpen(false);
-        const cardContent = `Pre-checkout verification passed! Inventory reserved for 15 minutes. Created Razorpay test order ${razorpay.orderId}. Please complete payment below:`;
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `msg-checkout-${Date.now()}`,
-            sender: 'agent',
-            content: cardContent,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            cardType: 'payment',
-            cardData: { order, razorpay },
-          },
-        ]);
-        if (order?._id) {
-          await persistCardToChat('order', order._id, cardContent);
-        }
-        showBanner('success', 'Checkout initiated and inventory reserved');
-      } else {
-        const errData = await res.json();
-        if (errData.error?.code === 'APPROVAL_REQUIRED' || policyEval?.requiresApproval) {
-          showBanner('error', errData.error?.message || 'Human approval required');
-          setIsCartDrawerOpen(false);
-          const cardContent =
-            'Deterministic Policy Check: This cart total exceeds your autonomous spending limit. Please review the bound cart snapshot and grant approval:';
-          const approvalCardPayload = {
-            cartTotal: cart.pricing.formatted.total,
-            reason: policyEval?.explanation || errData.error?.message,
-            cartVersion: cart.version,
-            approvalId: policyEval?.approvalId,
-            approvalHash: policyEval?.approvalHash,
-            approvalStatus: policyEval?.approvalStatus || 'PENDING',
-          };
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `msg-approval-${Date.now()}`,
-              sender: 'agent',
-              content: cardContent,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              cardType: 'approval',
-              cardData: approvalCardPayload,
-            },
-          ]);
-          const approvalId = policyEval?.approvalId || errData.error?.approvalId;
-          if (approvalId) {
-            await persistCardToChat('approval', approvalId, cardContent);
-          }
-        } else {
-          showBanner('error', errData.error?.message || 'Checkout initiation failed');
-        }
-      }
-    } catch {
-      showBanner('error', 'Network error initiating checkout');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyPaymentSuccess = async () => {
-    if (!activePaymentOrder || !token) return;
-    setIsLoading(true);
-    try {
-      const { order, razorpay } = activePaymentOrder;
-      const res = await fetch(`${API_BASE}/payments/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          orderId: order._id,
-          razorpayOrderId: razorpay.orderId,
-          razorpayPaymentId: `pay_test_${Math.random().toString(36).substring(2, 9)}`,
-          razorpaySignature: 'simulated_test_signature',
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const confirmedOrder = data.data.order;
-        setActivePaymentOrder(null);
-        const cartRes = await fetch(`${API_BASE}/cart`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (cartRes.ok) {
-          const cData = await cartRes.json();
-          setCart(cData.data);
-        }
-        await evaluatePolicy(token);
-        setOrders((prev) => [confirmedOrder, ...prev]);
-        const cardContent = `Payment authorized and verified! Stock committed to order ${confirmedOrder.orderNumber}. Order confirmation card:`;
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `msg-paid-${Date.now()}`,
-            sender: 'agent',
-            content: cardContent,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            cardType: 'order',
-            cardData: confirmedOrder,
-          },
-        ]);
-        if (confirmedOrder?._id) {
-          await persistCardToChat('order', confirmedOrder._id, cardContent);
-        }
-        showBanner('success', `Payment confirmed for Order ${confirmedOrder.orderNumber}!`);
-      } else {
-        const errData = await res.json();
-        showBanner('error', errData.error?.message || 'Payment verification failed');
-      }
-    } catch {
-      showBanner('error', 'Network error verifying payment');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSimulateTamperPayment = async () => {
-    if (!activePaymentOrder || !token) return;
-    setIsLoading(true);
-    try {
-      const { order, razorpay } = activePaymentOrder;
-      const res = await fetch(`${API_BASE}/payments/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          orderId: order._id,
-          razorpayOrderId: razorpay.orderId,
-          razorpayPaymentId: 'pay_tampered_attack_999',
-          razorpaySignature: 'invalid_forged_signature_hex_digest',
-        }),
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        showBanner('error', `Security Alert: ${errData.error?.code} — ${errData.error?.message}.`);
-        setActivePaymentOrder(null);
-        await evaluatePolicy(token);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `msg-tamper-${Date.now()}`,
-            sender: 'agent',
-            content: `🛡️ Security Guard Triggered: Cryptographic signature mismatch detected. Order ${order.orderNumber} was marked FAILED and all reserved inventory was restored.`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          },
-        ]);
-      }
-    } catch {
-      showBanner('error', 'Signature verification test failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAdvanceFulfillment = async (orderId: string) => {
-    if (!token) return;
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/orders/${orderId}/simulate-step`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const updatedOrder = data.data;
-        setOrders((prev) => prev.map((o) => (o._id === orderId ? updatedOrder : o)));
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.cardType === 'order' && (m.cardData as OrderData)?._id === orderId
-              ? { ...m, cardData: updatedOrder }
-              : m
-          )
-        );
-        showBanner('success', `Order advanced to ${updatedOrder.status}`);
-      }
-    } catch {
-      showBanner('error', 'Failed to advance order step');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGrantApproval = async (approvalId: string) => {
-    if (!token) return;
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/approvals/${approvalId}/approve`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        showBanner('success', 'Cryptographic approval recorded!');
-        await evaluatePolicy(token);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `msg-approved-${Date.now()}`,
-            sender: 'agent',
-            content: 'Approval granted! Proceeding to payment reservation...',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          },
-        ]);
-        await handleInitiateCheckout();
-      } else {
-        const errData = await res.json();
-        showBanner('error', errData.error?.message || 'Approval submission failed');
-      }
-    } catch {
-      showBanner('error', 'Failed to grant approval');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRejectApproval = async (approvalId: string) => {
-    if (!token) return;
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/approvals/${approvalId}/reject`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        showBanner('success', 'Approval rejected. Cart modified.');
-        await evaluatePolicy(token);
-      }
-    } catch {
-      showBanner('error', 'Failed to reject approval');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Send Chat message
   const handleSendMessage = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || !token) return;
@@ -1047,7 +550,7 @@ export const ShopperWorkspace: React.FC = () => {
         const createRes = await fetch(`${API_BASE}/chat/sessions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ title: 'CartPilot Shopping Session' }),
+          body: JSON.stringify({ title: 'Weekly Grocery Shopping' }),
         });
         if (createRes.ok) {
           const sData = await createRes.json();
@@ -1079,7 +582,7 @@ export const ShopperWorkspace: React.FC = () => {
             },
           ]);
 
-          if (agentMessage.cardType === 'cart') {
+          if (agentMessage.cardType === 'cart' || agentMessage.cardType === 'items') {
             const cartRes = await fetch(`${API_BASE}/cart`, {
               headers: { Authorization: `Bearer ${token}` },
             });
@@ -1101,615 +604,286 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
-  // Composer keyboard handler
-  const handleComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (!isLoading && composerText.trim()) {
-        handleSendMessage(composerText);
+  // Spending Mandates
+  const handleSelectPreset = async (presetKey: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE}/mandates/preset/${presetKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMandate(data.data.mandate);
+        await evaluatePolicy(token);
+        showBanner('success', `Activated "${data.data.preset.name}" spending mandate preset`);
       }
+    } catch {
+      showBanner('error', 'Network error activating preset');
     }
   };
 
-  const cartItemCount = cart?.itemCount || 0;
-  const userInitial = user?.name?.charAt(0)?.toUpperCase() || 'U';
-
-  const filteredSessions = chatSessions.filter((s) =>
-    s.title.toLowerCase().includes(sessionSearch.toLowerCase())
-  );
-
-  // ─── Sidebar ────────────────────────────────────────────────────────────────
-  const Sidebar = (
-    <aside
-      className={`
-        fixed md:static inset-y-0 left-0 z-40
-        w-[280px] flex-shrink-0 flex flex-col
-        bg-[--surface] border-r border-[--line]
-        transition-transform duration-250 ease-out
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-      `}
-    >
-      {/* Brand header */}
-      <div className="p-5 border-b border-[--line]">
-        <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-9 h-9 rounded-xl bg-[--brand] flex items-center justify-center flex-shrink-0">
-            <Leaf className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="font-heading font-bold text-base text-[--ink] leading-tight">
-              CartPilot
-            </div>
-            <div className="text-[--mut] text-[11px]">AI Shopping</div>
-          </div>
-          <button
-            className="ml-auto md:hidden p-1 text-[--mut]"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* New Chat button */}
-        <button
-          onClick={handleNewChat}
-          className="w-full py-2.5 px-4 rounded-chip bg-[--brand] text-white font-body font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
-        >
-          <Plus className="w-4 h-4" />
-          New Chat
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="px-4 py-3 border-b border-[--line]">
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 text-[--mut] absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search sessions..."
-            value={sessionSearch}
-            onChange={(e) => setSessionSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 rounded-chip bg-[--surface-2] border-0 text-xs text-[--ink] placeholder:text-[--mut] focus:outline-none focus:ring-2 focus:ring-[--brand]/20"
-          />
-        </div>
-      </div>
-
-      {/* Sessions list */}
-      <div className="flex-1 overflow-y-auto py-2 px-2">
-        {filteredSessions.length === 0 ? (
-          <p className="text-center text-[--mut] text-xs py-4">No sessions yet</p>
-        ) : (
-          filteredSessions.map((s) => (
-            <div
-              key={s._id}
-              className={`w-full flex items-center justify-between gap-1 px-3 py-2 rounded-xl text-left text-xs transition-colors mb-1 group ${
-                s._id === activeChatSessionId
-                  ? 'bg-[--brand-soft] text-[--brand] font-semibold'
-                  : 'text-[--mut] hover:bg-[--surface-2] hover:text-[--ink]'
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => handleSwitchSession(s._id)}
-                className="flex-1 flex items-center gap-2 truncate text-left cursor-pointer min-h-[36px]"
-              >
-                <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate">{s.title}</span>
-              </button>
-
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRenameSession(s._id, s.title);
-                  }}
-                  className="p-1 text-[--mut] hover:text-[--ink] rounded-md transition-colors"
-                  title="Rename conversation"
-                >
-                  <Edit2 className="w-3 h-3" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteSession(s._id);
-                  }}
-                  className="p-1 text-[--mut] hover:text-rose-500 rounded-md transition-colors"
-                  title="Delete conversation"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Bottom nav links */}
-      <div className="border-t border-[--line] px-2 py-3 space-y-0.5">
-        <button
-          onClick={() => setIsAddressModalOpen(true)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-xs text-[--mut] hover:bg-[--surface-2] hover:text-[--ink] transition-colors"
-        >
-          <MapPin className="w-4 h-4 text-acc" />
-          <span>Delivery Addresses</span>
-        </button>
-        <button
-          onClick={() => setIsOrdersSheetOpen(true)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-xs text-[--mut] hover:bg-[--surface-2] hover:text-[--ink] transition-colors"
-        >
-          <Package className="w-4 h-4" />
-          <span>Orders</span>
-          {orders.length > 0 && (
-            <span className="ml-auto bg-[--brand-soft] text-[--brand] text-[10px] font-bold px-1.5 py-0.5 rounded-chip">
-              {orders.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setIsMandateModalOpen(true)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-xs text-[--mut] hover:bg-[--surface-2] hover:text-[--ink] transition-colors"
-        >
-          <Shield className="w-4 h-4" />
-          <span>Rules</span>
-        </button>
-        <button
-          onClick={() => setIsDark((d) => !d)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-xs text-[--mut] hover:bg-[--surface-2] hover:text-[--ink] transition-colors"
-        >
-          <Settings className="w-4 h-4" />
-          <span>{isDark ? 'Light mode' : 'Dark mode'}</span>
-        </button>
-      </div>
-
-      {/* User profile */}
-      <div className="border-t border-[--line] p-4 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setIsProfileModalOpen(true)}
-          className="flex-1 flex items-center gap-3 text-left hover:opacity-80 transition-opacity min-w-0 cursor-pointer"
-          title="Manage Profile & Account"
-        >
-          <div className="w-8 h-8 rounded-chip bg-[--brand] flex items-center justify-center text-white font-heading font-bold text-sm flex-shrink-0">
-            {userInitial}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[--ink] text-xs font-semibold truncate">{user?.name || 'User'}</div>
-            <div className="text-[--mut] text-[10px] truncate">{user?.email}</div>
-          </div>
-        </button>
-        <button
-          onClick={() => logout()}
-          className="p-1.5 text-[--mut] hover:text-[--stop] transition-colors"
-          title="Sign out"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
-      </div>
-    </aside>
-  );
-
-  // ─── Empty State ─────────────────────────────────────────────────────────────
-  const EmptyState = (
-    <div className="flex-1 flex flex-col items-center justify-center gap-8 px-4 py-12">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-[--brand] flex items-center justify-center shadow-card">
-          <Leaf className="w-9 h-9 text-white" />
-        </div>
-        <div>
-          <h2 className="font-heading font-bold text-2xl text-[--ink]">CartPilot</h2>
-          <p className="text-[--mut] text-base mt-1">What would you like to cook today?</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 max-w-sm w-full">
-        {EXAMPLE_PROMPTS.map((p) => (
-          <button
-            key={p.label}
-            onClick={() => handleSendMessage(p.prompt)}
-            className="flex items-start gap-2.5 px-4 py-3 bg-[--surface] border border-[--line] rounded-card text-left hover:border-[--brand]/30 hover:bg-[--brand-soft]/30 transition-colors shadow-card group"
-          >
-            <span className="text-lg leading-none mt-0.5">{p.emoji}</span>
-            <span className="text-[--ink] text-xs font-medium leading-snug group-hover:text-[--brand] transition-colors">
-              {p.label}
-            </span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  // ─── Message renderer ─────────────────────────────────────────────────────
-  const renderMessage = (msg: ChatMessage) => {
-    const isUser = msg.sender === 'user';
-
-    return (
-      <div
-        key={msg.id}
-        className={`flex gap-3 items-end ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
-      >
-        {/* Avatar */}
-        {!isUser && (
-          <div className="w-7 h-7 rounded-chip bg-[--brand] flex items-center justify-center flex-shrink-0 mb-5">
-            <Bot className="w-3.5 h-3.5 text-white" />
-          </div>
-        )}
-
-        <div className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'} max-w-[80%]`}>
-          {/* Text bubble */}
-          {msg.content && (
-            <div
-              className={`px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                isUser
-                  ? 'bg-[--brand-soft] text-[--ink] rounded-bubble rounded-tr-sm'
-                  : 'bg-[--surface] text-[--ink] rounded-bubble rounded-tl-sm shadow-card'
-              }`}
-            >
-              <p>{msg.content}</p>
-
-              {/* Tool calls trace */}
-              {msg.toolCalls && msg.toolCalls.length > 0 && (
-                <div className="mt-2.5 pt-2 border-t border-[--line]/60 space-y-1">
-                  <span className="text-[10px] font-body text-[--mut] uppercase tracking-wider font-semibold">
-                    Tool calls:
-                  </span>
-                  <div className="flex flex-wrap gap-1">
-                    {msg.toolCalls.map((t, idx) => (
-                      <span
-                        key={idx}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[--surface-2] border border-[--line] text-[10px] text-[--go]"
-                      >
-                        <CheckCircle2 className="w-2.5 h-2.5" />
-                        <span className="font-mono">{t.toolName}</span>
-                        {t.durationMs !== undefined && (
-                          <span className="text-[--mut]">({t.durationMs}ms)</span>
-                        )}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Embedded cards */}
-          {msg.cardType === 'rules' && (
-            <div className="w-full max-w-lg">
-              <RulesCard
-                rules={{
-                  maxOrderAmountPaise: mandate?.maxOrderAmountPaise || 50000,
-                  dailyBudgetPaise: mandate?.dailyBudgetPaise || 150000,
-                  perOrderCapPaise: mandate?.perOrderCapPaise || 100000,
-                  requireExplicitApproval: mandate?.requireExplicitApproval || false,
-                }}
-                currentCartTotalPaise={cart?.pricing.totalPaise || 0}
-                onSelectPreset={handleSelectPreset}
-                onApplyRemedy={handleApplyRemedy}
-              />
-            </div>
-          )}
-
-          {msg.cardType === 'items' && Boolean(msg.cardData) && (
-            <div className="w-full max-w-lg">
-              <ItemsCard
-                cardData={msg.cardData as ProposalPayload}
-                onAddToCart={handleAddToCart}
-                onAddAllToCart={handleAddProposedItems}
-                cartItems={cart?.items}
-                onUpdateQuantity={handleUpdateQuantity}
-                title="Recipe Ingredients Proposal"
-              />
-            </div>
-          )}
-
-          {msg.cardType === 'approval' && Boolean(msg.cardData) && (
-            <div className="w-full max-w-lg">
-              <ApprovalCard
-                cartTotal={(msg.cardData as { cartTotal: string }).cartTotal}
-                reason={(msg.cardData as { reason?: string }).reason || 'Threshold exceeded'}
-                cartVersion={(msg.cardData as { cartVersion?: number }).cartVersion || 1}
-                approvalHash={(msg.cardData as { approvalHash?: string }).approvalHash}
-                status={(msg.cardData as { approvalStatus?: string }).approvalStatus || 'PENDING'}
-                onApprove={() =>
-                  handleGrantApproval((msg.cardData as { approvalId?: string }).approvalId || '')
-                }
-                onReject={() =>
-                  handleRejectApproval((msg.cardData as { approvalId?: string }).approvalId || '')
-                }
-                isLoading={isLoading}
-              />
-            </div>
-          )}
-
-          {msg.cardType === 'payment' && Boolean(msg.cardData) && (
-            <div className="w-full max-w-lg">
-              <PaymentCard
-                orderId={(msg.cardData as PaymentOrderState).order._id}
-                orderNumber={(msg.cardData as PaymentOrderState).order.orderNumber}
-                razorpayOrderId={(msg.cardData as PaymentOrderState).razorpay.orderId}
-                amountPaise={(msg.cardData as PaymentOrderState).razorpay.amountPaise}
-                items={(msg.cardData as PaymentOrderState).order.items}
-                pricing={(msg.cardData as PaymentOrderState).order.pricingSnapshot}
-                deliveryNote={(msg.cardData as PaymentOrderState).order.deliveryNote}
-                onVerifySuccess={handleVerifyPaymentSuccess}
-                onVerifyFail={handleSimulateTamperPayment}
-                isLoading={isLoading}
-              />
-            </div>
-          )}
-
-          {msg.cardType === 'order' && Boolean(msg.cardData) && (
-            <div className="w-full max-w-lg">
-              <ErrorBoundary fallbackTitle="Could not display order card">
-                <OrderCard
-                  order={msg.cardData as OrderData}
-                  onAdvanceFulfillment={handleAdvanceFulfillment}
-                  isLoading={isLoading}
-                />
-              </ErrorBoundary>
-            </div>
-          )}
-
-          <span className="text-[10px] text-[--mut] px-1">{msg.timestamp}</span>
-        </div>
-
-        {isUser && (
-          <div className="w-7 h-7 rounded-chip bg-[--surface-2] border border-[--line] flex items-center justify-center flex-shrink-0 mb-5">
-            <User className="w-3.5 h-3.5 text-[--mut]" />
-          </div>
-        )}
-      </div>
-    );
+  const handleUpdateCustomLimits = async (
+    autoApprovePaise: number,
+    perOrderPaise: number,
+    dailyPaise: number
+  ) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE}/mandates/custom`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          autoApproveUpToPaise: autoApprovePaise,
+          perOrderCapPaise: perOrderPaise,
+          dailyBudgetPaise: dailyPaise,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMandate(data.data);
+        await evaluatePolicy(token);
+        showBanner('success', 'Custom spending mandate updated');
+      }
+    } catch {
+      showBanner('error', 'Network error saving limits');
+    }
   };
 
-  // ─── Composer ─────────────────────────────────────────────────────────────
-  const ComposerBar = (
-    <div className="sticky bottom-0 glass border-t border-[--line] px-4 py-3">
-      {/* Novelty N2: Live Decision Lamp & 1-Tap Counterfactual Remedy */}
-      {cart &&
-        cart.items.length > 0 &&
-        (currentLamp.status === 'ask' || currentLamp.status === 'stop') && (
-          <div className="mb-2.5">
-            <DecisionLamp
-              status={currentLamp.status}
-              reasonCode={currentLamp.reasonCode}
-              reasonText={currentLamp.reasonText}
-              remedies={currentLamp.remedies}
-              onApplyRemedy={handleApplyRemedy}
-            />
-          </div>
-        )}
+  const handleOrderSuccess = (order: OrderData) => {
+    setOrders((prev) => [order, ...prev]);
+    setTrackedOrder(order);
+    setIsLiveTrackingOpen(true);
+    showBanner('success', `Order #${order.orderNumber} placed successfully!`);
+    // Refresh cart
+    if (token) {
+      fetch(`${API_BASE}/cart`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.json())
+        .then((d) => setCart(d.data))
+        .catch(() => {});
+    }
+  };
 
-      {/* Quick replies */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-2 scrollbar-none">
-        {quickReplies.map((qr) => (
-          <button
-            key={qr.label}
-            onClick={() => handleSendMessage(qr.prompt)}
-            disabled={isLoading}
-            className="flex-shrink-0 text-xs px-3 py-1.5 bg-[--surface-2] text-[--ink] rounded-chip border border-[--line] hover:border-[--brand]/40 hover:bg-[--brand-soft]/30 transition-colors disabled:opacity-50 font-body"
-          >
-            {qr.label}
-          </button>
-        ))}
-      </div>
+  const handleReorder = async (pastOrder: OrderData) => {
+    if (!token || !pastOrder.items || pastOrder.items.length === 0) return;
+    const toAdd = pastOrder.items.map((i) => ({
+      productId: i.productId,
+      quantity: i.quantity,
+    }));
+    await handleAddProposedItems(toAdd);
+    setIsOrdersSheetOpen(false);
+    setActiveMobileTab('cart');
+    showBanner('success', `Added ${toAdd.length} items from #${pastOrder.orderNumber} to cart`);
+  };
 
-      {/* Input row */}
-      <div className="flex items-end gap-3">
-        <textarea
-          ref={composerRef}
-          rows={1}
-          aria-label="Ask CartPilot for groceries, recipes, or spending rules"
-          value={composerText}
-          onChange={(e) => {
-            setComposerText(e.target.value);
-            // Auto-grow (1-4 lines)
-            e.target.style.height = 'auto';
-            e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
-          }}
-          onKeyDown={handleComposerKeyDown}
-          placeholder="Ask CartPilot for vegetarian groceries, recipes, or spending rules…"
-          disabled={isLoading}
-          className="flex-1 resize-none rounded-[var(--radius-input)] bg-[--surface] border border-[--line] px-4 py-2.5 text-sm text-[--ink] placeholder:text-[--mut] focus:outline-none focus:ring-2 focus:ring-[--brand]/20 focus:border-[--brand]/40 transition-all overflow-hidden leading-relaxed"
-          style={{ minHeight: '44px', maxHeight: '96px' }}
-        />
+  const handleSelectTab = (tab: TabKey, categoryId?: string) => {
+    setActiveMobileTab(tab);
+    if (categoryId) {
+      setSelectedBrowseCategory(categoryId);
+    }
+  };
 
-        {isLoading ? (
-          <button
-            onClick={() => setIsLoading(false)}
-            className="w-11 h-11 min-w-[44px] min-h-[44px] flex-shrink-0 rounded-[var(--radius-input)] bg-[--stop] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
-            title="Stop"
-            aria-label="Stop generation"
-          >
-            <Square className="w-4 h-4" />
-          </button>
-        ) : (
-          <button
-            onClick={() => handleSendMessage(composerText)}
-            disabled={!composerText.trim()}
-            className="w-11 h-11 min-w-[44px] min-h-[44px] flex-shrink-0 rounded-[var(--radius-input)] bg-[--brand] text-white flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-40 cursor-pointer"
-            title="Send (Enter)"
-            aria-label="Send message"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-    </div>
-  );
+  const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'P';
 
   return (
-    <div className="h-[100dvh] flex bg-[--bg] text-[--ink] overflow-hidden relative">
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <div className="h-[100dvh] flex flex-col bg-[--bg] text-[--ink] overflow-hidden relative">
+      {/* ── Main Screen Viewport Switching ──────────────────────────────────── */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Active Tab Screen */}
+        <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+          {activeMobileTab === 'home' && (
+            <HomeScreen
+              products={products}
+              cart={cart}
+              orders={orders}
+              selectedAddress={selectedAddress}
+              onSelectTab={handleSelectTab}
+              onOpenAddressModal={() => setIsAddressModalOpen(true)}
+              onOpenSearchModal={() => setIsGlobalSearchOpen(true)}
+              onOpenProfile={() => setActiveMobileTab('account')}
+              onSelectProduct={(p) => {
+                setSelectedProduct(p);
+                setIsProductSheetOpen(true);
+              }}
+              onAddToCart={handleAddToCart}
+              onUpdateQuantity={handleUpdateQuantity}
+              onOpenTracking={(ord) => {
+                setTrackedOrder(ord);
+                setIsLiveTrackingOpen(true);
+              }}
+              userInitial={userInitial}
+            />
+          )}
 
-      {/* Sidebar */}
-      {Sidebar}
+          {activeMobileTab === 'browse' && (
+            <BrowseScreen
+              products={products}
+              cart={cart}
+              onAddToCart={handleAddToCart}
+              onUpdateQuantity={handleUpdateQuantity}
+              onSelectProduct={(p) => {
+                setSelectedProduct(p);
+                setIsProductSheetOpen(true);
+              }}
+              initialCategory={selectedBrowseCategory}
+            />
+          )}
 
-      {/* Main chat area */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Top bar */}
-        <div className="h-14 flex items-center justify-between px-3 sm:px-4 border-b border-[--line] bg-[--surface] flex-shrink-0 gap-2 relative z-10">
-          <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-            <button
-              className="md:hidden p-2 text-[--mut] hover:text-[--ink] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer flex-shrink-0"
-              onClick={() => setSidebarOpen(true)}
-              aria-label="Open conversation sidebar"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <DeliveryChip
-              address={
-                selectedAddress
-                  ? `${selectedAddress.areaLocality || selectedAddress.apartmentStreet}, ${selectedAddress.city} · ${selectedAddress.pincode}`
-                  : 'Indiranagar, Bengaluru · 560038'
-              }
-              etaText={
-                selectedAddress?.isServiceable
-                  ? 'Delivery in about 20 min (estimated, simulated)'
-                  : 'Delivery in about 30 min (estimated, simulated)'
-              }
-              onClickAddress={() => setIsAddressModalOpen(true)}
+          {activeMobileTab === 'chat' && (
+            <AIShopScreen
+              messages={messages}
+              isLoading={isLoading}
+              composerText={composerText}
+              setComposerText={setComposerText}
+              onSendMessage={handleSendMessage}
+              onStopGeneration={() => setIsLoading(false)}
+              onOpenDrawer={() => setIsConversationDrawerOpen(true)}
+              onNewChat={handleNewChat}
+              cart={cart}
+              onAddToCart={handleAddToCart}
+              onUpdateQuantity={handleUpdateQuantity}
+              onAddProposedItems={handleAddProposedItems}
+              lampStatus={currentLamp.status}
+              lampReasonCode={currentLamp.reasonCode}
+              lampReasonText={currentLamp.reasonText}
+            />
+          )}
+
+          {activeMobileTab === 'cart' && (
+            <CartScreen
+              cart={cart}
+              onUpdateQuantity={handleUpdateQuantity}
+              onRemoveItem={handleRemoveItem}
+              onClearCart={handleClearCart}
+              onProceedToCheckout={() => setIsCheckoutModalOpen(true)}
+              onUpdateDeliveryNote={handleUpdateDeliveryNote}
+              onExploreProducts={() => setActiveMobileTab('browse')}
+              isLoading={isLoading}
+            />
+          )}
+
+          {activeMobileTab === 'account' && (
+            <AccountScreen
+              user={user}
+              orders={orders}
+              onOpenOrders={() => setIsOrdersSheetOpen(true)}
+              onOpenAddresses={() => setIsAddressModalOpen(true)}
+              onOpenRules={() => setIsRulesSheetOpen(true)}
+              onOpenProfileModal={() => setIsProfileModalOpen(true)}
+              onLogout={() => logout()}
+              isDark={isDark}
+              onToggleTheme={() => setIsDark((d) => !d)}
+            />
+          )}
+        </main>
+
+        {/* Desktop Persistent Context Panel (on wide screens >= 1024px when on chat or cart) */}
+        {(activeMobileTab === 'chat' || activeMobileTab === 'cart') && (
+          <div className="hidden lg:block h-full border-l border-[--line]">
+            <ContextPanel
+              cart={cart}
+              mandate={mandate}
+              lampStatus={currentLamp.status}
+              lampReasonCode={currentLamp.reasonCode}
+              lampReasonText={currentLamp.reasonText}
+              isCollapsed={isContextPanelCollapsed}
+              onToggleCollapse={() => setIsContextPanelCollapsed(!isContextPanelCollapsed)}
+              onUpdateQuantity={handleUpdateQuantity}
+              onRemoveItem={handleRemoveItem}
+              onClearCart={handleClearCart}
+              onInitiateCheckout={() => setIsCheckoutModalOpen(true)}
+              onUpdateDeliveryNote={handleUpdateDeliveryNote}
+              onOpenRules={() => setIsRulesSheetOpen(true)}
+              onOpenBrowse={() => setActiveMobileTab('browse')}
+              isLoading={isLoading}
             />
           </div>
-
-          <div className="flex items-center gap-2 flex-shrink-0 z-20">
-            {/* Address shortcut on medium/larger screens */}
-            <button
-              onClick={() => setIsAddressModalOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-chip border border-brd bg-paper hover:bg-card-top text-ink text-xs font-semibold cursor-pointer min-h-[44px] min-w-[44px]"
-              title="Change Delivery Location"
-            >
-              <MapPin className="w-3.5 h-3.5 text-acc" />
-              <span className="max-w-[120px] truncate capitalize">
-                {selectedAddress?.addressType ? selectedAddress.addressType.toLowerCase() : 'Address'}
-              </span>
-            </button>
-
-            {/* Quick Browse button on mobile/tablet/laptop */}
-            <button
-              data-testid="header-browse-btn"
-              onClick={() => setIsBrowseSheetOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-chip border border-brd bg-paper hover:bg-paper/80 text-ink text-xs font-semibold cursor-pointer min-h-[44px] min-w-[44px]"
-              aria-label="Browse Catalog"
-            >
-              <Search className="w-3.5 h-3.5 text-acc" />
-              <span className="hidden sm:inline">Browse</span>
-            </button>
-
-            {/* Cart button */}
-            <button
-              onClick={() => setIsCartDrawerOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-chip bg-[--brand] text-white text-xs font-semibold hover:opacity-90 transition-opacity min-h-[44px] min-w-[44px] cursor-pointer"
-              aria-label={`Cart ${cart?.pricing?.formatted?.total || '₹0.00'}, ${cartItemCount} items`}
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span className="hidden sm:inline">{cart?.pricing?.formatted?.total || '₹0.00'}</span>
-              {cartItemCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-white text-[--brand] text-[11px] font-bold flex items-center justify-center font-mono">
-                  {cartItemCount}
-                </span>
-              )}
-            </button>
-
-            {/* Profile Avatar Button */}
-            <button
-              onClick={() => setIsProfileModalOpen(true)}
-              className="w-8 h-8 rounded-full bg-acc/10 border border-acc/20 text-acc flex items-center justify-center font-bold text-xs hover:bg-acc/20 transition-colors min-h-[44px] min-w-[44px] cursor-pointer"
-              title="My Account & Profile"
-            >
-              {userInitial}
-            </button>
-          </div>
-        </div>
-
-        {/* Chat canvas (max 760px on laptop) */}
-        <div className="flex-1 overflow-y-auto">
-          {messages.length === 0 ? (
-            EmptyState
-          ) : (
-            <div className="max-w-[760px] mx-auto w-full px-4 py-6 space-y-4">
-              {messages.map(renderMessage)}
-              {isLoading && (
-                <div className="flex gap-3 items-end">
-                  <div className="w-7 h-7 rounded-chip bg-[--brand] flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <div className="px-4 py-2.5 bg-[--surface] rounded-bubble rounded-tl-sm shadow-card">
-                    <div className="flex items-center gap-2 text-[--mut] text-xs">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Thinking…</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
-
-        {/* Sticky Cart Bar on Mobile */}
-        <div className="md:hidden">
-          <StickyCartBar cart={cart} onOpenCart={() => setIsCartDrawerOpen(true)} />
-        </div>
-
-        {/* Composer (sits above mobile tab bar) */}
-        <div className="max-w-[760px] mx-auto w-full mb-[56px] md:mb-0">{ComposerBar}</div>
+        )}
       </div>
 
-      {/* Mobile Bottom Tab Bar */}
+      {/* ── Fixed Bottom 5-Destination Navigation Bar ──────────────────────── */}
       <BottomTabBar
         activeTab={activeMobileTab}
         onSelectTab={handleSelectTab}
         cart={cart}
       />
 
-      {/* Laptop / Desktop Persistent Context Panel (360px) */}
-      <div className="hidden lg:block h-full">
-        <ContextPanel
-          cart={cart}
-          mandate={mandate}
-          lampStatus={currentLamp.status}
-          lampReasonCode={currentLamp.reasonCode}
-          lampReasonText={currentLamp.reasonText}
-          isCollapsed={isContextPanelCollapsed}
-          onToggleCollapse={() => setIsContextPanelCollapsed(!isContextPanelCollapsed)}
-          onUpdateQuantity={handleUpdateQuantity}
-          onRemoveItem={handleRemoveItem}
-          onClearCart={handleClearCart}
-          onInitiateCheckout={handleInitiateCheckout}
-          onUpdateDeliveryNote={handleUpdateDeliveryNote}
-          onOpenRules={() => setIsRulesSheetOpen(true)}
-          onOpenBrowse={() => setIsBrowseSheetOpen(true)}
-          isLoading={isLoading}
-        />
-      </div>
+      {/* ── Slide-Over Conversation Drawer (Screen 9) ──────────────────────── */}
+      <ConversationDrawer
+        isOpen={isConversationDrawerOpen}
+        onClose={() => setIsConversationDrawerOpen(false)}
+        sessions={chatSessions}
+        activeSessionId={activeChatSessionId}
+        onSelectSession={handleSwitchSession}
+        onNewChat={handleNewChat}
+        onRenameSession={handleRenameSession}
+        onDeleteSession={handleDeleteSession}
+        onOpenOrders={() => setIsOrdersSheetOpen(true)}
+        onOpenAddresses={() => setIsAddressModalOpen(true)}
+        onOpenRules={() => setIsRulesSheetOpen(true)}
+        onOpenAccount={() => setActiveMobileTab('account')}
+        activeOrdersCount={
+          orders.filter(
+            (o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED' && o.status !== 'FAILED'
+          ).length
+        }
+      />
 
-      {/* Browse Sheet / Modal */}
-      <BrowseSheet
-        isOpen={isBrowseSheetOpen}
-        onClose={() => {
-          setIsBrowseSheetOpen(false);
-          setActiveMobileTab('chat');
-        }}
-        products={products}
+      {/* ── Checkout Modal (Screen 12) ─────────────────────────────────────── */}
+      <CheckoutModal
+        isOpen={isCheckoutModalOpen}
+        onClose={() => setIsCheckoutModalOpen(false)}
         cart={cart}
+        selectedAddress={selectedAddress}
+        onOpenAddressSelector={() => setIsAddressModalOpen(true)}
+        onOrderSuccess={handleOrderSuccess}
+        token={token}
+      />
+
+      {/* ── Live Tracking Modal (Screen 13) ─────────────────────────────────── */}
+      <LiveTrackingModal
+        isOpen={isLiveTrackingOpen}
+        onClose={() => setIsLiveTrackingOpen(false)}
+        order={trackedOrder}
+        onRefresh={() => {
+          if (!token) return;
+          fetch(`${API_BASE}/orders`, { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => r.json())
+            .then((d) => {
+              const ords = d.data || [];
+              setOrders(ords);
+              if (trackedOrder) {
+                const refreshed = ords.find((o: OrderData) => o._id === trackedOrder._id);
+                if (refreshed) setTrackedOrder(refreshed);
+              }
+            })
+            .catch(() => {});
+        }}
+      />
+
+      {/* ── Global Search Modal (Screen 14) ─────────────────────────────────── */}
+      <GlobalSearchModal
+        isOpen={isGlobalSearchOpen}
+        onClose={() => setIsGlobalSearchOpen(false)}
+        products={products}
         orders={orders}
-        onAddToCart={handleAddToCart}
-        onUpdateQuantity={handleUpdateQuantity}
+        chatSessions={chatSessions}
         onSelectProduct={(p) => {
           setSelectedProduct(p);
           setIsProductSheetOpen(true);
         }}
-        isSlideOver={typeof window !== 'undefined' && window.innerWidth >= 641 && window.innerWidth < 1024}
+        onAddToCart={handleAddToCart}
+        onSelectOrder={(ord) => {
+          setTrackedOrder(ord);
+          setIsLiveTrackingOpen(true);
+        }}
+        onSelectChat={(id) => {
+          handleSwitchSession(id);
+          setActiveMobileTab('chat');
+        }}
       />
 
-      {/* Product Detail Sheet */}
+      {/* ── Product Details Sheet (Screen 4) ───────────────────────────────── */}
       <ProductSheet
         product={selectedProduct}
         isOpen={isProductSheetOpen}
@@ -1717,28 +891,35 @@ export const ShopperWorkspace: React.FC = () => {
         cartItems={cart?.items}
         onAddToCart={handleAddToCart}
         onUpdateQuantity={handleUpdateQuantity}
-        onViewInChat={handleViewProductInChat}
+        onViewInChat={(p) => {
+          setIsProductSheetOpen(false);
+          setActiveMobileTab('chat');
+          setComposerText(`Tell me recipe ideas and nutrition for ${p.name}`);
+        }}
       />
 
-      {/* Orders & Delivery Tracking Sheet */}
+      {/* ── Location Selector & Address Management Modal (Screens 7 & 11) ──── */}
+      <AddressModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        token={token}
+        selectedAddressId={selectedAddress?._id}
+        onSelectAddress={(addr) => setSelectedAddress(addr)}
+      />
+
+      {/* ── Orders & Delivery Tracking Sheet (Screen 8) ─────────────────────── */}
       <OrdersSheet
         isOpen={isOrdersSheetOpen}
-        onClose={() => {
-          setIsOrdersSheetOpen(false);
-          setActiveMobileTab('chat');
-        }}
+        onClose={() => setIsOrdersSheetOpen(false)}
         orders={orders}
         onReorder={handleReorder}
         isSlideOver={typeof window !== 'undefined' && window.innerWidth >= 641}
       />
 
-      {/* Spending Rules Sheet */}
+      {/* ── Spending Rules Modal (Spending Mandate) ────────────────────────── */}
       <RulesSheet
         isOpen={isRulesSheetOpen}
-        onClose={() => {
-          setIsRulesSheetOpen(false);
-          setActiveMobileTab('chat');
-        }}
+        onClose={() => setIsRulesSheetOpen(false)}
         mandate={mandate}
         cart={cart}
         onSelectPreset={handleSelectPreset}
@@ -1746,10 +927,29 @@ export const ShopperWorkspace: React.FC = () => {
         isSlideOver={typeof window !== 'undefined' && window.innerWidth >= 641}
       />
 
+      {/* ── Customer Account & Profile Modal ──────────────────────────────── */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        token={token}
+        onOpenAddresses={() => setIsAddressModalOpen(true)}
+        onOpenOrders={() => setIsOrdersSheetOpen(true)}
+        onOpenRules={() => setIsRulesSheetOpen(true)}
+        onLogout={() => logout()}
+      />
+
+      {/* ── Splash Screen (Screen 1) ───────────────────────────────────────── */}
+      <SplashScreen
+        isOpen={isSplashScreenOpen}
+        onGetStarted={() => setIsSplashScreenOpen(false)}
+        onSignIn={() => setIsSplashScreenOpen(false)}
+        onClose={() => setIsSplashScreenOpen(false)}
+      />
+
       {/* ── Feedback Banner ───────────────────────────────────────────────── */}
       {feedbackBanner && (
         <div
-          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-card border text-xs font-semibold flex items-center gap-2 shadow-card backdrop-blur-md transition-all ${
+          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 shadow-card backdrop-blur-md transition-all ${
             feedbackBanner.type === 'success'
               ? 'bg-[--brand-soft] border-[--go]/30 text-[--go]'
               : 'bg-red-50 dark:bg-red-900/20 border-[--stop]/30 text-[--stop]'
@@ -1763,149 +963,6 @@ export const ShopperWorkspace: React.FC = () => {
           <span>{feedbackBanner.message}</span>
         </div>
       )}
-
-      {/* ── Cart Drawer ───────────────────────────────────────────────────── */}
-      {isCartDrawerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex justify-end">
-          <div className="w-full max-w-md h-full bg-[--surface] flex flex-col shadow-2xl">
-            {/* Drawer header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[--line]">
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="w-5 h-5 text-[--brand]" />
-                <h2 className="font-heading font-bold text-base text-[--ink]">Your Cart</h2>
-                {cartItemCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-chip bg-[--brand-soft] text-[--brand] text-xs font-bold">
-                    {cartItemCount}
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  setIsCartDrawerOpen(false);
-                  setActiveMobileTab('chat');
-                }}
-                className="p-1.5 text-[--mut] hover:text-[--ink] transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Drawer body */}
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              {!cart || cart.items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
-                  <ShoppingBag className="w-12 h-12 text-[--line]" />
-                  <p className="text-[--mut] text-sm font-medium">Your cart is empty</p>
-                  <p className="text-[--mut] text-xs">Ask CartPilot to add some groceries</p>
-                </div>
-              ) : (
-                <CartCard
-                  cart={cart}
-                  onUpdateQuantity={handleUpdateQuantity}
-                  onRemoveItem={handleRemoveItem}
-                  onClearCart={handleClearCart}
-                  onInitiateCheckout={handleInitiateCheckout}
-                  onUpdateDeliveryNote={handleUpdateDeliveryNote}
-                  lampStatus={currentLamp.status}
-                  lampReasonCode={currentLamp.reasonCode}
-                  lampReasonText={currentLamp.reasonText}
-                  isLoading={isLoading}
-                />
-              )}
-            </div>
-
-            {/* Drawer footer */}
-            <div className="px-5 py-4 border-t border-[--line]">
-              {cart && cart.items.length > 0 && (
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-heading font-semibold text-[--ink]">Total</span>
-                  <span className="font-heading font-bold text-xl text-[--brand]">
-                    {cart.pricing.formatted.total}
-                  </span>
-                </div>
-              )}
-              <button
-                onClick={() => {
-                  setIsCartDrawerOpen(false);
-                  handleInitiateCheckout();
-                }}
-                disabled={
-                  !cart || cart.items.length === 0 || isLoading || currentLamp.status === 'stop'
-                }
-                className="w-full py-3 rounded-[var(--radius-input)] bg-[--brand] text-white font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-40"
-              >
-                Review &amp; Checkout
-              </button>
-              <p className="text-center text-[10px] text-[--mut] mt-3 flex items-center justify-center gap-1">
-                <Lock className="w-3 h-3 text-[--go]" />
-                Deterministic policy gateway enforced
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Mandate Modal ─────────────────────────────────────────────────── */}
-      {isMandateModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
-          onClick={() => setIsMandateModalOpen(false)}
-        >
-          <div
-            className="w-full max-w-lg bg-[--surface] border border-[--line] rounded-card p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-[--line] mb-4">
-              <h3 className="font-heading font-bold text-base text-[--ink]">Spending Mandate</h3>
-              <button
-                onClick={() => setIsMandateModalOpen(false)}
-                className="p-1 text-[--mut] hover:text-[--ink]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <RulesCard
-              rules={{
-                maxOrderAmountPaise: mandate?.maxOrderAmountPaise || 50000,
-                dailyBudgetPaise: mandate?.dailyBudgetPaise || 150000,
-                perOrderCapPaise: mandate?.perOrderCapPaise || 100000,
-                requireExplicitApproval: mandate?.requireExplicitApproval || false,
-              }}
-              currentCartTotalPaise={cart?.pricing.totalPaise || 0}
-              onSelectPreset={handleSelectPreset}
-              onApplyRemedy={handleApplyRemedy}
-            />
-            <div className="pt-4 mt-4 border-t border-[--line] flex justify-end">
-              <button
-                onClick={() => setIsMandateModalOpen(false)}
-                className="px-4 py-2 rounded-[var(--radius-input)] bg-[--brand] text-white text-xs font-semibold hover:opacity-90 transition-opacity"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Address Selector & Management Modal ────────────────────────────── */}
-      <AddressModal
-        isOpen={isAddressModalOpen}
-        onClose={() => setIsAddressModalOpen(false)}
-        token={token}
-        selectedAddressId={selectedAddress?._id}
-        onSelectAddress={(addr) => setSelectedAddress(addr)}
-      />
-
-      {/* ── Customer Account & Profile Modal ──────────────────────────────── */}
-      <ProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        token={token}
-        onOpenAddresses={() => setIsAddressModalOpen(true)}
-        onOpenOrders={() => setIsOrdersSheetOpen(true)}
-        onOpenRules={() => setIsRulesSheetOpen(true)}
-        onLogout={() => logout()}
-      />
     </div>
   );
 };

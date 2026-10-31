@@ -5,24 +5,25 @@
 @tailwind utilities;
 
 :root {
-  --bg: #F6F4EC;
+  --bg: #FAFAF7;
   --surface: #FFFFFF;
-  --surface-2: #EFEDE3;
-  --ink: #14201A;
-  --mut: #5E6B63;
-  --line: #E4E0D3;
-  --brand: #0C5C34;
-  --brand-soft: #E1F2E7;
-  --go: #168A57;
+  --surface-2: #F2F4F0;
+  --ink: #18231F;
+  --mut: #738078;
+  --line: #E8EAE6;
+  --brand: #08643D;
+  --brand-hover: #064E30;
+  --brand-soft: #E7F5EC;
+  --go: #08643D;
   --ask: #C98A14;
   --stop: #D23F36;
 
-  --radius-card: 20px;
-  --radius-bubble: 18px;
-  --radius-input: 14px;
+  --radius-card: 16px;
+  --radius-bubble: 16px;
+  --radius-input: 12px;
   --radius-chip: 99px;
 
-  --shadow-card: 0 2px 12px rgba(14,20,17,0.07), 0 1px 3px rgba(14,20,17,0.05);
+  --shadow-card: 0 2px 12px rgba(24, 35, 31, 0.04), 0 1px 3px rgba(24, 35, 31, 0.03);
   --font-heading: 'Bricolage Grotesque', system-ui, sans-serif;
   --font-body: 'Instrument Sans', system-ui, sans-serif;
 }

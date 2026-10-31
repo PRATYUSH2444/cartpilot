@@ -6,18 +6,18 @@ export default {
     extend: {
       colors: {
         // CartPilot design system tokens (static values + CSS-var aliases)
-        brand: '#0C5C34',
-        'brand-dark': '#43C07D',
-        'brand-soft': '#E1F2E7',
-        go: '#168A57',
+        brand: '#08643D',
+        'brand-dark': '#064E30',
+        'brand-soft': '#E7F5EC',
+        go: '#08643D',
         ask: '#C98A14',
         stop: '#D23F36',
         surface: '#FFFFFF',
-        'surface-2': '#EFEDE3',
-        ink: '#14201A',
-        mut: '#5E6B63',
-        line: '#E4E0D3',
-        bg: '#F6F4EC',
+        'surface-2': '#F2F4F0',
+        ink: '#18231F',
+        mut: '#738078',
+        line: '#E8EAE6',
+        bg: '#FAFAF7',
         // Legacy aliases (mapped to CSS vars so dark mode still works)
         paper: 'var(--bg)',
         card: 'var(--surface)',
