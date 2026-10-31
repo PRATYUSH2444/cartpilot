@@ -279,7 +279,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
       </div>
 
       {/* ── Composer Bar ───────────────────────────────────────────────────── */}
-      <div className="bg-[--surface]/95 backdrop-blur-md border-t border-[--line] p-3 pb-24 md:pb-4 flex-shrink-0 z-20">
+      <div className="bg-[--surface]/95 backdrop-blur-md border-t border-[--line] px-4 py-3 flex-shrink-0 z-20 shadow-md">
         <div className="max-w-[760px] mx-auto space-y-2">
           {/* Quick suggestion prompt chips */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">

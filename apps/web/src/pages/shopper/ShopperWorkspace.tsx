@@ -688,9 +688,9 @@ export const ShopperWorkspace: React.FC = () => {
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'P';
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-[--bg] text-[--ink] overflow-hidden relative">
+    <div className="h-[100dvh] max-h-[100dvh] flex flex-col bg-[--bg] text-[--ink] overflow-hidden relative">
       {/* ── Main Screen Viewport Switching ──────────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
         {/* Active Tab Screen */}
         <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           {activeMobileTab === 'home' && (
@@ -798,6 +798,8 @@ export const ShopperWorkspace: React.FC = () => {
               onUpdateDeliveryNote={handleUpdateDeliveryNote}
               onOpenRules={() => setIsRulesSheetOpen(true)}
               onOpenBrowse={() => setActiveMobileTab('browse')}
+              selectedAddress={selectedAddress}
+              onOpenAddressModal={() => setIsAddressModalOpen(true)}
               isLoading={isLoading}
             />
           </div>

@@ -80,7 +80,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   const totalRupees = (totalPaise / 100).toFixed(0);
 
   return (
-    <div className="flex-1 overflow-y-auto pb-28 bg-[--bg]">
+    <div className="flex-1 overflow-y-auto pb-8 bg-[--bg]">
       {/* ── Top Header ──────────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-[--bg]/95 backdrop-blur-md px-4 py-3.5 border-b border-[--line]/60 flex items-center justify-between">
         <div className="flex items-center gap-2">

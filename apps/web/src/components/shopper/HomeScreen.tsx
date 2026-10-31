@@ -77,7 +77,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     : 'Home: HSR Layout, Bengaluru';
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24 bg-[--bg]">
+    <div className="flex-1 overflow-y-auto pb-8 bg-[--bg]">
       {/* ── Top Header Bar ─────────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-[--bg]/95 backdrop-blur-md px-4 pt-3 pb-2 border-b border-[--line]/60">
         <div className="flex items-center justify-between gap-3 mb-2.5">

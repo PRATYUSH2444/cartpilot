@@ -57,7 +57,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   const displayPhone = user?.phone || '+91 98765 43210';
 
   return (
-    <div className="flex-1 overflow-y-auto pb-28 bg-[--bg]">
+    <div className="flex-1 overflow-y-auto pb-8 bg-[--bg]">
       {/* ── Top Bar ────────────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-[--bg]/95 backdrop-blur-md px-4 py-3.5 border-b border-[--line]/60">
         <h2 className="font-heading font-bold text-base text-[--ink]">My Account</h2>
