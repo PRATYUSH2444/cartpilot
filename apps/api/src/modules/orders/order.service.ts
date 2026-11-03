@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { InventoryService } from '../inventory/inventory.service.js';
 import { OrderModel, IOrder, OrderStatus } from './order.model.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../common/errors/app-error.js';
 import { logger } from '../../common/logging/logger.js';
@@ -141,7 +142,74 @@ export class OrderService {
    * Simulates progressive fulfillment steps for testing and demo:
    * CONFIRMED -> PACKING -> OUT_FOR_DELIVERY -> DELIVERED
    */
-  public static async simulateStep(
+  /**
+   * Merchant explicitly accepts an order to start fulfillment.
+   */
+  public static async acceptOrder(
+    orderId: string,
+    userId: string,
+    role?: string,
+    merchantId?: string
+  ): Promise<IOrder> {
+    const order = await this.getOrderById(orderId, userId, role, merchantId);
+    const acceptable = ['CONFIRMED', 'PAID', 'PENDING_PAYMENT'];
+    if (!acceptable.includes(order.status)) {
+      throw new BadRequestError(`Cannot accept order with current status "${order.status}"`);
+    }
+    order.status = 'PACKING';
+    await order.save();
+    logger.info({ orderId: order._id, merchantId }, 'Merchant accepted order');
+    return order;
+  }
+
+  /**
+   * Merchant rejects an order with reason, releasing any stock reservation.
+   */
+  public static async rejectOrder(
+    orderId: string,
+    userId: string,
+    role?: string,
+    merchantId?: string,
+    reason?: string
+  ): Promise<IOrder> {
+    const order = await this.getOrderById(orderId, userId, role, merchantId);
+    if (order.status === 'DELIVERED' || order.status === 'CANCELLED' || order.status === 'REJECTED') {
+      throw new BadRequestError(`Cannot reject order with current status "${order.status}"`);
+    }
+    order.status = 'CANCELLED';
+    if (order.reservationId) {
+      await InventoryService.releaseReservation(order.reservationId);
+    }
+    await order.save();
+    logger.info({ orderId: order._id, reason }, 'Merchant rejected order and released stock reservation');
+    return order;
+  }
+
+  /**
+   * Updates an order directly to a target status with validation.
+   */
+  public static async updateOrderStatus(
+    orderId: string,
+    targetStatus: OrderStatus,
+    userId: string,
+    role?: string,
+    merchantId?: string,
+    reason?: string
+  ): Promise<IOrder> {
+    const order = await this.getOrderById(orderId, userId, role, merchantId);
+    if (targetStatus === 'DELIVERED') {
+      order.deliveredAt = new Date();
+    }
+    if ((targetStatus === 'CANCELLED' || targetStatus === 'REJECTED') && order.reservationId) {
+      await InventoryService.releaseReservation(order.reservationId);
+    }
+    order.status = targetStatus;
+    await order.save();
+    logger.info({ orderId: order._id, targetStatus, reason }, 'Order status updated');
+    return order;
+  }
+
+    public static async simulateStep(
     orderId: string,
     userId: string,
     role?: string,
@@ -150,9 +218,15 @@ export class OrderService {
     const order = await this.getOrderById(orderId, userId, role, merchantId);
 
     const validTransitions: Record<string, OrderStatus> = {
+      PENDING_PAYMENT: 'CONFIRMED',
       CONFIRMED: 'PACKING',
+      ACCEPTED: 'PACKING',
+      PREPARING: 'PACKING',
       PACKING: 'OUT_FOR_DELIVERY',
+      PACKED: 'OUT_FOR_DELIVERY',
+      READY_FOR_HANDOVER: 'OUT_FOR_DELIVERY',
       OUT_FOR_DELIVERY: 'DELIVERED',
+      DISPATCHED: 'DELIVERED',
     };
 
     const nextStatus = validTransitions[order.status];

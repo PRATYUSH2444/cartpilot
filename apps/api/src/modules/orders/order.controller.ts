@@ -53,7 +53,87 @@ export class OrderController {
     }
   }
 
-  public static async simulateStep(
+  public static async acceptOrder(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const role = req.user!.role;
+      const merchantId = req.user!.merchantId;
+      const id = req.params.id as string;
+
+      const order = await OrderService.acceptOrder(id, userId, role, merchantId);
+
+      res.status(200).json({
+        success: true,
+        message: `Order accepted and moved to ${order.status}`,
+        data: order,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async rejectOrder(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const role = req.user!.role;
+      const merchantId = req.user!.merchantId;
+      const id = req.params.id as string;
+      const { reason } = req.body || {};
+
+      const order = await OrderService.rejectOrder(id, userId, role, merchantId, reason);
+
+      res.status(200).json({
+        success: true,
+        message: 'Order rejected',
+        data: order,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async updateStatus(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const role = req.user!.role;
+      const merchantId = req.user!.merchantId;
+      const id = req.params.id as string;
+      const { status, reason } = req.body || {};
+
+      if (!status) {
+        const order = await OrderService.simulateStep(id, userId, role, merchantId);
+        res.status(200).json({
+          success: true,
+          message: `Order status advanced to ${order.status}`,
+          data: order,
+        });
+        return;
+      }
+
+      const order = await OrderService.updateOrderStatus(id, status, userId, role, merchantId, reason);
+      res.status(200).json({
+        success: true,
+        message: `Order status updated to ${order.status}`,
+        data: order,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+    public static async simulateStep(
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction

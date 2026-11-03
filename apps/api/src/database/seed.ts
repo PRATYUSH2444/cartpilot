@@ -5,6 +5,7 @@ import { UserModel } from '../modules/users/user.model.js';
 import { MerchantModel } from '../modules/merchants/merchant.model.js';
 import { MerchantUserModel } from '../modules/merchants/merchant-user.model.js';
 import { ProductModel } from '../modules/catalog/product.model.js';
+import { OrderModel } from '../modules/orders/order.model.js';
 import {
   SEED_MERCHANTS,
   SEED_PRODUCTS_FRESH_GREENS,
@@ -85,7 +86,7 @@ export async function runSeed(dropExisting = false): Promise<void> {
     { upsert: true, new: true }
   );
 
-  await UserModel.findOneAndUpdate(
+  const customerUserPrimary = await UserModel.findOneAndUpdate(
     { email: 'customer@example.com' },
     {
       name: 'Priya Sharma (Shopper)',
@@ -183,6 +184,226 @@ export async function runSeed(dropExisting = false): Promise<void> {
     },
     '✅ Seeded Strictly Vegetarian Catalog Products with Aliases'
   );
+
+  // 6. Seed Realistic Operational Orders for Fresh Greens Organics
+  if (customerUserPrimary && freshGreensId) {
+    const freshGreensProducts = await ProductModel.find({ merchantId: freshGreensId });
+    if (freshGreensProducts.length > 0) {
+      const productBySlug = new Map(freshGreensProducts.map((p) => [p.slug, p]));
+
+      const defaultAddress = {
+        street: 'Flat 402, Green Glen Layout, Bellandur',
+        city: 'Bengaluru',
+        state: 'Karnataka',
+        postalCode: '560103',
+      };
+
+      const initialOrders = [
+        {
+          orderNumber: 'CP-10248',
+          userId: customerUserPrimary._id,
+          merchantId: freshGreensId,
+          status: 'CONFIRMED' as const,
+          placedAt: new Date(Date.now() - 10 * 60 * 1000), // 10 min ago
+          shippingAddressSnapshot: { ...defaultAddress, street: 'Flat 101, Indiranagar 12th Main' },
+          deliveryNote: 'Please ring bell and leave with security',
+          items: [
+            {
+              productId: productBySlug.get('organic-tomatoes')?._id || freshGreensProducts[0]!._id,
+              name: 'Organic Tomatoes',
+              category: 'FRUITS_VEGETABLES',
+              unitPricePaise: 4000,
+              quantity: 2,
+              subtotalPaise: 8000,
+              packageSize: 500,
+              packageUnit: 'G',
+            },
+            {
+              productId: productBySlug.get('baby-spinach-palak')?._id || freshGreensProducts[1]!._id,
+              name: 'Baby Spinach (Palak)',
+              category: 'FRUITS_VEGETABLES',
+              unitPricePaise: 2500,
+              quantity: 1,
+              subtotalPaise: 2500,
+              packageSize: 250,
+              packageUnit: 'G',
+            },
+            {
+              productId: productBySlug.get('cow-milk')?._id || freshGreensProducts[2]!._id,
+              name: 'Cow Milk',
+              category: 'DAIRY_BREAKFAST',
+              unitPricePaise: 10000,
+              quantity: 1,
+              subtotalPaise: 10000,
+              packageSize: 1,
+              packageUnit: 'L',
+            },
+          ],
+          pricingSnapshot: {
+            subtotalPaise: 20500,
+            deliveryFeePaise: 0,
+            platformFeePaise: 825,
+            taxPaise: 0,
+            discountPaise: 0,
+            totalPaise: 21325,
+          },
+        },
+        {
+          orderNumber: 'CP-10247',
+          userId: customerUserPrimary._id,
+          merchantId: freshGreensId,
+          status: 'PACKING' as const,
+          placedAt: new Date(Date.now() - 28 * 60 * 1000), // 28 min ago
+          shippingAddressSnapshot: { ...defaultAddress, street: 'A-204, Diamond District, HAL' },
+          deliveryNote: 'Call before delivery',
+          items: [
+            {
+              productId: productBySlug.get('aashirvaad-sharbati-atta')?._id || freshGreensProducts[0]!._id,
+              name: 'Aashirvaad Atta',
+              category: 'ATTA_RICE_DAL',
+              unitPricePaise: 34000,
+              quantity: 1,
+              subtotalPaise: 34000,
+              packageSize: 5,
+              packageUnit: 'KG',
+            },
+            {
+              productId: productBySlug.get('moong-dal')?._id || freshGreensProducts[1]!._id,
+              name: 'Moong Dal',
+              category: 'ATTA_RICE_DAL',
+              unitPricePaise: 8000,
+              quantity: 1,
+              subtotalPaise: 8000,
+              packageSize: 500,
+              packageUnit: 'G',
+            },
+          ],
+          pricingSnapshot: {
+            subtotalPaise: 42000,
+            deliveryFeePaise: 0,
+            platformFeePaise: 800,
+            taxPaise: 0,
+            discountPaise: 0,
+            totalPaise: 42800,
+          },
+        },
+        {
+          orderNumber: 'CP-10246',
+          userId: customerUserPrimary._id,
+          merchantId: freshGreensId,
+          status: 'PACKING' as const,
+          placedAt: new Date(Date.now() - 45 * 60 * 1000), // 45 min ago
+          shippingAddressSnapshot: { ...defaultAddress, street: 'House 55, Defence Colony' },
+          items: [
+            {
+              productId: productBySlug.get('whole-wheat-bread')?._id || freshGreensProducts[2]!._id,
+              name: 'Whole Wheat Bread',
+              category: 'DAIRY_BREAKFAST',
+              unitPricePaise: 3500,
+              quantity: 2,
+              subtotalPaise: 7000,
+              packageSize: 400,
+              packageUnit: 'G',
+            },
+            {
+              productId: productBySlug.get('cow-milk')?._id || freshGreensProducts[2]!._id,
+              name: 'Cow Milk',
+              category: 'DAIRY_BREAKFAST',
+              unitPricePaise: 10000,
+              quantity: 1,
+              subtotalPaise: 10000,
+              packageSize: 1,
+              packageUnit: 'L',
+            },
+          ],
+          pricingSnapshot: {
+            subtotalPaise: 17000,
+            deliveryFeePaise: 0,
+            platformFeePaise: 850,
+            taxPaise: 0,
+            discountPaise: 0,
+            totalPaise: 17850,
+          },
+        },
+        {
+          orderNumber: 'CP-10245',
+          userId: customerUserPrimary._id,
+          merchantId: freshGreensId,
+          status: 'OUT_FOR_DELIVERY' as const,
+          placedAt: new Date(Date.now() - 65 * 60 * 1000), // 65 min ago
+          shippingAddressSnapshot: { ...defaultAddress, street: 'B-12, Green Glen Layout' },
+          items: [
+            {
+              productId: productBySlug.get('california-almonds')?._id || freshGreensProducts[0]!._id,
+              name: 'California Almonds',
+              category: 'SNACKS_MUNCHIES',
+              unitPricePaise: 28000,
+              quantity: 1,
+              subtotalPaise: 28000,
+              packageSize: 250,
+              packageUnit: 'G',
+            },
+            {
+              productId: productBySlug.get('organic-honey')?._id || freshGreensProducts[1]!._id,
+              name: 'Organic Honey',
+              category: 'SNACKS_MUNCHIES',
+              unitPricePaise: 35000,
+              quantity: 1,
+              subtotalPaise: 35000,
+              packageSize: 500,
+              packageUnit: 'G',
+            },
+          ],
+          pricingSnapshot: {
+            subtotalPaise: 63000,
+            deliveryFeePaise: 0,
+            platformFeePaise: 0,
+            taxPaise: 0,
+            discountPaise: 0,
+            totalPaise: 63000,
+          },
+        },
+        {
+          orderNumber: 'CP-10244',
+          userId: customerUserPrimary._id,
+          merchantId: freshGreensId,
+          status: 'DELIVERED' as const,
+          placedAt: new Date(Date.now() - 3 * 3600 * 1000),
+          deliveredAt: new Date(Date.now() - 2 * 3600 * 1000),
+          shippingAddressSnapshot: defaultAddress,
+          items: [
+            {
+              productId: productBySlug.get('basmati-rice')?._id || freshGreensProducts[0]!._id,
+              name: 'Basmati Rice',
+              category: 'ATTA_RICE_DAL',
+              unitPricePaise: 15000,
+              quantity: 2,
+              subtotalPaise: 30000,
+              packageSize: 1,
+              packageUnit: 'KG',
+            },
+          ],
+          pricingSnapshot: {
+            subtotalPaise: 30000,
+            deliveryFeePaise: 0,
+            platformFeePaise: 0,
+            taxPaise: 0,
+            discountPaise: 0,
+            totalPaise: 30000,
+          },
+        },
+      ];
+
+      for (const orderData of initialOrders) {
+        await OrderModel.findOneAndUpdate(
+          { orderNumber: orderData.orderNumber },
+          { ...orderData },
+          { upsert: true, new: true }
+        );
+      }
+      logger.info({ count: initialOrders.length }, '✅ Seeded Operational Orders for Fresh Greens Organics');
+    }
+  }
 
   logger.info('🎉 Database seeding completed cleanly!');
 }

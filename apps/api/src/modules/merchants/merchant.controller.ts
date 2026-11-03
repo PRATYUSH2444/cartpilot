@@ -113,6 +113,27 @@ export async function getMyStore(
   }
 }
 
+export async function getMyStoreAnalytics(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user || !req.user.merchantId) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'No merchant store linked' } });
+      return;
+    }
+
+    const analytics = await MerchantService.getStoreAnalytics(req.user.merchantId);
+    res.status(200).json({
+      success: true,
+      data: analytics,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function updateMyStore(
   req: AuthenticatedRequest,
   res: Response,

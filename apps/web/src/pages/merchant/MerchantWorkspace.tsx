@@ -5,6 +5,7 @@ import {
   MerchantTab,
   MerchantStoreData,
   StaffMemberData,
+  MerchantStoreAnalytics,
   Product,
   OrderData,
 } from '../../components/merchant/types';
@@ -38,6 +39,7 @@ export const MerchantWorkspace: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [staffList, setStaffList] = useState<StaffMemberData[]>([]);
+  const [storeAnalytics, setStoreAnalytics] = useState<MerchantStoreAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Modals & Drawers
@@ -126,6 +128,15 @@ export const MerchantWorkspace: React.FC = () => {
           : [];
         setStaffList(list);
       }
+
+      // 5. Fetch store aggregated analytics
+      const analyticsRes = await fetch(`${API_BASE}/merchants/my-store/analytics`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (analyticsRes.ok) {
+        const aData = await analyticsRes.json();
+        setStoreAnalytics(aData.data);
+      }
     } catch {
       showBanner('error', 'Failed to synchronize merchant portal data');
     } finally {
@@ -136,6 +147,62 @@ export const MerchantWorkspace: React.FC = () => {
   useEffect(() => {
     fetchMerchantData();
   }, [fetchMerchantData]);
+
+  // Handle Explicit Order Acceptance
+  const handleAcceptOrder = async (orderId: string) => {
+    if (!token) return;
+    setIsAdvancingOrder(true);
+    try {
+      const res = await fetch(`${API_BASE}/orders/${orderId}/accept`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const updated = data.data;
+        setOrders((prev) => prev.map((o) => (o._id === orderId ? updated : o)));
+        showBanner('success', `Order #${updated.orderNumber || orderId} accepted for fulfillment`);
+        fetchMerchantData();
+      } else {
+        const err = await res.json();
+        showBanner('error', err.error?.message || 'Could not accept order');
+      }
+    } catch {
+      showBanner('error', 'Network error accepting order');
+    } finally {
+      setIsAdvancingOrder(false);
+    }
+  };
+
+  // Handle Explicit Order Rejection
+  const handleRejectOrder = async (orderId: string, reason?: string) => {
+    if (!token) return;
+    setIsAdvancingOrder(true);
+    try {
+      const res = await fetch(`${API_BASE}/orders/${orderId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason: reason || 'Merchant declined order' }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const updated = data.data;
+        setOrders((prev) => prev.map((o) => (o._id === orderId ? updated : o)));
+        showBanner('success', `Order #${updated.orderNumber || orderId} rejected and stock released`);
+        fetchMerchantData();
+      } else {
+        const err = await res.json();
+        showBanner('error', err.error?.message || 'Could not reject order');
+      }
+    } catch {
+      showBanner('error', 'Network error rejecting order');
+    } finally {
+      setIsAdvancingOrder(false);
+    }
+  };
 
   // Handle Advance Fulfillment Status
   const handleAdvanceStatus = async (orderId: string) => {
@@ -491,6 +558,7 @@ export const MerchantWorkspace: React.FC = () => {
             {(activeTab === 'home' || activeTab === 'overview') && (
               <MerchantHomeView
                 store={store}
+                analytics={storeAnalytics}
                 orders={orders}
                 products={products}
                 onNavigate={(tab) => setActiveTab(tab)}
@@ -507,6 +575,8 @@ export const MerchantWorkspace: React.FC = () => {
                 onOpenCreateOrder={() => {
                   showBanner('success', 'Order draft created. Ready for customer assignment.');
                 }}
+                onAdvanceStatus={handleAdvanceStatus}
+                onAcceptOrder={handleAcceptOrder}
               />
             )}
 
@@ -565,6 +635,8 @@ export const MerchantWorkspace: React.FC = () => {
         onClose={() => setSelectedOrderId(null)}
         orders={orders}
         onAdvanceStatus={handleAdvanceStatus}
+        onAcceptOrder={handleAcceptOrder}
+        onRejectOrder={handleRejectOrder}
         isAdvancing={isAdvancingOrder}
       />
 

@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { MerchantModel, IMerchant, MerchantStatus } from './merchant.model.js';
+import { OrderModel } from '../orders/order.model.js';
 import { ProductModel, IProduct, ProductCategory, PackageUnit } from '../catalog/product.model.js';
 import { UserModel } from '../users/user.model.js';
 import { MerchantUserModel, MerchantPermission } from './merchant-user.model.js';
@@ -62,6 +63,50 @@ export class MerchantService {
   /**
    * Update merchant store details (profile, online status, contact, address, delivery pincodes).
    */
+  /**
+   * Real-time operational database analytics for merchant dashboard.
+   */
+  static async getStoreAnalytics(merchantId: string) {
+    if (!mongoose.Types.ObjectId.isValid(merchantId)) {
+      throw new BadRequestError('Invalid merchant ID format');
+    }
+    const merchantObjId = new mongoose.Types.ObjectId(merchantId);
+
+    const orders = await OrderModel.find({ merchantId: merchantObjId });
+    const totalSalesPaise = orders.reduce((sum, o) => {
+      if (o.status !== 'CANCELLED' && o.status !== 'FAILED') {
+        return sum + (o.pricingSnapshot?.totalPaise || 0);
+      }
+      return sum;
+    }, 0);
+
+    const newOrders = orders.filter((o) => o.status === 'CONFIRMED' || o.status === 'PENDING_PAYMENT');
+    const ordersToComplete = orders.filter((o) => o.status === 'PACKING' || o.status === 'OUT_FOR_DELIVERY');
+    const completedOrders = orders.filter((o) => o.status === 'DELIVERED');
+
+    const lowStockCount = await ProductModel.countDocuments({
+      merchantId: merchantObjId,
+      availableStock: { $lte: 10, $gt: 0 },
+      isActive: true,
+    });
+    const outOfStockCount = await ProductModel.countDocuments({
+      merchantId: merchantObjId,
+      availableStock: 0,
+      isActive: true,
+    });
+
+    return {
+      todaySalesPaise: totalSalesPaise,
+      newOrdersCount: newOrders.length,
+      ordersToCompleteCount: ordersToComplete.length,
+      completedOrdersCount: completedOrders.length,
+      lowStockCount,
+      outOfStockCount,
+      totalOrdersCount: orders.length,
+      avgOrderValuePaise: orders.length > 0 ? Math.round(totalSalesPaise / orders.length) : 0,
+    };
+  }
+
   static async updateStore(
     merchantId: string,
     updates: Partial<{

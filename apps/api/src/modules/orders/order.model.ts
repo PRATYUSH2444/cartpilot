@@ -4,10 +4,14 @@ export type OrderStatus =
   | 'PENDING_PAYMENT'
   | 'PAID'
   | 'CONFIRMED'
+  | 'ACCEPTED'
+  | 'PREPARING'
   | 'PACKING'
+  | 'READY_FOR_HANDOVER'
   | 'OUT_FOR_DELIVERY'
   | 'DELIVERED'
   | 'CANCELLED'
+  | 'REJECTED'
   | 'FAILED'
   | 'REFUNDED';
 
@@ -200,10 +204,14 @@ const OrderSchema = new Schema<IOrder>(
         'PENDING_PAYMENT',
         'PAID',
         'CONFIRMED',
+        'ACCEPTED',
+        'PREPARING',
         'PACKING',
+        'READY_FOR_HANDOVER',
         'OUT_FOR_DELIVERY',
         'DELIVERED',
         'CANCELLED',
+        'REJECTED',
         'FAILED',
         'REFUNDED',
       ],

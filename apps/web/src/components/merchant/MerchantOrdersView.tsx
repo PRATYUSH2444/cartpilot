@@ -13,6 +13,8 @@ interface OrdersViewProps {
   orders: OrderData[];
   onSelectOrder: (orderId: string) => void;
   onOpenCreateOrder?: () => void;
+  onAdvanceStatus?: (orderId: string) => Promise<void>;
+  onAcceptOrder?: (orderId: string) => Promise<void>;
 }
 
 type OrderTabFilter =
@@ -29,6 +31,8 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
   orders,
   onSelectOrder,
   onOpenCreateOrder,
+  onAdvanceStatus,
+  onAcceptOrder,
 }) => {
   const [activeTab, setActiveTab] = useState<OrderTabFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,151 +53,20 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
     []
   );
 
-  // Extended orders list (real DB orders + realistic supplementary records if catalog is small)
-  const fullOrderList = useMemo(() => {
-    if (orders.length >= 8) return orders;
+  // Directly bind to real database orders
+  const fullOrderList = orders;
 
-    const defaultAddress = {
-      name: 'Priya Sharma',
-      street: 'A-101 Green Park',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      postalCode: '560038',
-      phone: '+91 98765 43210',
-    };
-
-    // Supplementary records matching the mockup screenshot
-    const supplementary: OrderData[] = [
-      {
-        _id: 'ord-10028',
-        orderNumber: 'CP-10028',
-        userId: 'usr-1',
-        status: 'CONFIRMED',
-        placedAt: new Date().toISOString(),
-        shippingAddressSnapshot: defaultAddress,
-        items: [
-          { productId: 'p1', name: 'Baby Spinach (Palak)', quantity: 2, unitPricePaise: 2500, subtotalPaise: 5000, packageSize: 250, packageUnit: 'G' },
-          { productId: 'p2', name: 'Organic Tomatoes', quantity: 1, unitPricePaise: 4000, subtotalPaise: 4000, packageSize: 500, packageUnit: 'G' },
-          { productId: 'p3', name: 'Cow Milk', quantity: 1, unitPricePaise: 10000, subtotalPaise: 10000, packageSize: 1, packageUnit: 'L' },
-          { productId: 'p4', name: 'Whole Wheat Bread', quantity: 1, unitPricePaise: 3500, subtotalPaise: 3500, packageSize: 400, packageUnit: 'G' },
-        ],
-        pricingSnapshot: { subtotalPaise: 22500, deliveryFeePaise: 0, platformFeePaise: 400, taxPaise: 0, discountPaise: 0, totalPaise: 22900 },
-      },
-      {
-        _id: 'ord-10027',
-        orderNumber: 'CP-10027',
-        userId: 'usr-2',
-        status: 'PACKING',
-        placedAt: new Date().toISOString(),
-        shippingAddressSnapshot: defaultAddress,
-        items: [
-          { productId: 'p5', name: 'Aashirvaad Atta', quantity: 1, unitPricePaise: 34000, subtotalPaise: 34000, packageSize: 5, packageUnit: 'KG' },
-          { productId: 'p6', name: 'Moong Dal', quantity: 1, unitPricePaise: 8000, subtotalPaise: 8000, packageSize: 500, packageUnit: 'G' },
-        ],
-        pricingSnapshot: { subtotalPaise: 42000, deliveryFeePaise: 0, taxPaise: 0, discountPaise: 0, totalPaise: 42000 },
-      },
-      {
-        _id: 'ord-10026',
-        orderNumber: 'CP-10026',
-        userId: 'usr-3',
-        status: 'CONFIRMED',
-        placedAt: new Date().toISOString(),
-        shippingAddressSnapshot: defaultAddress,
-        items: [
-          { productId: 'p7', name: 'California Almonds', quantity: 2, unitPricePaise: 28000, subtotalPaise: 56000, packageSize: 250, packageUnit: 'G' },
-          { productId: 'p8', name: 'Organic Honey', quantity: 1, unitPricePaise: 35000, subtotalPaise: 35000, packageSize: 500, packageUnit: 'G' },
-          { productId: 'p9', name: 'Olive Oil', quantity: 1, unitPricePaise: 33000, subtotalPaise: 33000, packageSize: 500, packageUnit: 'ML' },
-        ],
-        pricingSnapshot: { subtotalPaise: 124000, deliveryFeePaise: 0, taxPaise: 0, discountPaise: 0, totalPaise: 124000 },
-      },
-      {
-        _id: 'ord-10025',
-        orderNumber: 'CP-10025',
-        userId: 'usr-4',
-        status: 'PACKING',
-        placedAt: new Date().toISOString(),
-        shippingAddressSnapshot: defaultAddress,
-        items: [
-          { productId: 'p10', name: 'Basmati Rice', quantity: 1, unitPricePaise: 15000, subtotalPaise: 15000, packageSize: 1, packageUnit: 'KG' },
-          { productId: 'p11', name: 'Green Tea', quantity: 2, unitPricePaise: 12000, subtotalPaise: 24000, packageSize: 100, packageUnit: 'G' },
-          { productId: 'p12', name: 'Organic Jaggery', quantity: 1, unitPricePaise: 11000, subtotalPaise: 11000, packageSize: 500, packageUnit: 'G' },
-        ],
-        pricingSnapshot: { subtotalPaise: 50000, deliveryFeePaise: 0, taxPaise: 0, discountPaise: 0, totalPaise: 50000 },
-      },
-      {
-        _id: 'ord-10024',
-        orderNumber: 'CP-10024',
-        userId: 'usr-5',
-        status: 'OUT_FOR_DELIVERY',
-        placedAt: new Date().toISOString(),
-        shippingAddressSnapshot: defaultAddress,
-        items: [
-          { productId: 'p13', name: 'Farm Fresh Apples', quantity: 1, unitPricePaise: 18000, subtotalPaise: 18000, packageSize: 1, packageUnit: 'KG' },
-          { productId: 'p14', name: 'Alphonso Mango Pulp', quantity: 1, unitPricePaise: 25000, subtotalPaise: 25000, packageSize: 850, packageUnit: 'G' },
-          { productId: 'p15', name: 'Fresh Paneer', quantity: 1, unitPricePaise: 10500, subtotalPaise: 10500, packageSize: 200, packageUnit: 'G' },
-        ],
-        pricingSnapshot: { subtotalPaise: 53500, deliveryFeePaise: 0, taxPaise: 0, discountPaise: 0, totalPaise: 53500 },
-      },
-      {
-        _id: 'ord-10023',
-        orderNumber: 'CP-10023',
-        userId: 'usr-6',
-        status: 'OUT_FOR_DELIVERY',
-        placedAt: new Date().toISOString(),
-        shippingAddressSnapshot: defaultAddress,
-        items: [
-          { productId: 'p16', name: 'Cold Pressed Coconut Oil', quantity: 1, unitPricePaise: 29000, subtotalPaise: 29000, packageSize: 500, packageUnit: 'ML' },
-          { productId: 'p17', name: 'Chia Seeds', quantity: 1, unitPricePaise: 22000, subtotalPaise: 22000, packageSize: 250, packageUnit: 'G' },
-        ],
-        pricingSnapshot: { subtotalPaise: 51000, deliveryFeePaise: 0, taxPaise: 0, discountPaise: 0, totalPaise: 51000 },
-      },
-      {
-        _id: 'ord-10022',
-        orderNumber: 'CP-10022',
-        userId: 'usr-7',
-        status: 'OUT_FOR_DELIVERY',
-        placedAt: new Date().toISOString(),
-        shippingAddressSnapshot: defaultAddress,
-        items: [
-          { productId: 'p18', name: 'Pure Desi Ghee', quantity: 1, unitPricePaise: 68000, subtotalPaise: 68000, packageSize: 1, packageUnit: 'L' },
-          { productId: 'p19', name: 'Organic Turmeric Powder', quantity: 1, unitPricePaise: 9500, subtotalPaise: 9500, packageSize: 200, packageUnit: 'G' },
-          { productId: 'p20', name: 'Cumin Seeds', quantity: 1, unitPricePaise: 11000, subtotalPaise: 11000, packageSize: 200, packageUnit: 'G' },
-          { productId: 'p21', name: 'Black Pepper', quantity: 1, unitPricePaise: 14000, subtotalPaise: 14000, packageSize: 100, packageUnit: 'G' },
-          { productId: 'p22', name: 'Rock Salt (Sendha Namak)', quantity: 1, unitPricePaise: 8700, subtotalPaise: 8700, packageSize: 1, packageUnit: 'KG' },
-        ],
-        pricingSnapshot: { subtotalPaise: 111200, deliveryFeePaise: 0, taxPaise: 0, discountPaise: 0, totalPaise: 111200 },
-      },
-      {
-        _id: 'ord-10021',
-        orderNumber: 'CP-10021',
-        userId: 'usr-8',
-        status: 'DELIVERED',
-        placedAt: new Date().toISOString(),
-        shippingAddressSnapshot: defaultAddress,
-        items: [
-          { productId: 'p23', name: 'Sweet Corn', quantity: 2, unitPricePaise: 3000, subtotalPaise: 6000, packageSize: 2, packageUnit: 'PIECE' },
-          { productId: 'p24', name: 'Fresh Coriander', quantity: 1, unitPricePaise: 1500, subtotalPaise: 1500, packageSize: 100, packageUnit: 'G' },
-          { productId: 'p25', name: 'Lemon', quantity: 1, unitPricePaise: 2000, subtotalPaise: 2000, packageSize: 4, packageUnit: 'PIECE' },
-        ],
-        pricingSnapshot: { subtotalPaise: 9500, deliveryFeePaise: 4000, platformFeePaise: 400, taxPaise: 0, discountPaise: 0, totalPaise: 13900 },
-      },
-    ];
-
-    // Combine real orders with supplementary mock orders without duplicating IDs
-    const realIds = new Set(orders.map((o) => o._id));
-    return [...orders, ...supplementary.filter((s) => !realIds.has(s._id))];
-  }, [orders]);
-
-  // Tab counts
+  // Tab counts dynamically calculated from live orders
   const tabCounts = useMemo(() => {
     return {
       all: fullOrderList.length,
       new: fullOrderList.filter((o) => o.status === 'CONFIRMED' || o.status === 'PENDING_PAYMENT').length,
-      accepted: 5,
-      preparing: fullOrderList.filter((o) => o.status === 'PACKING').length || 4,
-      packed: 2,
-      dispatched: fullOrderList.filter((o) => o.status === 'OUT_FOR_DELIVERY').length || 8,
-      delivered: fullOrderList.filter((o) => o.status === 'DELIVERED').length || 14,
+      accepted: fullOrderList.filter((o) => o.status === 'ACCEPTED').length,
+      preparing: fullOrderList.filter((o) => o.status === 'PREPARING' || o.status === 'PACKING').length,
+      packed: fullOrderList.filter((o) => o.status === 'PACKED' || o.status === 'READY_FOR_HANDOVER').length,
+      dispatched: fullOrderList.filter((o) => o.status === 'DISPATCHED' || o.status === 'OUT_FOR_DELIVERY').length,
+      delivered: fullOrderList.filter((o) => o.status === 'DELIVERED').length,
+      cancelled: fullOrderList.filter((o) => o.status === 'CANCELLED' || o.status === 'REJECTED').length,
     };
   }, [fullOrderList]);
 
@@ -203,21 +76,26 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
       // Tab filter
       if (activeTab === 'NEW') {
         if (o.status !== 'CONFIRMED' && o.status !== 'PENDING_PAYMENT') return false;
+      } else if (activeTab === 'ACCEPTED') {
+        if (o.status !== 'ACCEPTED') return false;
       } else if (activeTab === 'PREPARING') {
-        if (o.status !== 'PACKING') return false;
+        if (o.status !== 'PREPARING' && o.status !== 'PACKING') return false;
+      } else if (activeTab === 'PACKED') {
+        if (o.status !== 'PACKED' && o.status !== 'READY_FOR_HANDOVER') return false;
       } else if (activeTab === 'DISPATCHED') {
-        if (o.status !== 'OUT_FOR_DELIVERY') return false;
+        if (o.status !== 'DISPATCHED' && o.status !== 'OUT_FOR_DELIVERY') return false;
       } else if (activeTab === 'DELIVERED') {
         if (o.status !== 'DELIVERED') return false;
       } else if (activeTab === 'CANCELLED') {
-        if (o.status !== 'CANCELLED') return false;
+        if (o.status !== 'CANCELLED' && o.status !== 'REJECTED') return false;
       }
 
       // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const num = (o.orderNumber || o._id).toLowerCase();
-        return num.includes(q);
+        const custName = ((o.shippingAddressSnapshot as any)?.name || '').toLowerCase();
+        return num.includes(q) || custName.includes(q);
       }
 
       return true;
@@ -426,6 +304,8 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
                   const orderId = o.orderNumber || o._id.slice(-6).toUpperCase();
                   const totalPaise = o.pricingSnapshot?.totalPaise || 62800;
                   const cust = customerDirectory[idx % customerDirectory.length]!;
+                  const custName = (o.shippingAddressSnapshot as any)?.name || cust.name;
+                  const custPhone = (o.shippingAddressSnapshot as any)?.phone || cust.phone;
                   const isChecked = selectedOrders.has(o._id);
 
                   return (
@@ -458,21 +338,21 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-2.5">
                           <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] flex items-center justify-center flex-shrink-0">
-                            {cust.name.charAt(0)}
+                            {custName.charAt(0)}
                           </div>
                           <div className="flex flex-col min-w-0">
                             <span className="text-slate-900 dark:text-white font-semibold truncate">
-                              {cust.name}
+                              {custName}
                             </span>
                             <span className="text-[10px] text-slate-400 truncate">
-                              {cust.phone}
+                              {custPhone}
                             </span>
                           </div>
                         </div>
                       </td>
 
                       <td className="py-3 px-3 text-slate-500">
-                        {o.items?.length || 4} items
+                        {o.items?.length || 1} items
                       </td>
 
                       <td className="py-3 px-3 font-mono font-semibold text-slate-900 dark:text-white">
@@ -502,13 +382,33 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
                         className="py-3 px-4 text-right"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <button
-                          onClick={() => onSelectOrder(o._id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                          title="View order"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {onAcceptOrder && (o.status === 'CONFIRMED' || o.status === 'PENDING_PAYMENT') && (
+                            <button
+                              onClick={() => onAcceptOrder(o._id)}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[11px] shadow-2xs cursor-pointer"
+                              title="Accept order"
+                            >
+                              Accept
+                            </button>
+                          )}
+                          {onAdvanceStatus && o.status !== 'DELIVERED' && o.status !== 'CANCELLED' && o.status !== 'REJECTED' && (o.status !== 'CONFIRMED' && o.status !== 'PENDING_PAYMENT') && (
+                            <button
+                              onClick={() => onAdvanceStatus(o._id)}
+                              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-medium cursor-pointer"
+                              title="Advance fulfillment"
+                            >
+                              Next →
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onSelectOrder(o._id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                            title="View order"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

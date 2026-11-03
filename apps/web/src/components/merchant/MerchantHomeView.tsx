@@ -18,10 +18,11 @@ import {
   Bell,
   ShoppingCart,
 } from 'lucide-react';
-import { OrderData, Product, MerchantStoreData, MerchantTab } from './types';
+import { OrderData, Product, MerchantStoreData, MerchantTab, MerchantStoreAnalytics } from './types';
 
 interface MerchantHomeViewProps {
   store: MerchantStoreData | null;
+  analytics?: MerchantStoreAnalytics | null;
   orders: OrderData[];
   products: Product[];
   onNavigate: (tab: MerchantTab) => void;
@@ -32,6 +33,7 @@ interface MerchantHomeViewProps {
 
 export const MerchantHomeView: React.FC<MerchantHomeViewProps> = ({
   store,
+  analytics,
   orders,
   products,
   onNavigate,
@@ -41,7 +43,7 @@ export const MerchantHomeView: React.FC<MerchantHomeViewProps> = ({
 }) => {
   // ── Metrics Calculation ────────────────────────────────────────────────────
   const metrics = useMemo(() => {
-    const totalSalesPaise = orders.reduce(
+    const totalSalesPaise = analytics?.salesPaise ?? orders.reduce(
       (sum, o) => sum + (o.pricingSnapshot?.totalPaise || 0),
       0
     );
@@ -86,86 +88,60 @@ export const MerchantHomeView: React.FC<MerchantHomeViewProps> = ({
 
   // ── Recent Orders Rows ─────────────────────────────────────────────────────
   const recentOrdersList = useMemo(() => {
-    if (orders.length >= 4) {
-      return orders.slice(0, 4).map((o, idx) => {
-        const initials = ['PS', 'AK', 'VS', 'NP'][idx] || 'CU';
-        const fallbackNames = ['Priya Sharma', 'Amit Kumar', 'Vikram Singh', 'Neha Patel'];
-        const customerName =
-          (o.shippingAddressSnapshot as any)?.name || fallbackNames[idx] || 'Customer';
-        const itemCount = o.items?.reduce((s, it) => s + it.quantity, 0) || 3;
-        const amountPaise = o.pricingSnapshot?.totalPaise || 21325;
-        
-        let statusLabel = 'New';
-        let statusStyle = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
-        if (o.status === 'CONFIRMED') {
-          statusLabel = 'New';
-          statusStyle = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
-        } else if (o.status === 'PACKING') {
-          statusLabel = idx % 2 === 0 ? 'Preparing' : 'Packed';
-          statusStyle = idx % 2 === 0 
-            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
-            : 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300';
-        } else if (o.status === 'OUT_FOR_DELIVERY') {
-          statusLabel = 'Handover';
-          statusStyle = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300';
-        }
+    if (!orders || orders.length === 0) return [];
 
-        return {
-          id: o._id,
-          orderIdDisplay: o.orderNumber ? `#${o.orderNumber}` : `#CP-1024${8 - idx}`,
-          initials,
-          customerName,
-          itemsCount: `${itemCount} items`,
-          amountDisplay: `₹${(amountPaise / 100).toFixed(2)}`,
-          status: statusLabel,
-          statusStyle,
-        };
-      });
-    }
+    return orders.slice(0, 5).map((o, idx) => {
+      const fallbackNames = ['Priya Sharma', 'Amit Kumar', 'Vikram Singh', 'Neha Patel', 'Rahul Mehta'];
+      const customerName =
+        (o.shippingAddressSnapshot as any)?.name || fallbackNames[idx % fallbackNames.length] || 'Customer';
+      
+      const initials = customerName
+        .split(' ')
+        .map((w: string) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
 
-    // Default matching reference design exactly
-    return [
-      {
-        id: 'ord-10248',
-        orderIdDisplay: '#CP-10248',
-        initials: 'PS',
-        customerName: 'Priya Sharma',
-        itemsCount: '3 items',
-        amountDisplay: '₹213.25',
-        status: 'New',
-        statusStyle: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
-      },
-      {
-        id: 'ord-10247',
-        orderIdDisplay: '#CP-10247',
-        initials: 'AK',
-        customerName: 'Amit Kumar',
-        itemsCount: '5 items',
-        amountDisplay: '₹428.00',
-        status: 'Preparing',
-        statusStyle: 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300',
-      },
-      {
-        id: 'ord-10246',
-        orderIdDisplay: '#CP-10246',
-        initials: 'VS',
-        customerName: 'Vikram Singh',
-        itemsCount: '2 items',
-        amountDisplay: '₹178.50',
-        status: 'Packed',
-        statusStyle: 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300',
-      },
-      {
-        id: 'ord-10245',
-        orderIdDisplay: '#CP-10245',
-        initials: 'NP',
-        customerName: 'Neha Patel',
-        itemsCount: '4 items',
-        amountDisplay: '₹325.00',
-        status: 'Handover',
-        statusStyle: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300',
-      },
-    ];
+      const itemCount = o.items?.reduce((s, it) => s + it.quantity, 0) || o.items?.length || 1;
+      const amountPaise = o.pricingSnapshot?.totalPaise || 0;
+      
+      let statusLabel = 'New';
+      let statusStyle = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
+      
+      if (o.status === 'CONFIRMED' || o.status === 'PENDING_PAYMENT') {
+        statusLabel = 'New';
+        statusStyle = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
+      } else if (o.status === 'ACCEPTED') {
+        statusLabel = 'Accepted';
+        statusStyle = 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300';
+      } else if (o.status === 'PREPARING' || o.status === 'PACKING') {
+        statusLabel = 'Preparing';
+        statusStyle = 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300';
+      } else if (o.status === 'PACKED' || o.status === 'READY_FOR_HANDOVER') {
+        statusLabel = 'Packed';
+        statusStyle = 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300';
+      } else if (o.status === 'OUT_FOR_DELIVERY' || o.status === 'DISPATCHED') {
+        statusLabel = 'Handover';
+        statusStyle = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300';
+      } else if (o.status === 'DELIVERED') {
+        statusLabel = 'Delivered';
+        statusStyle = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300';
+      } else if (o.status === 'CANCELLED' || o.status === 'REJECTED') {
+        statusLabel = 'Cancelled';
+        statusStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300';
+      }
+
+      return {
+        id: o._id,
+        orderIdDisplay: o.orderNumber ? `#${o.orderNumber}` : `#${o._id.slice(-6).toUpperCase()}`,
+        initials,
+        customerName,
+        itemsCount: `${itemCount} items`,
+        amountDisplay: `₹${(amountPaise / 100).toFixed(2)}`,
+        status: statusLabel,
+        statusStyle,
+      };
+    });
   }, [orders]);
 
   // Chart data for 7 days

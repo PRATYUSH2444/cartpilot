@@ -131,4 +131,14 @@ export interface StockAdjustmentEntry {
   timestamp: string;
 }
 
+export interface MerchantStoreAnalytics {
+  salesPaise: number;
+  newOrdersCount: number;
+  ordersToCompleteCount: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  averageOrderValuePaise: number;
+  totalOrdersCount: number;
+}
+
 export type { Product, OrderData };

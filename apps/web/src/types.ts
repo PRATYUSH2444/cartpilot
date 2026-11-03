@@ -186,10 +186,16 @@ export interface OrderData {
     | 'PENDING_PAYMENT'
     | 'PAID'
     | 'CONFIRMED'
+    | 'ACCEPTED'
+    | 'PREPARING'
     | 'PACKING'
+    | 'PACKED'
+    | 'READY_FOR_HANDOVER'
     | 'OUT_FOR_DELIVERY'
+    | 'DISPATCHED'
     | 'DELIVERED'
     | 'CANCELLED'
+    | 'REJECTED'
     | 'FAILED';
   items: OrderLine[];
   pricingSnapshot: {
