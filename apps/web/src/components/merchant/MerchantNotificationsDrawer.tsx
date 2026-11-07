@@ -29,6 +29,18 @@ interface NotificationItem {
   actionPayload?: string;
 }
 
+function formatTimeAgo(dateInput?: string | Date): string {
+  if (!dateInput) return 'Just now';
+  const diffMs = Date.now() - new Date(dateInput).getTime();
+  const diffMins = Math.max(Math.floor(diffMs / 60000), 0);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+}
+
 export const MerchantNotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
   isOpen,
   onClose,
@@ -45,7 +57,7 @@ export const MerchantNotificationsDrawer: React.FC<NotificationsDrawerProps> = (
     const list: NotificationItem[] = [];
 
     // Order notifications
-    orders.slice(0, 5).forEach((order, idx) => {
+    orders.slice(0, 10).forEach((order) => {
       const isNew = order.status === 'CONFIRMED' || order.status === 'PENDING_PAYMENT' || order.status === 'PAID';
       list.push({
         id: `notif-order-${order._id}`,
@@ -56,21 +68,21 @@ export const MerchantNotificationsDrawer: React.FC<NotificationsDrawerProps> = (
         description: `Customer order with ${order.items?.length || 1} items for ₹${(
           (order.pricingSnapshot?.totalPaise || 0) / 100
         ).toFixed(2)}`,
-        timeAgo: `${(idx + 1) * 12} mins ago`,
+        timeAgo: formatTimeAgo(order.createdAt),
         unread: !readIds.has(`notif-order-${order._id}`),
         actionPayload: order._id,
       });
     });
 
     // Inventory notifications
-    const lowStock = products.filter((p) => p.availableStock <= 10);
-    lowStock.slice(0, 4).forEach((p, idx) => {
+    const lowStock = products.filter((p) => p.availableStock <= 10 && p.isActive);
+    lowStock.slice(0, 5).forEach((p) => {
       list.push({
         id: `notif-stock-${p._id}`,
         type: 'inventory',
         title: p.availableStock === 0 ? `Out of stock: ${p.name}` : `Low stock alert: ${p.name}`,
-        description: `Only ${p.availableStock} ${p.packageUnit || 'units'} remaining in warehouse`,
-        timeAgo: `${(idx + 1) * 2} hrs ago`,
+        description: `Only ${p.availableStock} ${p.packageUnit || 'units'} remaining in inventory`,
+        timeAgo: formatTimeAgo((p as any).updatedAt),
         unread: !readIds.has(`notif-stock-${p._id}`),
       });
     });

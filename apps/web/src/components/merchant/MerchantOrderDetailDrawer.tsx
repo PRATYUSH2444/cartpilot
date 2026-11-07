@@ -79,12 +79,12 @@ export const MerchantOrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({
   const totalPaise = order.pricingSnapshot?.totalPaise || 0;
 
   const addr: any = order.shippingAddressSnapshot || {};
-  const customerName = addr.name || 'Priya Sharma';
-  const customerPhone = addr.phone || '+91 98765 43210';
+  const customerName = addr.name || order.deliveryNote?.replace(/^Merchant direct order:? */, '') || 'Verified Customer';
+  const customerPhone = addr.phone || 'Phone upon dispatch';
   const customerEmail = addr.email || 'customer@cartpilot.com';
-  const streetAddress = addr.street || addr.houseFlat || 'A-101, Green Park Apartments, Indiranagar';
-  const cityState = `${addr.city || 'Bengaluru'} - ${addr.postalCode || addr.pincode || '560038'}, ${addr.state || 'Karnataka'}`;
-  const deliveryInstructions = order.deliveryNote || addr.instructions || 'Deliver fresh groceries directly.';
+  const streetAddress = addr.street || addr.houseFlat || 'Store Pickup / Delivery Address';
+  const cityState = `${addr.city || 'Bengaluru'}${addr.postalCode || addr.pincode ? ` - ${addr.postalCode || addr.pincode}` : ''}, ${addr.state || 'Karnataka'}`;
+  const deliveryInstructions = order.deliveryNote || addr.instructions || 'Standard door delivery.';
 
   return (
     <ModalPortal>

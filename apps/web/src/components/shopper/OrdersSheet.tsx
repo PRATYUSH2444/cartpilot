@@ -162,7 +162,7 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
                         </span>
                       </div>
                       <span className="text-[11px] text-mut font-mono mt-0.5 block">
-                        Placed: {new Date(order.placedAt).toLocaleString()}
+                        Placed: {order.placedAt || (order as any).createdAt ? new Date(order.placedAt || (order as any).createdAt).toLocaleString() : 'Recent'}
                       </span>
                     </div>
 

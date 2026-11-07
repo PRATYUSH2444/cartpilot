@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { CartModel, ICart } from './cart.model.js';
 import { ProductModel, IProduct } from '../catalog/product.model.js';
+import { MerchantModel } from '../merchants/merchant.model.js';
 import { PricingService, CalculatedPricing } from '../pricing/pricing.service.js';
 import { AppError, NotFoundError } from '../../common/errors/app-error.js';
 import { approvalService } from '../approvals/approval.service.js';
@@ -24,6 +25,15 @@ export interface PopulatedCartItem {
   addedAt: Date;
 }
 
+export interface CartDeliveryEstimate {
+  prepMinutes: number;
+  travelMinutes: number;
+  totalDeliveryMinutes: number;
+  workloadPreset: string;
+  orderAcceptanceMode: string;
+  formattedEta: string;
+}
+
 export interface CartResponse {
   id: string;
   userId: string;
@@ -33,6 +43,7 @@ export interface CartResponse {
   pricing: CalculatedPricing;
   itemCount: number;
   deliveryNote?: string;
+  deliveryEstimate?: CartDeliveryEstimate;
 }
 
 export class CartService {
@@ -242,6 +253,44 @@ export class CartService {
    * Helper that populates product details and applies authoritative pure server pricing.
    */
   private static async buildCartResponse(cart: ICart): Promise<CartResponse> {
+    const productIds = cart.items.map((i) => i.productId);
+    const products = productIds.length > 0 ? await ProductModel.find({ _id: { $in: productIds } }) : [];
+
+    // Real-time merchant delivery estimate lookup
+    let deliveryEstimate: CartDeliveryEstimate = {
+      prepMinutes: 30,
+      travelMinutes: 15,
+      totalDeliveryMinutes: 45,
+      workloadPreset: 'NORMAL',
+      orderAcceptanceMode: 'OPEN',
+      formattedEta: '45 min instant delivery',
+    };
+
+    try {
+      let targetMerchantId: any = null;
+      if (products.length > 0 && products[0]?.merchantId) {
+        targetMerchantId = products[0].merchantId;
+      }
+      let merchant = targetMerchantId ? await MerchantModel.findById(targetMerchantId) : null;
+      if (!merchant) {
+        merchant = await MerchantModel.findOne({ isActive: true });
+      }
+      if (merchant?.deliverySettings) {
+        const ds = merchant.deliverySettings;
+        const total = ds.totalDeliveryMinutes || (ds.currentPrepMinutes + ds.estimatedTravelMinutes);
+        deliveryEstimate = {
+          prepMinutes: ds.currentPrepMinutes || 30,
+          travelMinutes: ds.estimatedTravelMinutes || 15,
+          totalDeliveryMinutes: total || 45,
+          workloadPreset: ds.workloadPreset || 'NORMAL',
+          orderAcceptanceMode: ds.orderAcceptanceMode || 'OPEN',
+          formattedEta: `${total || 45} min instant delivery`,
+        };
+      }
+    } catch {
+      // Non-blocking fallback
+    }
+
     if (cart.items.length === 0) {
       const pricing = PricingService.calculate([]);
       return {
@@ -253,11 +302,10 @@ export class CartService {
         pricing,
         itemCount: 0,
         deliveryNote: cart.deliveryNote,
+        deliveryEstimate,
       };
     }
 
-    const productIds = cart.items.map((i) => i.productId);
-    const products = await ProductModel.find({ _id: { $in: productIds } });
     const productMap = new Map<string, IProduct>();
     for (const prod of products) {
       productMap.set(prod._id.toString(), prod);
@@ -309,6 +357,7 @@ export class CartService {
       pricing,
       itemCount: totalItemCount,
       deliveryNote: cart.deliveryNote,
+      deliveryEstimate,
     };
   }
 }

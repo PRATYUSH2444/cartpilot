@@ -30,6 +30,7 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
   onToggleCollapse,
   store,
   pendingOrdersCount,
+  lowStockCount,
 }) => {
   // Map secondary tabs to the 5 primary tabs for highlighting
   const getActivePrimaryTab = (): 'home' | 'orders' | 'products' | 'delivery' | 'shop' => {
@@ -53,7 +54,7 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
       id: 'orders' as MerchantTab,
       label: 'Orders',
       icon: ClipboardList,
-      badge: pendingOrdersCount > 0 ? pendingOrdersCount : 3,
+      badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
       badgeColor: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
       isActive: primaryActive === 'orders',
     },
@@ -61,6 +62,8 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
       id: 'products' as MerchantTab,
       label: 'My Products',
       icon: Package,
+      badge: lowStockCount > 0 ? lowStockCount : undefined,
+      badgeColor: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
       isActive: primaryActive === 'products',
     },
     {

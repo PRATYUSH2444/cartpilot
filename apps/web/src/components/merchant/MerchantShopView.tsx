@@ -16,11 +16,14 @@ import {
   MessageSquare,
   ExternalLink,
 } from 'lucide-react';
-import { MerchantStoreData, StaffMemberData } from './types';
+import { MerchantStoreData, StaffMemberData, OrderData, MerchantStoreAnalytics } from './types';
 
 interface MerchantShopViewProps {
   store: MerchantStoreData | null;
   staffList: StaffMemberData[];
+  orders?: OrderData[];
+  analytics?: MerchantStoreAnalytics | null;
+  initialSubTab?: ShopSubTab;
   onSaveProfile: (updates: Partial<MerchantStoreData>) => Promise<void>;
   isSavingProfile: boolean;
   onInviteStaff: (name: string, email: string, permissions: string[], role?: string) => Promise<any>;
@@ -33,26 +36,47 @@ type ShopSubTab = 'business' | 'earnings' | 'customers' | 'staff' | 'security' |
 export const MerchantShopView: React.FC<MerchantShopViewProps> = ({
   store,
   staffList,
+  orders = [],
+  analytics,
+  initialSubTab,
   onSaveProfile,
   isSavingProfile,
   onInviteStaff,
   onRevokeStaff,
   isInvitingStaff,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<ShopSubTab>('business');
+  const [activeSubTab, setActiveSubTab] = useState<ShopSubTab>(initialSubTab || 'business');
 
   // Business Details Form
-  const [businessName, setBusinessName] = useState(store?.businessName || 'Fresh Greens Organics');
-  const [phone, setPhone] = useState(store?.phone || '+91 98765 43210');
-  const [email, setEmail] = useState(store?.email || 'merchant@freshgrocers.com');
-  const [description, setDescription] = useState(
-    store?.description ||
-      'Fresh, organic, and 100% certified pure vegetarian produce sourced directly from verified local farms.'
-  );
-  const [street, setStreet] = useState(store?.address?.street || 'Shop 14, 12th Main Road, HAL 2nd Stage');
+  const [businessName, setBusinessName] = useState(store?.businessName || '');
+  const [phone, setPhone] = useState(store?.phone || '');
+  const [email, setEmail] = useState(store?.email || '');
+  const [description, setDescription] = useState(store?.description || '');
+  const [street, setStreet] = useState(store?.address?.street || '');
   const [city, setCity] = useState(store?.address?.city || 'Bengaluru');
   const [postalCode, setPostalCode] = useState(store?.address?.postalCode || '560038');
   const [fssaiLicense, setFssaiLicense] = useState('11223344556677');
+
+  // Sync state when store or subtab changes
+  React.useEffect(() => {
+    if (store) {
+      if (store.businessName) setBusinessName(store.businessName);
+      if (store.phone) setPhone(store.phone);
+      if (store.email) setEmail(store.email);
+      if (store.description) setDescription(store.description);
+      if (store.address) {
+        if (store.address.street) setStreet(store.address.street);
+        if (store.address.city) setCity(store.address.city);
+        if (store.address.postalCode) setPostalCode(store.address.postalCode);
+      }
+    }
+  }, [store]);
+
+  React.useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
   const [gstin, setGstin] = useState('29AAAAA0000A1Z5');
 
   // Staff Invite Form
@@ -113,15 +137,49 @@ export const MerchantShopView: React.FC<MerchantShopViewProps> = ({
     setNewStaffEmail('');
   };
 
-  // Customers seed list
-  const customersList = [
-    { name: 'Priya Sharma', phone: '+91 98765 43210', totalOrders: 14, totalSpend: '₹4,820', status: 'VIP' },
-    { name: 'Amit Kumar', phone: '+91 98111 22334', totalOrders: 8, totalSpend: '₹2,640', status: 'Active' },
-    { name: 'Sneha Reddy', phone: '+91 97444 55667', totalOrders: 11, totalSpend: '₹3,750', status: 'VIP' },
-    { name: 'Vikram Singh', phone: '+91 99222 33445', totalOrders: 5, totalSpend: '₹1,420', status: 'Active' },
-    { name: 'Neha Patel', phone: '+91 98333 44556', totalOrders: 7, totalSpend: '₹2,100', status: 'Active' },
-    { name: 'Rahul Mehta', phone: '+91 96555 66778', totalOrders: 3, totalSpend: '₹890', status: 'New' },
-  ];
+  // Real Financial Totals Derived from Orders & Analytics
+  const totalGrossSalesPaise = analytics?.salesPaise ?? orders.reduce((sum, o) => {
+    if (o.status !== 'CANCELLED' && o.status !== 'FAILED' && o.status !== 'REJECTED' && o.status !== 'PENDING_PAYMENT') {
+      return sum + (o.pricingSnapshot?.totalPaise || 0);
+    }
+    return sum;
+  }, 0);
+
+  const platformCommissionPaise = Math.round(totalGrossSalesPaise * 0.05); // 5% platform fee
+  const paymentFeePaise = Math.round(totalGrossSalesPaise * 0.02); // 2% gateway processing
+  const netPayoutPaise = Math.max(totalGrossSalesPaise - platformCommissionPaise - paymentFeePaise, 0);
+
+  // Real Dynamic Customers Derived from Live Orders
+  const customersList = React.useMemo(() => {
+    const customerMap = new Map<string, { name: string; phone: string; totalOrders: number; totalSpendPaise: number; status: string }>();
+    for (const ord of orders) {
+      const phone = ord.shippingAddressSnapshot?.phone || ord.shippingAddressSnapshot?.name || 'Walk-in Customer';
+      const name = ord.shippingAddressSnapshot?.name || 'Store Customer';
+      const amount = ord.pricingSnapshot?.totalPaise || 0;
+      if (!customerMap.has(phone)) {
+        customerMap.set(phone, {
+          name,
+          phone: ord.shippingAddressSnapshot?.phone || 'Direct Order',
+          totalOrders: 1,
+          totalSpendPaise: amount,
+          status: 'New',
+        });
+      } else {
+        const existing = customerMap.get(phone)!;
+        existing.totalOrders += 1;
+        existing.totalSpendPaise += amount;
+        if (existing.totalOrders >= 5) existing.status = 'VIP';
+        else if (existing.totalOrders >= 2) existing.status = 'Active';
+      }
+    }
+    return Array.from(customerMap.values()).map((c) => ({
+      name: c.name,
+      phone: c.phone,
+      totalOrders: c.totalOrders,
+      totalSpend: `₹${(c.totalSpendPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      status: c.status,
+    }));
+  }, [orders]);
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200">
@@ -342,15 +400,15 @@ export const MerchantShopView: React.FC<MerchantShopViewProps> = ({
             <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
               <span className="text-xs text-slate-400">Total Gross Sales</span>
               <div className="text-2xl font-bold font-mono text-slate-900 dark:text-white mt-1">
-                ₹1,24,520
+                ₹{(totalGrossSalesPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </div>
-              <span className="text-[11px] text-emerald-600 font-semibold block mt-1">+14% this month</span>
+              <span className="text-[11px] text-emerald-600 font-semibold block mt-1">From live verified orders</span>
             </div>
 
             <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
               <span className="text-xs text-slate-400">Platform Commission (5%)</span>
               <div className="text-2xl font-bold font-mono text-slate-900 dark:text-white mt-1">
-                ₹6,226
+                ₹{(platformCommissionPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </div>
               <span className="text-[11px] text-slate-400 block mt-1">CartPilot ecosystem fee</span>
             </div>
@@ -358,7 +416,7 @@ export const MerchantShopView: React.FC<MerchantShopViewProps> = ({
             <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
               <span className="text-xs text-slate-400">Payment Gateway (2%)</span>
               <div className="text-2xl font-bold font-mono text-slate-900 dark:text-white mt-1">
-                ₹2,490
+                ₹{(paymentFeePaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </div>
               <span className="text-[11px] text-slate-400 block mt-1">Razorpay / UPI processing</span>
             </div>
@@ -366,9 +424,9 @@ export const MerchantShopView: React.FC<MerchantShopViewProps> = ({
             <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
               <span className="text-xs text-emerald-800 dark:text-emerald-300 font-semibold">Net Payout Transferred</span>
               <div className="text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400 mt-1">
-                ₹1,15,804
+                ₹{(netPayoutPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </div>
-              <span className="text-[11px] text-emerald-600 font-bold block mt-1">Settled to HDFC Bank</span>
+              <span className="text-[11px] text-emerald-600 font-bold block mt-1">Available for daily settlement</span>
             </div>
           </div>
 

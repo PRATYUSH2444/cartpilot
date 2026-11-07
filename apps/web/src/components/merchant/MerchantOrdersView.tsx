@@ -38,21 +38,6 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
 
-  // Customer seed names for aesthetic realism matching the design mockup
-  const customerDirectory = useMemo(
-    () => [
-      { name: 'Priya Sharma', phone: '+91 98765 43210', email: 'priya.sharma@example.com' },
-      { name: 'Amit Kumar', phone: '+91 98111 22334', email: 'amit.kumar@example.com' },
-      { name: 'Sneha Reddy', phone: '+91 97444 55667', email: 'sneha.reddy@example.com' },
-      { name: 'Vikram Singh', phone: '+91 99222 33445', email: 'vikram.singh@example.com' },
-      { name: 'Neha Patel', phone: '+91 98333 44556', email: 'neha.patel@example.com' },
-      { name: 'Rahul Mehta', phone: '+91 96555 66778', email: 'rahul.mehta@example.com' },
-      { name: 'Kavya Nair', phone: '+91 95444 33221', email: 'kavya.nair@example.com' },
-      { name: 'Arjun Das', phone: '+91 94333 22110', email: 'arjun.das@example.com' },
-    ],
-    []
-  );
-
   // Directly bind to real database orders
   const fullOrderList = orders;
 
@@ -127,11 +112,19 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
       color = 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200 dark:border-sky-800';
       dot = 'bg-sky-500';
       label = 'New';
-    } else if (status === 'PACKING') {
+    } else if (status === 'ACCEPTED') {
+      color = 'bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300 border border-teal-200 dark:border-teal-800';
+      dot = 'bg-teal-500';
+      label = 'Accepted';
+    } else if (status === 'PREPARING' || status === 'PACKING') {
       color = 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800';
       dot = 'bg-amber-500';
       label = 'Preparing';
-    } else if (status === 'OUT_FOR_DELIVERY') {
+    } else if (status === 'PACKED' || status === 'READY_FOR_HANDOVER') {
+      color = 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800';
+      dot = 'bg-purple-500';
+      label = 'Packed';
+    } else if (status === 'DISPATCHED' || status === 'OUT_FOR_DELIVERY') {
       color = 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800';
       dot = 'bg-indigo-500';
       label = 'Dispatched';
@@ -139,7 +132,7 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
       color = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800';
       dot = 'bg-emerald-500';
       label = 'Delivered';
-    } else if (status === 'CANCELLED') {
+    } else if (status === 'CANCELLED' || status === 'REJECTED') {
       color = 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800';
       dot = 'bg-rose-500';
       label = 'Cancelled';
@@ -175,8 +168,8 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
                 '\n' +
                 filteredOrders
                   .map(
-                    (o, i) =>
-                      `#${o.orderNumber || o._id},${customerDirectory[i % customerDirectory.length]?.name || 'Customer'},₹${(
+                    (o) =>
+                      `#${o.orderNumber || o._id},${(o.shippingAddressSnapshot as any)?.name || o.deliveryNote?.replace(/^Merchant direct order:? */, '') || 'Customer'},₹${(
                         (o.pricingSnapshot?.totalPaise || 0) / 100
                       ).toFixed(2)},${o.status}`
                   )
@@ -300,12 +293,11 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map((o, idx) => {
+                filteredOrders.map((o) => {
                   const orderId = o.orderNumber || o._id.slice(-6).toUpperCase();
-                  const totalPaise = o.pricingSnapshot?.totalPaise || 62800;
-                  const cust = customerDirectory[idx % customerDirectory.length]!;
-                  const custName = (o.shippingAddressSnapshot as any)?.name || cust.name;
-                  const custPhone = (o.shippingAddressSnapshot as any)?.phone || cust.phone;
+                  const totalPaise = o.pricingSnapshot?.totalPaise || 0;
+                  const custName = (o.shippingAddressSnapshot as any)?.name || o.deliveryNote?.replace(/^Merchant direct order:? */, '') || 'Verified Customer';
+                  const custPhone = (o.shippingAddressSnapshot as any)?.phone || 'Direct';
                   const isChecked = selectedOrders.has(o._id);
 
                   return (
@@ -369,13 +361,14 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
                       <td className="py-3 px-3">{renderStatusBadge(o.status)}</td>
 
                       <td className="py-3 px-3 text-slate-400 text-[11px] font-mono">
-                        {idx === 0
-                          ? 'Today, 10:24'
-                          : idx === 1
-                          ? 'Today, 09:15'
-                          : idx === 2
-                          ? 'Today, 08:42'
-                          : 'Yesterday'}
+                        {(o.createdAt || o.placedAt)
+                          ? new Date(o.createdAt || o.placedAt!).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : 'Recent'}
                       </td>
 
                       <td

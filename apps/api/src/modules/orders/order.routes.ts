@@ -19,21 +19,34 @@ orderRouter.get('/:id/proof', OrderController.getOrderProof);
 // POST /api/v1/orders/:id/proof/verify (Tamper-Evident Verification)
 orderRouter.post('/:id/proof/verify', OrderController.verifyOrderProof);
 
-// POST /api/v1/orders/:id/simulate-step (Fulfillment step with tenant & ownership validation)
+// Order Lifecycle & Acceptance Endpoints (Merchant / Fulfillment)
+orderRouter.post(
+  '/:id/accept',
+  requireOrderFulfillmentPermission,
+  OrderController.acceptOrder
+);
+
+orderRouter.post(
+  '/:id/reject',
+  requireOrderFulfillmentPermission,
+  OrderController.rejectOrder
+);
+
+// Fulfillment Progression (Step-by-step advance: CONFIRMED -> ACCEPTED -> PREPARING -> PACKED -> OUT_FOR_DELIVERY -> DELIVERED)
+orderRouter.post(
+  '/:id/advance-status',
+  requireOrderFulfillmentPermission,
+  OrderController.simulateStep
+);
+
 orderRouter.post(
   '/:id/simulate-step',
   requireOrderFulfillmentPermission,
   OrderController.simulateStep
 );
 
-// Order Fulfillment Progression (CONFIRMED -> PACKING -> OUT_FOR_DELIVERY -> DELIVERED)
-orderRouter.post(
-  '/:id/advance-status',
-  requireOrderFulfillmentPermission,
-  OrderController.simulateStep
-);
 orderRouter.patch(
   '/:id/status',
   requireOrderFulfillmentPermission,
-  OrderController.simulateStep
+  OrderController.updateStatus
 );

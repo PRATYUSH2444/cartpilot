@@ -131,14 +131,28 @@ export interface StockAdjustmentEntry {
   timestamp: string;
 }
 
+export interface ChartDataPoint {
+  date: string;
+  label: string;
+  salesPaise: number;
+  orderCount: number;
+}
+
 export interface MerchantStoreAnalytics {
   salesPaise: number;
+  todaySalesPaise: number;
+  yesterdaySalesPaise: number;
+  salesGrowthPercentVsYesterday: number;
+  salesGrowthDisplay: string;
   newOrdersCount: number;
   ordersToCompleteCount: number;
+  completedOrdersCount: number;
   lowStockCount: number;
   outOfStockCount: number;
   averageOrderValuePaise: number;
   totalOrdersCount: number;
+  chart7d?: ChartDataPoint[];
+  chart30d?: ChartDataPoint[];
 }
 
 export type { Product, OrderData };

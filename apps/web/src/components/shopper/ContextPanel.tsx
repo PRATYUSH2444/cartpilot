@@ -156,7 +156,7 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5 min-w-0">
               <Clock className="w-3.5 h-3.5 text-acc flex-shrink-0" />
-              <span className="text-ink font-semibold text-xs">20 min instant delivery</span>
+              <span className="text-ink font-semibold text-xs">{cart?.deliveryEstimate?.formattedEta || `${cart?.deliveryEstimate?.totalDeliveryMinutes || 45} min instant delivery`}</span>
             </div>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
               FREE DELIVERY

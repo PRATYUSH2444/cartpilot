@@ -156,7 +156,7 @@ export class OrderService {
     if (!acceptable.includes(order.status)) {
       throw new BadRequestError(`Cannot accept order with current status "${order.status}"`);
     }
-    order.status = 'PACKING';
+    order.status = 'ACCEPTED';
     await order.save();
     logger.info({ orderId: order._id, merchantId }, 'Merchant accepted order');
     return order;
@@ -219,9 +219,9 @@ export class OrderService {
 
     const validTransitions: Record<string, OrderStatus> = {
       PENDING_PAYMENT: 'CONFIRMED',
-      CONFIRMED: 'PACKING',
-      ACCEPTED: 'PACKING',
-      PREPARING: 'PACKING',
+      CONFIRMED: 'ACCEPTED',
+      ACCEPTED: 'PREPARING',
+      PREPARING: 'PACKED',
       PACKING: 'OUT_FOR_DELIVERY',
       PACKED: 'OUT_FOR_DELIVERY',
       READY_FOR_HANDOVER: 'OUT_FOR_DELIVERY',

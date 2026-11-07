@@ -28,7 +28,7 @@ import { IntegrationsModal } from '../../components/IntegrationsModal';
 import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 export const MerchantWorkspace: React.FC = () => {
-  const { token, logout } = useAuth();
+  const { token, user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const mainScrollRef = useRef<HTMLElement>(null);
@@ -143,9 +143,9 @@ export const MerchantWorkspace: React.FC = () => {
   }, []);
 
   // Fetch real data from central backend
-  const fetchMerchantData = useCallback(async () => {
+  const fetchMerchantData = useCallback(async (silent = false) => {
     if (!token) return;
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
 
     try {
       // 1. Fetch store profile
@@ -196,15 +196,28 @@ export const MerchantWorkspace: React.FC = () => {
         setStoreAnalytics(aData.data);
       }
     } catch {
-      showBanner('error', 'Failed to synchronize merchant portal data');
+      if (!silent) {
+        showBanner('error', 'Failed to synchronize merchant portal data');
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, [token]);
 
   useEffect(() => {
     fetchMerchantData();
   }, [fetchMerchantData]);
+
+  // Proactive live synchronization polling (every 10s)
+  useEffect(() => {
+    if (!token) return;
+    const pollInterval = setInterval(() => {
+      fetchMerchantData(true);
+    }, 10000);
+    return () => clearInterval(pollInterval);
+  }, [token, fetchMerchantData]);
 
   // Handle Explicit Order Acceptance
   const handleAcceptOrder = async (orderId: string) => {
@@ -608,9 +621,10 @@ export const MerchantWorkspace: React.FC = () => {
       <div className="merchant-header-cell">
         <MerchantHeader
           store={store}
+          user={user}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onOpenNotifications={() => setIsNotificationsOpen(true)}
-          unreadNotificationsCount={3}
+          unreadNotificationsCount={pendingOrdersCount + lowStockCount}
           isDark={isDark}
           onToggleTheme={toggleTheme}
           onNavigate={handleSelectTab}
@@ -639,6 +653,7 @@ export const MerchantWorkspace: React.FC = () => {
               analytics={storeAnalytics}
               orders={orders}
               products={products}
+              user={user}
               onNavigate={handleSelectTab}
               onSelectOrder={(id) => setSelectedOrderId(id)}
               onUpdateDeliveryPreset={handleUpdateDeliveryPreset}
@@ -694,6 +709,21 @@ export const MerchantWorkspace: React.FC = () => {
             <MerchantShopView
               store={store}
               staffList={staffList}
+              orders={orders}
+              analytics={storeAnalytics}
+              initialSubTab={
+                activeTab === 'customers'
+                  ? 'customers'
+                  : activeTab === 'finance'
+                  ? 'earnings'
+                  : activeTab === 'staff'
+                  ? 'staff'
+                  : activeTab === 'security'
+                  ? 'security'
+                  : activeTab === 'support'
+                  ? 'support'
+                  : 'business'
+              }
               onSaveProfile={handleSaveStoreProfile}
               isSavingProfile={isSavingProfile}
               onInviteStaff={handleInviteStaff}

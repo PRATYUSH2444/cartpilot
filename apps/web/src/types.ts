@@ -12,6 +12,7 @@ export interface Product {
   availableStock: number;
   aliases: string[];
   isVegetarian: boolean;
+  isActive?: boolean;
   imageUrl?: string;
 }
 
@@ -61,6 +62,15 @@ export interface PricingBreakdown {
   };
 }
 
+export interface CartDeliveryEstimate {
+  prepMinutes: number;
+  travelMinutes: number;
+  totalDeliveryMinutes: number;
+  workloadPreset: string;
+  orderAcceptanceMode: string;
+  formattedEta: string;
+}
+
 export interface CartData {
   id: string;
   userId: string;
@@ -69,6 +79,7 @@ export interface CartData {
   pricing: PricingBreakdown;
   itemCount: number;
   deliveryNote?: string;
+  deliveryEstimate?: CartDeliveryEstimate;
 }
 
 export interface MandateData {
@@ -182,6 +193,7 @@ export interface OrderData {
   _id: string;
   orderNumber: string;
   userId: string;
+  merchantId?: string;
   status:
     | 'PENDING_PAYMENT'
     | 'PAID'
@@ -198,6 +210,7 @@ export interface OrderData {
     | 'REJECTED'
     | 'FAILED';
   items: OrderLine[];
+  itemsSnapshot?: OrderLine[];
   pricingSnapshot: {
     subtotalPaise: number;
     deliveryFeePaise: number;
@@ -205,9 +218,12 @@ export interface OrderData {
     taxPaise: number;
     discountPaise: number;
     totalPaise: number;
-  freeDeliveryThresholdPaise?: number;
+    freeDeliveryThresholdPaise?: number;
   };
   shippingAddressSnapshot: {
+    name?: string;
+    phone?: string;
+    email?: string;
     street: string;
     city: string;
     state: string;
@@ -220,7 +236,14 @@ export interface OrderData {
   };
   reservationId?: string;
   paymentId?: string;
-  placedAt: string;
+  paymentStatus?: string;
+  paymentDetails?: {
+    razorpayPaymentId?: string;
+    razorpayOrderId?: string;
+    method?: string;
+  };
+  placedAt?: string;
+  createdAt?: string;
   deliveredAt?: string;
 }
 

@@ -72,18 +72,84 @@ export class MerchantService {
     }
     const merchantObjId = new mongoose.Types.ObjectId(merchantId);
 
-    const orders = await OrderModel.find({ merchantId: merchantObjId });
-    const totalSalesPaise = orders.reduce((sum, o) => {
-      if (o.status !== 'CANCELLED' && o.status !== 'FAILED') {
-        return sum + (o.pricingSnapshot?.totalPaise || 0);
-      }
-      return sum;
-    }, 0);
+    const orders = await OrderModel.find({ merchantId: merchantObjId }).sort({ createdAt: -1 });
 
+    // Legitimate paid order statuses
+    const PAID_STATUSES = new Set([
+      'PAID',
+      'CONFIRMED',
+      'ACCEPTED',
+      'PREPARING',
+      'PACKING',
+      'PACKED',
+      'READY_FOR_HANDOVER',
+      'OUT_FOR_DELIVERY',
+      'DISPATCHED',
+      'DELIVERED',
+    ]);
+
+    // Active order awaiting merchant acceptance
     const newOrders = orders.filter((o) => o.status === 'CONFIRMED' || o.status === 'PENDING_PAYMENT');
-    const ordersToComplete = orders.filter((o) => o.status === 'PACKING' || o.status === 'OUT_FOR_DELIVERY');
+
+    // Orders active in fulfillment pipeline
+    const ordersToComplete = orders.filter(
+      (o) =>
+        o.status === 'ACCEPTED' ||
+        o.status === 'PREPARING' ||
+        o.status === 'PACKING' ||
+        o.status === 'PACKED' ||
+        o.status === 'READY_FOR_HANDOVER' ||
+        o.status === 'OUT_FOR_DELIVERY' ||
+        o.status === 'DISPATCHED'
+    );
+
     const completedOrders = orders.filter((o) => o.status === 'DELIVERED');
 
+    // Timezone bounds: Store local day (Asia/Kolkata +05:30)
+    const now = new Date();
+    const tzOffsetMs = 5.5 * 60 * 60 * 1000;
+    const localNow = new Date(now.getTime() + tzOffsetMs);
+    const startOfTodayUtc = new Date(
+      Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate(), 0, 0, 0, 0) - tzOffsetMs
+    );
+    const startOfYesterdayUtc = new Date(startOfTodayUtc.getTime() - 24 * 60 * 60 * 1000);
+    const endOfYesterdayUtc = new Date(startOfTodayUtc.getTime() - 1);
+
+    // Sales Calculations
+    let allTimeSalesPaise = 0;
+    let todaySalesPaise = 0;
+    let yesterdaySalesPaise = 0;
+
+    for (const ord of orders) {
+      if (PAID_STATUSES.has(ord.status)) {
+        const amt = ord.pricingSnapshot?.totalPaise || 0;
+        allTimeSalesPaise += amt;
+        const ordTime = new Date(ord.createdAt).getTime();
+        if (ordTime >= startOfTodayUtc.getTime()) {
+          todaySalesPaise += amt;
+        } else if (ordTime >= startOfYesterdayUtc.getTime() && ordTime <= endOfYesterdayUtc.getTime()) {
+          yesterdaySalesPaise += amt;
+        }
+      }
+    }
+
+    // Comparison against yesterday
+    let salesGrowthPercentVsYesterday = 0;
+    let salesGrowthDisplay = 'No sales yesterday';
+    if (yesterdaySalesPaise > 0) {
+      salesGrowthPercentVsYesterday = Math.round(
+        ((todaySalesPaise - yesterdaySalesPaise) / yesterdaySalesPaise) * 100
+      );
+      const sign = salesGrowthPercentVsYesterday >= 0 ? '+' : '';
+      salesGrowthDisplay = `${sign}${salesGrowthPercentVsYesterday}% vs yesterday`;
+    } else if (todaySalesPaise > 0) {
+      salesGrowthPercentVsYesterday = 100;
+      salesGrowthDisplay = '+100% vs yesterday';
+    } else {
+      salesGrowthDisplay = '0% vs yesterday';
+    }
+
+    // Low stock counts
     const lowStockCount = await ProductModel.countDocuments({
       merchantId: merchantObjId,
       availableStock: { $lte: 10, $gt: 0 },
@@ -95,15 +161,73 @@ export class MerchantService {
       isActive: true,
     });
 
+    // 7-Day & 30-Day Daily Aggregation Chart (Authoritative from Database)
+    const chart7d: { date: string; label: string; salesPaise: number; orderCount: number }[] = [];
+    const chart30d: { date: string; label: string; salesPaise: number; orderCount: number }[] = [];
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    // Generate 7-day array
+    for (let i = 6; i >= 0; i--) {
+      const dayStartUtc = new Date(startOfTodayUtc.getTime() - i * 24 * 60 * 60 * 1000);
+      const dayEndUtc = new Date(dayStartUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
+      const dayLocal = new Date(dayStartUtc.getTime() + tzOffsetMs);
+      const dateStr = dayLocal.toISOString().slice(0, 10);
+      const label = `${dayLocal.getUTCDate()} ${monthNames[dayLocal.getUTCMonth()]}`;
+
+      let daySales = 0;
+      let dayOrders = 0;
+      for (const ord of orders) {
+        if (PAID_STATUSES.has(ord.status)) {
+          const ordTime = new Date(ord.createdAt).getTime();
+          if (ordTime >= dayStartUtc.getTime() && ordTime <= dayEndUtc.getTime()) {
+            daySales += ord.pricingSnapshot?.totalPaise || 0;
+            dayOrders += 1;
+          }
+        }
+      }
+      chart7d.push({ date: dateStr, label, salesPaise: daySales, orderCount: dayOrders });
+    }
+
+    // Generate 30-day array
+    for (let i = 29; i >= 0; i--) {
+      const dayStartUtc = new Date(startOfTodayUtc.getTime() - i * 24 * 60 * 60 * 1000);
+      const dayEndUtc = new Date(dayStartUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
+      const dayLocal = new Date(dayStartUtc.getTime() + tzOffsetMs);
+      const dateStr = dayLocal.toISOString().slice(0, 10);
+      const label = `${dayLocal.getUTCDate()} ${monthNames[dayLocal.getUTCMonth()]}`;
+
+      let daySales = 0;
+      let dayOrders = 0;
+      for (const ord of orders) {
+        if (PAID_STATUSES.has(ord.status)) {
+          const ordTime = new Date(ord.createdAt).getTime();
+          if (ordTime >= dayStartUtc.getTime() && ordTime <= dayEndUtc.getTime()) {
+            daySales += ord.pricingSnapshot?.totalPaise || 0;
+            dayOrders += 1;
+          }
+        }
+      }
+      chart30d.push({ date: dateStr, label, salesPaise: daySales, orderCount: dayOrders });
+    }
+
+    const paidOrders = orders.filter((o) => PAID_STATUSES.has(o.status));
+
     return {
-      todaySalesPaise: totalSalesPaise,
+      salesPaise: allTimeSalesPaise,
+      todaySalesPaise,
+      yesterdaySalesPaise,
+      salesGrowthPercentVsYesterday,
+      salesGrowthDisplay,
       newOrdersCount: newOrders.length,
       ordersToCompleteCount: ordersToComplete.length,
       completedOrdersCount: completedOrders.length,
       lowStockCount,
       outOfStockCount,
       totalOrdersCount: orders.length,
-      avgOrderValuePaise: orders.length > 0 ? Math.round(totalSalesPaise / orders.length) : 0,
+      avgOrderValuePaise: paidOrders.length > 0 ? Math.round(allTimeSalesPaise / paidOrders.length) : 0,
+      chart7d,
+      chart30d,
     };
   }
 
