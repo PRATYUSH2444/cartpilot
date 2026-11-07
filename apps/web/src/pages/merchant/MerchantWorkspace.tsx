@@ -1,6 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE } from '../../config/api';
+import { ModalPortal } from '../../components/common/ModalPortal';
+import { useScrollLock } from '../../hooks/useScrollLock';
 import {
   MerchantTab,
   MerchantStoreData,
@@ -26,6 +29,10 @@ import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 export const MerchantWorkspace: React.FC = () => {
   const { token, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const mainScrollRef = useRef<HTMLElement>(null);
+
   const [isDark, setIsDark] = useState<boolean>(() => {
     return document.documentElement.classList.contains('dark') || true;
   });
@@ -34,6 +41,55 @@ export const MerchantWorkspace: React.FC = () => {
   const [activeTab, setActiveTab] = useState<MerchantTab>('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Sync route from URL
+  useEffect(() => {
+    const path = location.pathname.toLowerCase();
+    if (path.includes('/orders') || path.includes('/fulfilment')) {
+      setActiveTab('orders');
+    } else if (
+      path.includes('/products') ||
+      path.includes('/inventory') ||
+      path.includes('/categories')
+    ) {
+      setActiveTab('products');
+    } else if (path.includes('/delivery') || path.includes('/delivery-settings')) {
+      setActiveTab('delivery');
+    } else if (
+      path.includes('/shop') ||
+      path.includes('/store-profile') ||
+      path.includes('/staff') ||
+      path.includes('/customers') ||
+      path.includes('/finance') ||
+      path.includes('/analytics') ||
+      path.includes('/marketing') ||
+      path.includes('/notifications') ||
+      path.includes('/security') ||
+      path.includes('/support')
+    ) {
+      setActiveTab('shop');
+    } else {
+      setActiveTab('home');
+    }
+  }, [location.pathname]);
+
+  const handleSelectTab = useCallback(
+    (tab: MerchantTab) => {
+      setActiveTab(tab);
+      let targetSubpath = '';
+      if (tab === 'home' || tab === 'overview') targetSubpath = '';
+      else if (tab === 'orders' || tab === 'fulfilment') targetSubpath = '/orders';
+      else if (tab === 'products' || tab === 'inventory' || tab === 'categories') targetSubpath = '/products';
+      else if (tab === 'delivery' || tab === 'delivery-settings') targetSubpath = '/delivery';
+      else targetSubpath = '/shop';
+
+      const fullPath = `/merchant${targetSubpath}`;
+      if (location.pathname !== fullPath) {
+        navigate(fullPath);
+      }
+    },
+    [location.pathname, navigate]
+  );
 
   // Data
   const [store, setStore] = useState<MerchantStoreData | null>(null);
@@ -471,8 +527,23 @@ export const MerchantWorkspace: React.FC = () => {
 
   const lowStockCount = products.filter((p) => p.availableStock <= 10).length;
 
+  // Background page scroll lock when any dialog or drawer is active
+  const isAnyModalOpen =
+    isCreateOrderOpen ||
+    isAddProductOpen ||
+    Boolean(selectedOrderId) ||
+    isCommandPaletteOpen ||
+    isNotificationsOpen ||
+    isIntegrationsOpen ||
+    isMobileSidebarOpen;
+
+  useScrollLock(isAnyModalOpen);
+
   return (
-    <div className="min-h-screen bg-[#F9FAFB] dark:bg-[#0B0F17] text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-150">
+    <div
+      className="merchant-app-shell font-sans text-slate-800 dark:text-slate-100 transition-colors duration-150"
+      style={{ '--sidebar-col-width': isSidebarCollapsed ? '72px' : '250px' } as React.CSSProperties}
+    >
       {/* Banner Notification */}
       {banner && (
         <div
@@ -488,39 +559,38 @@ export const MerchantWorkspace: React.FC = () => {
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
           )}
           <span>{banner.message}</span>
-          <button onClick={() => setBanner(null)} className="ml-2 hover:opacity-80">
+          <button onClick={() => setBanner(null)} className="ml-2 hover:opacity-80 cursor-pointer">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* Main Shell Container */}
-      <div className="flex-1 flex overflow-hidden h-screen">
-        {/* Desktop Collapsible Left Sidebar */}
-        <div className="hidden md:flex">
-          <MerchantSidebar
-            activeTab={activeTab}
-            onSelectTab={(tab) => setActiveTab(tab)}
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            store={store}
-            pendingOrdersCount={pendingOrdersCount}
-            lowStockCount={lowStockCount}
-          />
-        </div>
+      {/* Desktop Fixed Left Sidebar Cell */}
+      <div className="hidden md:block merchant-sidebar-cell">
+        <MerchantSidebar
+          activeTab={activeTab}
+          onSelectTab={handleSelectTab}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          store={store}
+          pendingOrdersCount={pendingOrdersCount}
+          lowStockCount={lowStockCount}
+        />
+      </div>
 
-        {/* Mobile Sidebar Overlay Drawer */}
-        {isMobileSidebarOpen && (
+      {/* Mobile Sidebar Overlay Drawer (Rendered via Portal with backdrop & scroll-lock) */}
+      {isMobileSidebarOpen && (
+        <ModalPortal>
           <div className="fixed inset-0 z-50 flex md:hidden">
             <div
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs"
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs animate-in fade-in"
               onClick={() => setIsMobileSidebarOpen(false)}
             />
-            <div className="relative w-64 h-full bg-white dark:bg-slate-900 shadow-2xl z-10 flex flex-col">
+            <div className="relative w-64 h-full bg-white dark:bg-slate-900 shadow-2xl z-10 flex flex-col animate-in slide-in-from-left duration-200">
               <MerchantSidebar
                 activeTab={activeTab}
                 onSelectTab={(tab) => {
-                  setActiveTab(tab);
+                  handleSelectTab(tab);
                   setIsMobileSidebarOpen(false);
                 }}
                 isCollapsed={false}
@@ -531,103 +601,108 @@ export const MerchantWorkspace: React.FC = () => {
               />
             </div>
           </div>
-        )}
+        </ModalPortal>
+      )}
 
-        {/* Right Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {/* Top Global Header */}
-          <MerchantHeader
-            store={store}
-            onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-            onOpenNotifications={() => setIsNotificationsOpen(true)}
-            unreadNotificationsCount={3}
-            isDark={isDark}
-            onToggleTheme={toggleTheme}
-            onNavigate={(tab) => setActiveTab(tab)}
-            onLogout={logout}
-            onToggleStoreOnline={handleToggleStoreOnline}
-            isUpdatingOnline={isSavingProfile}
-            onToggleSidebarMobile={() => setIsMobileSidebarOpen(true)}
-          />
-
-          {/* Main Workspace Screen Canvas */}
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-[1540px] w-full mx-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-            {isLoading && !store && (
-              <div className="flex items-center justify-center p-8 text-xs text-slate-400">
-                <span className="animate-spin mr-2">⏳</span> Loading merchant workspace...
-              </div>
-            )}
-            {(activeTab === 'home' || activeTab === 'overview') && (
-              <MerchantHomeView
-                store={store}
-                analytics={storeAnalytics}
-                orders={orders}
-                products={products}
-                onNavigate={(tab) => setActiveTab(tab)}
-                onSelectOrder={(id) => setSelectedOrderId(id)}
-                onUpdateDeliveryPreset={handleUpdateDeliveryPreset}
-                onToggleAcceptance={handleToggleAcceptance}
-              />
-            )}
-
-            {(activeTab === 'orders' || activeTab === 'fulfilment') && (
-              <MerchantOrdersView
-                orders={orders}
-                onSelectOrder={(id) => setSelectedOrderId(id)}
-                onOpenCreateOrder={() => setIsCreateOrderOpen(true)}
-                onAdvanceStatus={handleAdvanceStatus}
-                onAcceptOrder={handleAcceptOrder}
-              />
-            )}
-
-            {(activeTab === 'products' || activeTab === 'inventory' || activeTab === 'categories') && (
-              <MerchantProductsView
-                products={products}
-                onOpenAddProduct={() => {
-                  setProductToEdit(null);
-                  setIsAddProductOpen(true);
-                }}
-                onEditProduct={(p) => {
-                  setProductToEdit(p);
-                  setIsAddProductOpen(true);
-                }}
-                onAdjustStock={handleAdjustStock}
-                onArchiveProduct={handleArchiveProduct}
-                onQuickAddProduct={handleProductSubmit}
-              />
-            )}
-
-            {(activeTab === 'delivery' || activeTab === 'delivery-settings') && (
-              <MerchantDeliveryView
-                store={store}
-                onSaveDeliverySettings={handleSaveDeliverySettings}
-                isSaving={isSavingDelivery}
-              />
-            )}
-
-            {(activeTab === 'shop' ||
-              activeTab === 'store-profile' ||
-              activeTab === 'staff' ||
-              activeTab === 'customers' ||
-              activeTab === 'finance' ||
-              activeTab === 'analytics' ||
-              activeTab === 'marketing' ||
-              activeTab === 'notifications' ||
-              activeTab === 'security' ||
-              activeTab === 'support') && (
-              <MerchantShopView
-                store={store}
-                staffList={staffList}
-                onSaveProfile={handleSaveStoreProfile}
-                isSavingProfile={isSavingProfile}
-                onInviteStaff={handleInviteStaff}
-                onRevokeStaff={handleRevokeStaff}
-                isInvitingStaff={isInvitingStaff}
-              />
-            )}
-          </main>
-        </div>
+      {/* Fixed Top Global Header Cell */}
+      <div className="merchant-header-cell">
+        <MerchantHeader
+          store={store}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onOpenNotifications={() => setIsNotificationsOpen(true)}
+          unreadNotificationsCount={3}
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
+          onNavigate={handleSelectTab}
+          onLogout={logout}
+          onToggleStoreOnline={handleToggleStoreOnline}
+          isUpdatingOnline={isSavingProfile}
+          onToggleSidebarMobile={() => setIsMobileSidebarOpen(true)}
+        />
       </div>
+
+      {/* Main Independently-Scrollable Content Cell */}
+      <main
+        id="merchant-main-scroll"
+        ref={mainScrollRef}
+        className="merchant-main-cell p-4 sm:p-6 lg:p-8 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800"
+      >
+        <div className="max-w-[1540px] w-full mx-auto">
+          {isLoading && !store && (
+            <div className="flex items-center justify-center p-8 text-xs text-slate-400">
+              <span className="animate-spin mr-2">⏳</span> Loading merchant workspace...
+            </div>
+          )}
+          {(activeTab === 'home' || activeTab === 'overview') && (
+            <MerchantHomeView
+              store={store}
+              analytics={storeAnalytics}
+              orders={orders}
+              products={products}
+              onNavigate={handleSelectTab}
+              onSelectOrder={(id) => setSelectedOrderId(id)}
+              onUpdateDeliveryPreset={handleUpdateDeliveryPreset}
+              onToggleAcceptance={handleToggleAcceptance}
+            />
+          )}
+
+          {(activeTab === 'orders' || activeTab === 'fulfilment') && (
+            <MerchantOrdersView
+              orders={orders}
+              onSelectOrder={(id) => setSelectedOrderId(id)}
+              onOpenCreateOrder={() => setIsCreateOrderOpen(true)}
+              onAdvanceStatus={handleAdvanceStatus}
+              onAcceptOrder={handleAcceptOrder}
+            />
+          )}
+
+          {(activeTab === 'products' || activeTab === 'inventory' || activeTab === 'categories') && (
+            <MerchantProductsView
+              products={products}
+              onOpenAddProduct={() => {
+                setProductToEdit(null);
+                setIsAddProductOpen(true);
+              }}
+              onEditProduct={(p) => {
+                setProductToEdit(p);
+                setIsAddProductOpen(true);
+              }}
+              onAdjustStock={handleAdjustStock}
+              onArchiveProduct={handleArchiveProduct}
+              onQuickAddProduct={handleProductSubmit}
+            />
+          )}
+
+          {(activeTab === 'delivery' || activeTab === 'delivery-settings') && (
+            <MerchantDeliveryView
+              store={store}
+              onSaveDeliverySettings={handleSaveDeliverySettings}
+              isSaving={isSavingDelivery}
+            />
+          )}
+
+          {(activeTab === 'shop' ||
+            activeTab === 'store-profile' ||
+            activeTab === 'staff' ||
+            activeTab === 'customers' ||
+            activeTab === 'finance' ||
+            activeTab === 'analytics' ||
+            activeTab === 'marketing' ||
+            activeTab === 'notifications' ||
+            activeTab === 'security' ||
+            activeTab === 'support') && (
+            <MerchantShopView
+              store={store}
+              staffList={staffList}
+              onSaveProfile={handleSaveStoreProfile}
+              isSavingProfile={isSavingProfile}
+              onInviteStaff={handleInviteStaff}
+              onRevokeStaff={handleRevokeStaff}
+              isInvitingStaff={isInvitingStaff}
+            />
+          )}
+        </div>
+      </main>
 
       {/* Slide-over Order Details Drawer */}
       <MerchantOrderDetailDrawer
@@ -644,7 +719,7 @@ export const MerchantWorkspace: React.FC = () => {
       <MerchantCommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
-        onNavigate={(tab) => setActiveTab(tab)}
+        onNavigate={handleSelectTab}
         products={products}
         orders={orders}
         onOpenAddProduct={() => {

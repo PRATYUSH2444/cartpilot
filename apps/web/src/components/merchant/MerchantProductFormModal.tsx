@@ -5,6 +5,8 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { Product } from './types';
+import { ModalPortal } from '../common/ModalPortal';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -30,6 +32,8 @@ export const MerchantProductFormModal: React.FC<ProductFormModalProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
+  useScrollLock(isOpen, { onEscape: onClose });
+
   const [activeSection, setActiveSection] = useState<FormSection>('basic');
 
   // Form Fields
@@ -117,73 +121,79 @@ export const MerchantProductFormModal: React.FC<ProductFormModalProps> = ({
     { id: 'additional', label: '7. Additional Details', desc: 'Dietary assurance & visibility' },
   ];
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs transition-opacity"
-        onClick={onClose}
-      />
+    <ModalPortal>
+      <div className="modal-overlay">
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+          onClick={onClose}
+        />
 
-      {/* Modal Dialog */}
-      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-10 flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold font-display text-slate-900 dark:text-white">
-              {productToEdit ? 'Edit Product' : 'Add New Product'}
-            </h2>
-            <p className="text-xs text-slate-400">
-              Create and manage products for your retail catalog
-            </p>
-          </div>
+        {/* Modal Dialog */}
+        <div className="modal-dialog relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 z-10 flex flex-col max-h-[90dvh] animate-in zoom-in-95 duration-200">
+          {/* Header */}
+          <div className="modal-header px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900">
+            <div>
+              <h2 className="text-lg font-bold font-display text-slate-900 dark:text-white">
+                {productToEdit ? 'Edit Product' : 'Add New Product'}
+              </h2>
+              <p className="text-xs text-slate-400">
+                Create and manage products for your retail catalog
+              </p>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting || !name || !priceRupees}
-              className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 shadow-xs flex items-center gap-1.5"
-            >
-              {isSubmitting ? (
-                <span>Saving...</span>
-              ) : (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Save Product</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* 2-Column Split: Left navigation + Right Form */}
-        <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-          {/* Left Vertical Stepper Tabs */}
-          <div className="w-full md:w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 p-3 space-y-1 overflow-y-auto flex-shrink-0">
-            {sections.map((sec) => (
+            <div className="flex items-center gap-2">
               <button
-                key={sec.id}
-                onClick={() => setActiveSection(sec.id as FormSection)}
-                className={`w-full text-left p-3 rounded-xl transition-colors ${
-                  activeSection === sec.id
-                    ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-semibold shadow-xs border border-slate-200/80 dark:border-slate-700'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/40'
-                }`}
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
               >
-                <div className="text-xs font-semibold leading-tight">{sec.label}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5 truncate">{sec.desc}</div>
+                Cancel
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting || !name || !priceRupees}
+                className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                {isSubmitting ? (
+                  <span>Saving...</span>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Save Product</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
-          {/* Right Form Content */}
-          <form onSubmit={handleSubmit} className="flex-1 p-6 overflow-y-auto space-y-5 text-xs">
+          {/* 2-Column Split: Left navigation + Right Form */}
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col md:flex-row">
+            {/* Left Vertical Stepper Tabs */}
+            <div className="w-full md:w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 p-3 space-y-1 overflow-y-auto overscroll-contain flex-shrink-0">
+              {sections.map((sec) => (
+                <button
+                  type="button"
+                  key={sec.id}
+                  onClick={() => setActiveSection(sec.id as FormSection)}
+                  className={`w-full text-left p-3 rounded-xl transition-colors cursor-pointer ${
+                    activeSection === sec.id
+                      ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-semibold shadow-xs border border-slate-200/80 dark:border-slate-700'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/40'
+                  }`}
+                >
+                  <div className="text-xs font-semibold leading-tight">{sec.label}</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 truncate">{sec.desc}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* Right Form Content */}
+            <form onSubmit={handleSubmit} className="modal-body flex-1 p-6 space-y-5 text-xs">
             {/* 1. Basic Information */}
             {activeSection === 'basic' && (
               <div className="space-y-4 animate-in fade-in duration-150">
@@ -559,5 +569,6 @@ export const MerchantProductFormModal: React.FC<ProductFormModalProps> = ({
         </div>
       </div>
     </div>
+  </ModalPortal>
   );
 };

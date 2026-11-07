@@ -22,6 +22,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { MerchantTab, Product, OrderData } from './types';
+import { ModalPortal } from '../common/ModalPortal';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -55,6 +57,7 @@ export const MerchantCommandPalette: React.FC<CommandPaletteProps> = ({
   onToggleStoreOnline,
   onOpenIntegrations,
 }) => {
+  useScrollLock(isOpen, { onEscape: onClose });
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -333,35 +336,36 @@ export const MerchantCommandPalette: React.FC<CommandPaletteProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 sm:px-6">
-      <div
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity animate-in fade-in duration-150"
-        onClick={onClose}
-      />
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 sm:px-6">
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-150"
+          onClick={onClose}
+        />
 
-      <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[520px]">
-        {/* Search Input Bar */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
-          <Search className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setSelectedIndex(0);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a command or search..."
-            className="flex-1 bg-transparent text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"
-          />
-          <kbd className="px-2 py-0.5 text-[10px] font-mono text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 shadow-2xs">
-            ESC
-          </kbd>
-        </div>
+        <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[520px]">
+          {/* Search Input Bar */}
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex-shrink-0">
+            <Search className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setSelectedIndex(0);
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder="Type a command or search..."
+              className="flex-1 bg-transparent text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"
+            />
+            <kbd className="px-2 py-0.5 text-[10px] font-mono text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 shadow-2xs">
+              ESC
+            </kbd>
+          </div>
 
-        {/* Results List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {/* Results List */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 space-y-1">
           {filteredCommands.length === 0 ? (
             <div className="py-12 text-center text-xs text-slate-400 dark:text-slate-500">
               No results found for &ldquo;{query}&rdquo;
@@ -425,5 +429,6 @@ export const MerchantCommandPalette: React.FC<CommandPaletteProps> = ({
         </div>
       </div>
     </div>
+  </ModalPortal>
   );
 };

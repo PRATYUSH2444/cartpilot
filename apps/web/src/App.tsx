@@ -83,6 +83,14 @@ export function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/merchant/*"
+            element={
+              <ProtectedRoute allowedRoles={['MERCHANT']}>
+                <MerchantWorkspace />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/admin"

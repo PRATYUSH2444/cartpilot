@@ -79,12 +79,12 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
 
   return (
     <aside
-      className={`h-full bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col justify-between transition-all duration-200 select-none ${
+      className={`h-full bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col justify-between transition-all duration-200 select-none overflow-hidden ${
         isCollapsed ? 'w-[72px]' : 'w-[250px]'
       }`}
     >
-      {/* ── Top Header & Store Identity ───────────────────────────────────── */}
-      <div className="p-4 space-y-4">
+      {/* ── Top Header & Store Identity (Stationary) ───────────────────────── */}
+      <div className="flex-shrink-0 p-4 pb-2 space-y-4">
         {/* Brand Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -105,7 +105,7 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
 
           <button
             onClick={onToggleCollapse}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -114,7 +114,10 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
 
         {/* Store Card Pill */}
         {!isCollapsed && (
-          <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between gap-2 cursor-pointer hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors">
+          <div
+            onClick={() => onSelectTab('shop')}
+            className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between gap-2 cursor-pointer hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors"
+          >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 flex items-center justify-center text-base shrink-0">
                 🏪
@@ -131,80 +134,82 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
             <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
           </div>
         )}
-
-        {/* ── Five Primary Navigation Items ─────────────────────────────────── */}
-        <nav className="space-y-1.5 pt-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onSelectTab(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                  item.isActive
-                    ? 'bg-emerald-700 text-white shadow-xs font-bold'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
-                }`}
-                title={item.label}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <Icon
-                    className={`w-4 h-4 shrink-0 ${
-                      item.isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'
-                    }`}
-                  />
-                  {!isCollapsed && <span className="truncate">{item.label}</span>}
-                </div>
-
-                {!isCollapsed && item.badge !== undefined && (
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-                      item.isActive
-                        ? 'bg-emerald-600/60 text-white'
-                        : item.badgeColor || 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
       </div>
 
-      {/* ── Bottom Support Card ───────────────────────────────────────────── */}
-      {!isCollapsed ? (
-        <div className="p-4">
-          <div className="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 relative overflow-hidden space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                <Headphones className="w-4 h-4" />
+      {/* ── Five Primary Navigation Items (Scrollable when height constrained) ─ */}
+      <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-2 space-y-1.5 scrollbar-none">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onSelectTab(item.id)}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+                item.isActive
+                  ? 'bg-emerald-700 text-white shadow-xs font-bold'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
+              }`}
+              title={item.label}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <Icon
+                  className={`w-4 h-4 shrink-0 ${
+                    item.isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'
+                  }`}
+                />
+                {!isCollapsed && <span className="truncate">{item.label}</span>}
               </div>
-              <span className="font-bold text-xs text-slate-900 dark:text-white">Need Help?</span>
+
+              {!isCollapsed && item.badge !== undefined && (
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                    item.isActive
+                      ? 'bg-emerald-600/60 text-white'
+                      : item.badgeColor || 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* ── Bottom Support Card (Stationary) ─────────────────────────────── */}
+      <div className="flex-shrink-0 border-t border-slate-100 dark:border-slate-800/60">
+        {!isCollapsed ? (
+          <div className="p-4">
+            <div className="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 relative overflow-hidden space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <Headphones className="w-4 h-4" />
+                </div>
+                <span className="font-bold text-xs text-slate-900 dark:text-white">Need Help?</span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                Chat with our support team or get instant assistance.
+              </p>
+              <button
+                onClick={() => onSelectTab('shop')}
+                className="w-full py-2 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer text-center block"
+              >
+                Get Support
+              </button>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-              Chat with our support team or get instant assistance.
-            </p>
+          </div>
+        ) : (
+          <div className="p-3 flex justify-center">
             <button
               onClick={() => onSelectTab('shop')}
-              className="w-full py-2 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer text-center block"
+              className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center cursor-pointer"
+              title="Help & Support"
             >
-              Get Support
+              <Headphones className="w-5 h-5" />
             </button>
           </div>
-        </div>
-      ) : (
-        <div className="p-3 flex justify-center">
-          <button
-            onClick={() => onSelectTab('shop')}
-            className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center"
-            title="Help & Support"
-          >
-            <Headphones className="w-5 h-5" />
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </aside>
   );
 };

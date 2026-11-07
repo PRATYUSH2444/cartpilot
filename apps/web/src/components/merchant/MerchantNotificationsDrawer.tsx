@@ -8,6 +8,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { OrderData, Product } from './types';
+import { ModalPortal } from '../common/ModalPortal';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface NotificationsDrawerProps {
   isOpen: boolean;
@@ -34,6 +36,7 @@ export const MerchantNotificationsDrawer: React.FC<NotificationsDrawerProps> = (
   products,
   onSelectOrder,
 }) => {
+  useScrollLock(isOpen, { onEscape: onClose });
   const [activeFilter, setActiveFilter] = useState<'all' | 'order' | 'inventory' | 'system'>('all');
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
@@ -105,66 +108,67 @@ export const MerchantNotificationsDrawer: React.FC<NotificationsDrawerProps> = (
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-2xs transition-opacity animate-in fade-in duration-200"
-        onClick={onClose}
-      />
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex justify-end">
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+          onClick={onClose}
+        />
 
-      {/* Drawer */}
-      <div className="relative w-full max-w-md h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 z-10 flex flex-col animate-in slide-in-from-right duration-200">
-        {/* Header */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
-              <Bell className="w-4 h-4" />
+        {/* Drawer */}
+        <div className="relative w-full max-w-md h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 z-10 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+          {/* Header */}
+          <div className="flex-shrink-0 p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+                <Bell className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Notifications
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Live orders, stock alerts & system updates
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Notifications
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                Live orders, stock alerts & system updates
-              </p>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={markAllAsRead}
+                className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline px-2 py-1 cursor-pointer"
+              >
+                Mark all read
+              </button>
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={markAllAsRead}
-              className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline px-2 py-1"
-            >
-              Mark all read
-            </button>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              <X className="w-4 h-4" />
-            </button>
+          {/* Filter Tabs */}
+          <div className="flex-shrink-0 px-4 py-2 border-b border-slate-100 dark:border-slate-800/80 flex items-center gap-1 text-xs bg-slate-50/50 dark:bg-slate-800/20">
+            {(['all', 'order', 'inventory', 'system'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveFilter(tab)}
+                className={`px-3 py-1.5 rounded-lg capitalize font-medium transition-colors cursor-pointer ${
+                  activeFilter === tab
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                }`}
+              >
+                {tab === 'all' ? 'All' : tab}
+              </button>
+            ))}
           </div>
-        </div>
 
-        {/* Filter Tabs */}
-        <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800/80 flex items-center gap-1 text-xs">
-          {(['all', 'order', 'inventory', 'system'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveFilter(tab)}
-              className={`px-3 py-1.5 rounded-lg capitalize font-medium transition-colors ${
-                activeFilter === tab
-                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold'
-                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-              }`}
-            >
-              {tab === 'all' ? 'All' : tab}
-            </button>
-          ))}
-        </div>
-
-        {/* Notifications List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
+          {/* Scrollable Notifications List */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-2.5">
           {filtered.length === 0 ? (
             <div className="py-20 text-center text-xs text-slate-400">
               No notifications in this tab
@@ -230,5 +234,6 @@ export const MerchantNotificationsDrawer: React.FC<NotificationsDrawerProps> = (
         </div>
       </div>
     </div>
+  </ModalPortal>
   );
 };

@@ -15,6 +15,8 @@ import {
   Check,
 } from 'lucide-react';
 import { Product } from './types';
+import { ModalPortal } from '../common/ModalPortal';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface ProductsViewProps {
   products: Product[];
@@ -55,6 +57,13 @@ export const MerchantProductsView: React.FC<ProductsViewProps> = ({
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [bulkCsvText, setBulkCsvText] = useState('');
   const [bulkParsedItems, setBulkParsedItems] = useState<any[]>([]);
+
+  useScrollLock(isQuickAddOpen || isBulkModalOpen, {
+    onEscape: () => {
+      setIsQuickAddOpen(false);
+      setIsBulkModalOpen(false);
+    },
+  });
 
   // Tab counts
   const tabCounts = useMemo(() => {
@@ -527,213 +536,217 @@ export const MerchantProductsView: React.FC<ProductsViewProps> = ({
 
       {/* ── Quick Add (10 Seconds) Modal ─────────────────────────────────────── */}
       {isQuickAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs animate-in fade-in"
-            onClick={() => setIsQuickAddOpen(false)}
-          />
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 z-10 animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-amber-300" />
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs animate-in fade-in"
+              onClick={() => setIsQuickAddOpen(false)}
+            />
+            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 z-10 animate-in zoom-in-95">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
+                    <Zap className="w-4 h-4 text-amber-300" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      Quick Add Product (10s)
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Instant catalog listing with 4 essential fields
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Quick Add Product (10s)
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    Instant catalog listing with 4 essential fields
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsQuickAddOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleQuickAddSubmit} className="space-y-4 pt-4">
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
-                  Product Name *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Fresh Paneer 200g or Basmati Rice 1kg"
-                  value={quickName}
-                  onChange={(e) => setQuickName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  required
-                />
+                <button
+                  onClick={() => setIsQuickAddOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <form onSubmit={handleQuickAddSubmit} className="space-y-4 pt-4">
                 <div>
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
-                    Selling Price (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="e.g. 85.00"
-                    value={quickPriceRupees}
-                    onChange={(e) => setQuickPriceRupees(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
-                    Initial Stock *
-                  </label>
-                  <input
-                    type="number"
-                    value={quickStock}
-                    onChange={(e) => setQuickStock(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
-                    Category
-                  </label>
-                  <select
-                    value={quickCategory}
-                    onChange={(e) => setQuickCategory(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none"
-                  >
-                    <option value="FRUITS_VEGETABLES">Fruits & Vegetables</option>
-                    <option value="DAIRY_BREAKFAST">Dairy & Breakfast</option>
-                    <option value="ATTA_RICE_DAL">Atta, Rice & Dal</option>
-                    <option value="SNACKS_MUNCHIES">Snacks & Munchies</option>
-                    <option value="BEVERAGES">Beverages</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
-                    Unit
+                    Product Name *
                   </label>
                   <input
                     type="text"
-                    value={quickUnit}
-                    onChange={(e) => setQuickUnit(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none"
+                    placeholder="e.g. Fresh Paneer 200g or Basmati Rice 1kg"
+                    value={quickName}
+                    onChange={(e) => setQuickName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    required
                   />
                 </div>
-              </div>
 
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={isQuickSubmitting}
-                  className="w-full py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>
-                    {isQuickSubmitting ? 'Listing Product...' : 'Save & Publish Immediately'}
-                  </span>
-                </button>
-              </div>
-            </form>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                      Selling Price (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g. 85.00"
+                      value={quickPriceRupees}
+                      onChange={(e) => setQuickPriceRupees(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                      Initial Stock *
+                    </label>
+                    <input
+                      type="number"
+                      value={quickStock}
+                      onChange={(e) => setQuickStock(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                      Category
+                    </label>
+                    <select
+                      value={quickCategory}
+                      onChange={(e) => setQuickCategory(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none"
+                    >
+                      <option value="FRUITS_VEGETABLES">Fruits & Vegetables</option>
+                      <option value="DAIRY_BREAKFAST">Dairy & Breakfast</option>
+                      <option value="ATTA_RICE_DAL">Atta, Rice & Dal</option>
+                      <option value="SNACKS_MUNCHIES">Snacks & Munchies</option>
+                      <option value="BEVERAGES">Beverages</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                      Unit
+                    </label>
+                    <input
+                      type="text"
+                      value={quickUnit}
+                      onChange={(e) => setQuickUnit(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isQuickSubmitting}
+                    className="w-full py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>
+                      {isQuickSubmitting ? 'Listing Product...' : 'Save & Publish Immediately'}
+                    </span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* ── Bulk CSV Upload Modal ────────────────────────────────────────────── */}
       {isBulkModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs animate-in fade-in"
-            onClick={() => setIsBulkModalOpen(false)}
-          />
-          <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 z-10 animate-in zoom-in-95 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Bulk Product CSV Import
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsBulkModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-500">
-              Paste CSV data or write lines with format:{' '}
-              <code className="text-emerald-600 font-mono">Name, Category, Price, Stock</code>
-            </p>
-
-            <textarea
-              rows={6}
-              value={bulkCsvText}
-              onChange={(e) => handleParseCsv(e.target.value)}
-              placeholder="Name,Category,Price,Stock&#10;Organic Green Peas 500g,FRUITS_VEGETABLES,65.00,40&#10;Amul Cow Ghee 1L,DAIRY_BREAKFAST,620.00,25&#10;Tata Sampann Toor Dal 1kg,ATTA_RICE_DAL,185.00,30"
-              className="w-full p-3 font-mono text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none"
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs animate-in fade-in"
+              onClick={() => setIsBulkModalOpen(false)}
             />
-
-            {bulkParsedItems.length > 0 && (
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 max-h-36 overflow-y-auto">
-                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Preview ({bulkParsedItems.length} items parsed):
-                </span>
-                <div className="space-y-1 text-xs font-mono text-slate-600 dark:text-slate-400">
-                  {bulkParsedItems.map((item, i) => (
-                    <div key={i}>
-                      {i + 1}. {item.name} — ₹{item.priceRupees} ({item.stock} in stock)
-                    </div>
-                  ))}
+            <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 z-10 animate-in zoom-in-95 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Bulk Product CSV Import
+                  </h3>
                 </div>
+                <button
+                  onClick={() => setIsBulkModalOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-            )}
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsBulkModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (bulkParsedItems.length === 0) return;
-                  if (onQuickAddProduct) {
-                    for (const it of bulkParsedItems) {
-                      await onQuickAddProduct({
-                        name: it.name,
-                        description: `Fresh ${it.name} pure vegetarian`,
-                        category: it.category || 'GROCERY',
-                        pricePaise: Math.round(parseFloat(it.priceRupees || '0') * 100),
-                        availableStock: parseInt(it.stock || '50', 10),
-                        isVegetarianCertified: true,
-                      });
+              <p className="text-xs text-slate-500">
+                Paste CSV data or write lines with format:{' '}
+                <code className="text-emerald-600 font-mono">Name, Category, Price, Stock</code>
+              </p>
+
+              <textarea
+                rows={6}
+                value={bulkCsvText}
+                onChange={(e) => handleParseCsv(e.target.value)}
+                placeholder="Name,Category,Price,Stock&#10;Organic Green Peas 500g,FRUITS_VEGETABLES,65.00,40&#10;Amul Cow Ghee 1L,DAIRY_BREAKFAST,620.00,25&#10;Tata Sampann Toor Dal 1kg,ATTA_RICE_DAL,185.00,30"
+                className="w-full p-3 font-mono text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none"
+              />
+
+              {bulkParsedItems.length > 0 && (
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 max-h-36 overflow-y-auto">
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    Preview ({bulkParsedItems.length} items parsed):
+                  </span>
+                  <div className="space-y-1 text-xs font-mono text-slate-600 dark:text-slate-400">
+                    {bulkParsedItems.map((item, i) => (
+                      <div key={i}>
+                        {i + 1}. {item.name} — ₹{item.priceRupees} ({item.stock} in stock)
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (bulkParsedItems.length === 0) return;
+                    if (onQuickAddProduct) {
+                      for (const it of bulkParsedItems) {
+                        await onQuickAddProduct({
+                          name: it.name,
+                          description: `Fresh ${it.name} pure vegetarian`,
+                          category: it.category || 'GROCERY',
+                          pricePaise: Math.round(parseFloat(it.priceRupees || '0') * 100),
+                          availableStock: parseInt(it.stock || '50', 10),
+                          isVegetarianCertified: true,
+                        });
+                      }
                     }
-                  }
-                  setIsBulkModalOpen(false);
-                  setBulkCsvText('');
-                  setBulkParsedItems([]);
-                }}
-                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-600 shadow-xs cursor-pointer"
-              >
-                Import {bulkParsedItems.length} Products
-              </button>
+                    setIsBulkModalOpen(false);
+                    setBulkCsvText('');
+                    setBulkParsedItems([]);
+                  }}
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-600 shadow-xs cursor-pointer"
+                >
+                  Import {bulkParsedItems.length} Products
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

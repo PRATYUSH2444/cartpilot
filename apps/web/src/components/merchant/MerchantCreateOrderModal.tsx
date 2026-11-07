@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { Product, OrderData } from './types';
 import { API_BASE } from '../../config/api';
+import { ModalPortal } from '../common/ModalPortal';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface MerchantCreateOrderModalProps {
   isOpen: boolean;
@@ -45,6 +47,8 @@ export const MerchantCreateOrderModal: React.FC<MerchantCreateOrderModalProps> =
   token,
   onOrderCreated,
 }) => {
+  useScrollLock(isOpen, { onEscape: onClose });
+
   // Customer details state
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -209,53 +213,60 @@ export const MerchantCreateOrderModal: React.FC<MerchantCreateOrderModalProps> =
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs transition-opacity"
-        onClick={onClose}
-      />
+  if (!isOpen) return null;
 
-      {/* Modal Dialog */}
-      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 z-10 flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
-              <ShoppingBag className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  Create New Store Order
-                </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                  Direct POS / Intake
-                </span>
+  return (
+    <ModalPortal>
+      <div className="modal-overlay">
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+          onClick={onClose}
+        />
+
+        {/* Modal Dialog */}
+        <div className="modal-dialog relative w-full max-w-4xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 z-10 flex flex-col max-h-[90dvh] animate-in zoom-in-95 duration-200">
+          {/* Fixed Header */}
+          <div className="modal-header px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+                <ShoppingBag className="w-5 h-5" />
               </div>
-              <p className="text-xs text-slate-400">
-                Place direct orders for phone intakes, walk-in customers, or custom requests
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    Create New Store Order
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                    Direct POS / Intake
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Place direct orders for phone intakes, walk-in customers, or custom requests
+                </p>
+              </div>
             </div>
+
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          {/* Scrollable Form Body */}
+          <form
+            id="create-manual-order-form"
+            onSubmit={handleSubmit}
+            className="modal-body p-6 space-y-6"
           >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
-          {errorMessage && (
-            <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
+            {errorMessage && (
+              <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
           {/* Section 1: Customer Information */}
           <div className="space-y-3">
@@ -604,19 +615,28 @@ export const MerchantCreateOrderModal: React.FC<MerchantCreateOrderModalProps> =
               </span>
             </div>
           </div>
+        </form>
 
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        {/* Fixed Stationary Footer */}
+        <div className="modal-footer px-6 py-4 bg-slate-50/80 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
+          <div className="flex items-baseline gap-2">
+            <span className="text-xs text-slate-500 font-medium">Grand Total:</span>
+            <span className="text-base sm:text-lg font-mono font-black text-emerald-600 dark:text-emerald-400">
+              ₹{(grandTotalPaise / 100).toFixed(2)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
+              form="create-manual-order-form"
               disabled={isSubmitting || selectedItems.length === 0}
               className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
             >
@@ -633,8 +653,9 @@ export const MerchantCreateOrderModal: React.FC<MerchantCreateOrderModalProps> =
               )}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
+  </ModalPortal>
   );
 };

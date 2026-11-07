@@ -18,6 +18,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { API_BASE } from '../config/api';
+import { ModalPortal } from './common/ModalPortal';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 export interface IntegrationStatus {
   service: string;
@@ -36,6 +38,7 @@ interface IntegrationsModalProps {
 }
 
 export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, onClose, token }) => {
+  useScrollLock(isOpen, { onEscape: onClose });
   const [integrations, setIntegrations] = useState<IntegrationStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -212,8 +215,9 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, on
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[92vh] flex flex-col">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[90dvh] flex flex-col">
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -474,5 +478,6 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, on
         </div>
       </div>
     </div>
+  </ModalPortal>
   );
 };

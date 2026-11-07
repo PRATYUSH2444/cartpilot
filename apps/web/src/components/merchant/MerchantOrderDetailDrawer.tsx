@@ -8,6 +8,8 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { OrderData } from './types';
+import { ModalPortal } from '../common/ModalPortal';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface OrderDetailDrawerProps {
   orderId: string | null;
@@ -28,6 +30,7 @@ export const MerchantOrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({
   onRejectOrder,
   isAdvancing,
 }) => {
+  useScrollLock(Boolean(orderId), { onEscape: onClose });
   const [internalNotes, setInternalNotes] = useState('');
 
   if (!orderId) return null;
@@ -84,125 +87,126 @@ export const MerchantOrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({
   const deliveryInstructions = order.deliveryNote || addr.instructions || 'Deliver fresh groceries directly.';
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-2xs transition-opacity animate-in fade-in duration-200"
-        onClick={onClose}
-      />
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex justify-end">
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+          onClick={onClose}
+        />
 
-      {/* Drawer */}
-      <div className="relative w-full max-w-4xl h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 z-10 flex flex-col overflow-y-auto animate-in slide-in-from-right duration-200">
-        {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold font-mono text-slate-900 dark:text-white">
-                  Order #{orderNum}
-                </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                  Paid
-                </span>
+        {/* Drawer Panel */}
+        <div className="relative w-full max-w-4xl h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 z-10 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+          {/* Stationary Header */}
+          <div className="flex-shrink-0 p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onClose}
+                className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold font-mono text-slate-900 dark:text-white">
+                    Order #{orderNum}
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    Paid
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Placed on Today, 10:24 AM • Verified Vegetarian
+                </p>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Placed on Today, 10:24 AM • Verified Vegetarian
-              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print</span>
+              </button>
+
+              {onRejectOrder && (order.status === 'CONFIRMED' || order.status === 'PENDING_PAYMENT') && (
+                <button
+                  disabled={isAdvancing}
+                  onClick={() => {
+                    const reason = window.prompt('Reason for rejecting order (e.g. out of stock, store closing):');
+                    if (reason !== null) onRejectOrder(order._id, reason || 'Merchant declined');
+                  }}
+                  className="px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 text-xs font-semibold hover:bg-rose-50 dark:hover:bg-rose-950/20 cursor-pointer"
+                >
+                  Reject Order
+                </button>
+              )}
+
+              {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && order.status !== 'REJECTED' && (
+                <button
+                  disabled={isAdvancing}
+                  onClick={() => {
+                    if (onAcceptOrder && (order.status === 'CONFIRMED' || order.status === 'PENDING_PAYMENT')) {
+                      onAcceptOrder(order._id);
+                    } else {
+                      onAdvanceStatus(order._id);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 shadow-xs cursor-pointer"
+                >
+                  {isAdvancing ? (
+                    <span>Processing...</span>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{nextActionLabel}</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print</span>
-            </button>
-
-            {onRejectOrder && (order.status === 'CONFIRMED' || order.status === 'PENDING_PAYMENT') && (
-              <button
-                disabled={isAdvancing}
-                onClick={() => {
-                  const reason = window.prompt('Reason for rejecting order (e.g. out of stock, store closing):');
-                  if (reason !== null) onRejectOrder(order._id, reason || 'Merchant declined');
-                }}
-                className="px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 text-xs font-semibold hover:bg-rose-50 dark:hover:bg-rose-950/20 cursor-pointer"
-              >
-                Reject Order
-              </button>
-            )}
-
-            {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && order.status !== 'REJECTED' && (
-              <button
-                disabled={isAdvancing}
-                onClick={() => {
-                  if (onAcceptOrder && (order.status === 'CONFIRMED' || order.status === 'PENDING_PAYMENT')) {
-                    onAcceptOrder(order._id);
-                  } else {
-                    onAdvanceStatus(order._id);
-                  }
-                }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 shadow-xs cursor-pointer"
-              >
-                {isAdvancing ? (
-                  <span>Processing...</span>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>{nextActionLabel}</span>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Linear Stepper */}
-        <div className="px-6 py-5 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-between relative">
-            <div className="absolute left-6 right-6 top-3 h-0.5 bg-slate-200 dark:bg-slate-700 -z-0" />
-            {stages.map((stage, idx) => {
-              const isPast = idx < activeStep;
-              const isCurrent = idx === activeStep;
-              return (
-                <div key={stage} className="relative z-10 flex flex-col items-center">
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
-                      isPast
-                        ? 'bg-emerald-600 text-white'
-                        : isCurrent
-                        ? 'bg-emerald-500 text-white ring-4 ring-emerald-100 dark:ring-emerald-950'
-                        : 'bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 text-slate-400'
-                    }`}
-                  >
-                    {isPast ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
+          {/* Stationary Linear Stepper */}
+          <div className="flex-shrink-0 px-6 py-5 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between relative">
+              <div className="absolute left-6 right-6 top-3 h-0.5 bg-slate-200 dark:bg-slate-700 -z-0" />
+              {stages.map((stage, idx) => {
+                const isPast = idx < activeStep;
+                const isCurrent = idx === activeStep;
+                return (
+                  <div key={stage} className="relative z-10 flex flex-col items-center">
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
+                        isPast
+                          ? 'bg-emerald-600 text-white'
+                          : isCurrent
+                          ? 'bg-emerald-500 text-white ring-4 ring-emerald-100 dark:ring-emerald-950'
+                          : 'bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 text-slate-400'
+                      }`}
+                    >
+                      {isPast ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
+                    </div>
+                    <span
+                      className={`text-[11px] mt-1.5 font-medium ${
+                        isCurrent
+                          ? 'font-bold text-emerald-700 dark:text-emerald-400'
+                          : isPast
+                          ? 'text-slate-700 dark:text-slate-300'
+                          : 'text-slate-400'
+                      }`}
+                    >
+                      {stage}
+                    </span>
                   </div>
-                  <span
-                    className={`text-[11px] mt-1.5 font-medium ${
-                      isCurrent
-                        ? 'font-bold text-emerald-700 dark:text-emerald-400'
-                        : isPast
-                        ? 'text-slate-700 dark:text-slate-300'
-                        : 'text-slate-400'
-                    }`}
-                  >
-                    {stage}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        {/* Content Body */}
-        <div className="p-6 space-y-6">
+          {/* Independently Scrollable Content Body */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Customer Details */}
             <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-2xs space-y-3">
@@ -361,5 +365,6 @@ export const MerchantOrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({
         </div>
       </div>
     </div>
+  </ModalPortal>
   );
 };
