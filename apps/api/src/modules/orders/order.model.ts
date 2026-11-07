@@ -37,6 +37,8 @@ export interface IPricingSnapshot {
 }
 
 export interface IShippingAddressSnapshot {
+  name?: string;
+  phone?: string;
   street: string;
   city: string;
   state: string;
@@ -169,6 +171,8 @@ const PricingSnapshotSchema = new Schema<IPricingSnapshot>(
 
 const ShippingAddressSnapshotSchema = new Schema<IShippingAddressSnapshot>(
   {
+    name: { type: String, required: false },
+    phone: { type: String, required: false },
     street: { type: String, required: true },
     city: { type: String, required: true },
     state: { type: String, required: true },

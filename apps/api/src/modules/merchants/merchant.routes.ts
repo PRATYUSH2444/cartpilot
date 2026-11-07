@@ -17,6 +17,7 @@ import {
   updateMyProduct,
   adjustMyProductStock,
   archiveMyProduct,
+  createMyStoreOrder,
 } from './merchant.controller.js';
 import { validate } from '../../common/middleware/validate.js';
 import { authenticate, requireRole } from '../../common/middleware/auth.js';
@@ -50,6 +51,10 @@ merchantRouter.post(
 merchantRouter.delete('/staff/:staffUserId', authenticate, requireRole('MERCHANT'), revokeStaff);
 
 // Merchant Product & Inventory Management (Tenant Isolated)
+
+// Merchant Direct Order Creation (POS / Phone / Manual Intake)
+merchantRouter.post('/my-store/orders', authenticate, requireRole('MERCHANT'), createMyStoreOrder);
+
 merchantRouter.post('/my-store/products', authenticate, requireRole('MERCHANT'), addMyProduct);
 merchantRouter.patch('/my-store/products/:productId', authenticate, requireRole('MERCHANT'), updateMyProduct);
 merchantRouter.patch('/my-store/products/:productId/stock', authenticate, requireRole('MERCHANT'), adjustMyProductStock);

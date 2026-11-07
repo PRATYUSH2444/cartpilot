@@ -452,3 +452,17 @@ export async function archiveMyProduct(
     next(error);
   }
 }
+
+export async function createMyStoreOrder(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const merchantUserId = req.user!.userId;
+    const order = await MerchantService.createManualOrder(merchantUserId, req.user?.merchantId, req.body);
+    res.status(201).json({
+      success: true,
+      data: order,
+      message: `Order #${order.orderNumber} successfully created and confirmed`,
+    });
+  } catch (err) {
+    next(err);
+  }
+}

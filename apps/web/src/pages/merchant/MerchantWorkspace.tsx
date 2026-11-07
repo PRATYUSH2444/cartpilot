@@ -20,6 +20,7 @@ import { MerchantOrdersView } from '../../components/merchant/MerchantOrdersView
 import { MerchantOrderDetailDrawer } from '../../components/merchant/MerchantOrderDetailDrawer';
 import { MerchantProductsView } from '../../components/merchant/MerchantProductsView';
 import { MerchantProductFormModal } from '../../components/merchant/MerchantProductFormModal';
+import { MerchantCreateOrderModal } from '../../components/merchant/MerchantCreateOrderModal';
 import { IntegrationsModal } from '../../components/IntegrationsModal';
 import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 
@@ -47,6 +48,7 @@ export const MerchantWorkspace: React.FC = () => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
   const [isAdvancingOrder, setIsAdvancingOrder] = useState(false);
@@ -572,9 +574,7 @@ export const MerchantWorkspace: React.FC = () => {
               <MerchantOrdersView
                 orders={orders}
                 onSelectOrder={(id) => setSelectedOrderId(id)}
-                onOpenCreateOrder={() => {
-                  showBanner('success', 'Order draft created. Ready for customer assignment.');
-                }}
+                onOpenCreateOrder={() => setIsCreateOrderOpen(true)}
                 onAdvanceStatus={handleAdvanceStatus}
                 onAcceptOrder={handleAcceptOrder}
               />
@@ -663,6 +663,21 @@ export const MerchantWorkspace: React.FC = () => {
         orders={orders}
         products={products}
         onSelectOrder={(id) => setSelectedOrderId(id)}
+      />
+
+
+      {/* Direct Storefront / Phone Intake Manual Order Creation Modal */}
+      <MerchantCreateOrderModal
+        isOpen={isCreateOrderOpen}
+        onClose={() => setIsCreateOrderOpen(false)}
+        products={products}
+        token={token}
+        onOrderCreated={(newOrder) => {
+          setOrders((prev) => [newOrder, ...prev]);
+          showBanner('success', `Order #${newOrder.orderNumber} placed & confirmed in live database!`);
+          setSelectedOrderId(newOrder._id);
+          fetchMerchantData();
+        }}
       />
 
       {/* Structured Add / Edit Product Modal */}

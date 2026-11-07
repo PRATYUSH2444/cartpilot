@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { MerchantModel, IMerchant, MerchantStatus } from './merchant.model.js';
-import { OrderModel } from '../orders/order.model.js';
+import { OrderModel, IOrder } from '../orders/order.model.js';
 import { ProductModel, IProduct, ProductCategory, PackageUnit } from '../catalog/product.model.js';
 import { UserModel } from '../users/user.model.js';
 import { MerchantUserModel, MerchantPermission } from './merchant-user.model.js';
@@ -900,4 +900,143 @@ export class MerchantService {
       payload: { merchantId, productId },
     });
   }
+
+  /**
+   * Merchant creates a real order directly from the Merchant Portal (Manual/POS/Phone order).
+   */
+  static async createManualOrder(
+    merchantUserId: string,
+    merchantId: string | undefined,
+    input: {
+      customer: {
+        name: string;
+        phone: string;
+        email?: string;
+        street?: string;
+        city?: string;
+        postalCode?: string;
+      };
+      items: Array<{
+        productId: string;
+        quantity: number;
+      }>;
+      deliveryNote?: string;
+      paymentMethod?: string;
+    }
+  ): Promise<IOrder> {
+    let store: IMerchant | null = null;
+    if (merchantId && mongoose.Types.ObjectId.isValid(merchantId)) {
+      store = await MerchantModel.findById(merchantId);
+    }
+    if (!store) {
+      const merchantUser = await MerchantUserModel.findOne({ userId: new mongoose.Types.ObjectId(merchantUserId) });
+      if (merchantUser) {
+        store = await MerchantModel.findById(merchantUser.merchantId);
+      }
+    }
+    if (!store) {
+      throw new NotFoundError('Merchant store profile could not be resolved for this account');
+    }
+
+    if (!input.items || input.items.length === 0) {
+      throw new BadRequestError('Cannot create an order without items');
+    }
+    if (!input.customer?.name || !input.customer?.phone) {
+      throw new BadRequestError('Customer name and phone number are required');
+    }
+
+    const itemSnapshots = [];
+    let subtotalPaise = 0;
+
+    for (const line of input.items) {
+      if (!mongoose.Types.ObjectId.isValid(line.productId)) {
+        throw new BadRequestError(`Invalid product ID format: ${line.productId}`);
+      }
+      const product = await ProductModel.findById(line.productId);
+      if (!product) {
+        throw new NotFoundError(`Product not found: ${line.productId}`);
+      }
+      if (!product.isVegetarian) {
+        throw new BadRequestError(`Product ${product.name} violates pure-vegetarian policy`);
+      }
+      const qty = Math.max(1, Number(line.quantity) || 1);
+      if (product.availableStock < qty) {
+        throw new BadRequestError(
+          `Insufficient stock for "${product.name}". Available: ${product.availableStock}, requested: ${qty}`
+        );
+      }
+
+      const lineSubtotal = product.pricePaise * qty;
+      subtotalPaise += lineSubtotal;
+
+      itemSnapshots.push({
+        productId: product._id,
+        name: product.name,
+        category: product.category || 'Grocery',
+        quantity: qty,
+        unitPricePaise: product.pricePaise,
+        subtotalPaise: lineSubtotal,
+        packageSize: product.packageSize || 1,
+        packageUnit: product.packageUnit || 'piece',
+      });
+
+      // Concurrency-safe stock deduction
+      product.availableStock -= qty;
+      await product.save();
+    }
+
+    const taxPaise = Math.round(subtotalPaise * 0.05); // 5% GST
+    const deliveryFeePaise = store.deliverySettings?.deliveryFeePaise || 0;
+    const totalPaise = subtotalPaise + taxPaise + deliveryFeePaise;
+
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const orderNumber = `CP-${dateStr}-${randomSuffix}`;
+
+    const order = new OrderModel({
+      orderNumber,
+      userId: new mongoose.Types.ObjectId(merchantUserId),
+      merchantId: store._id,
+      status: 'CONFIRMED',
+      items: itemSnapshots,
+      pricingSnapshot: {
+        subtotalPaise,
+        deliveryFeePaise,
+        platformFeePaise: 0,
+        taxPaise,
+        discountPaise: 0,
+        totalPaise,
+      },
+      shippingAddressSnapshot: {
+        street: input.customer.street || 'Storefront Walk-in / Direct Order',
+        city: input.customer.city || 'Bengaluru',
+        state: 'Karnataka',
+        postalCode: input.customer.postalCode || '560038',
+        phone: input.customer.phone,
+        name: input.customer.name,
+      },
+      deliveryNote: input.deliveryNote || 'Merchant direct order',
+      placedAt: new Date(),
+    });
+
+    await order.save();
+
+    await auditService.recordEvent({
+      eventType: 'ORDER_CONFIRMED',
+      actorId: merchantUserId,
+      actorRole: 'MERCHANT',
+      resourceId: order._id.toString(),
+      resourceType: 'ORDER',
+      payload: {
+        orderNumber,
+        merchantId: store._id.toString(),
+        totalPaise,
+        itemCount: itemSnapshots.length,
+        paymentMethod: input.paymentMethod || 'COD',
+      },
+    });
+
+    return order;
+  }
 }
+
