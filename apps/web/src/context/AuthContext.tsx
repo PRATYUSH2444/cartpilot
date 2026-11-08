@@ -34,6 +34,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
+  authFetch: (url: string, options?: RequestInit) => Promise<Response>;
   switchRoleQuick: (role: UserRole) => Promise<boolean>;
   setUserProfile: (user: UserProfile) => void;
   setSession: (token: string, user: UserProfile) => void;
@@ -47,6 +48,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSessionExpired, setIsSessionExpired] = useState<boolean>(false);
+  const latestTokenRef = React.useRef<string | null>(token);
+
+  useEffect(() => {
+    latestTokenRef.current = token;
+  }, [token]);
 
   // Silent session refresh via httpOnly, secure cookie on app startup
   const refreshSession = useCallback(async (): Promise<boolean> => {
@@ -71,24 +77,90 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           mustChangePassword: data.data.user.mustChangePassword,
         };
 
+        latestTokenRef.current = data.data.accessToken;
         setToken(data.data.accessToken);
         setUser(profile);
         setIsSessionExpired(false);
         try { localStorage.setItem('cartpilot_has_session', 'true'); } catch {}
-        try { localStorage.setItem('cartpilot_has_session', 'true'); } catch {}
         return true;
       } else {
+        latestTokenRef.current = null;
         setToken(null);
         setUser(null);
         try { localStorage.removeItem('cartpilot_has_session'); } catch {}
         return false;
       }
     } catch {
+      latestTokenRef.current = null;
       setToken(null);
       setUser(null);
       return false;
     }
   }, []);
+
+  // Proactive automated token refresh timer: refreshes before access token expires (15m expiry)
+  useEffect(() => {
+    if (!token) return;
+    try {
+      const parts = token.split('.');
+      if (parts.length >= 2) {
+        const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = JSON.parse(
+          decodeURIComponent(
+            atob(payloadBase64)
+              .split('')
+              .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+              .join('')
+          )
+        );
+        if (decoded.exp) {
+          const expMs = decoded.exp * 1000;
+          const now = Date.now();
+          // Proactively refresh 60 seconds before expiration (min 15 seconds)
+          const delay = Math.max(expMs - now - 60000, 15000);
+          const timer = setTimeout(() => {
+            refreshSession();
+          }, delay);
+          return () => clearTimeout(timer);
+        }
+      }
+    } catch {
+      // Fallback: 10 minutes
+      const timer = setTimeout(() => {
+        refreshSession();
+      }, 10 * 60 * 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [token, refreshSession]);
+
+  // Unified authenticated fetch with automatic retry on 401
+  const authFetch = useCallback(
+    async (url: string, options: RequestInit = {}): Promise<Response> => {
+      const reqOptions: RequestInit = { ...options };
+      const headers = new Headers(reqOptions.headers || {});
+      if (latestTokenRef.current) {
+        headers.set('Authorization', `Bearer ${latestTokenRef.current}`);
+      }
+      reqOptions.headers = headers;
+      reqOptions.credentials = reqOptions.credentials || 'include';
+
+      let response = await fetch(url, reqOptions);
+
+      // If token expired right at call time, refresh and retry once transparently
+      if (response.status === 401) {
+        const refreshed = await refreshSession();
+        if (refreshed && latestTokenRef.current) {
+          const retryHeaders = new Headers(options.headers || {});
+          retryHeaders.set('Authorization', `Bearer ${latestTokenRef.current}`);
+          reqOptions.headers = retryHeaders;
+          response = await fetch(url, reqOptions);
+        }
+      }
+
+      return response;
+    },
+    [refreshSession]
+  );
 
   // Validate or silently re-authenticate session on mount
   useEffect(() => {
@@ -253,6 +325,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         logoutAll,
         refreshSession,
+        authFetch,
         switchRoleQuick,
         setUserProfile: setUser,
         setSession,

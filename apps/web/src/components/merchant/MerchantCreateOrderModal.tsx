@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Product, OrderData } from './types';
 import { API_BASE } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 import { ModalPortal } from '../common/ModalPortal';
 import { useScrollLock } from '../../hooks/useScrollLock';
 
@@ -47,6 +48,7 @@ export const MerchantCreateOrderModal: React.FC<MerchantCreateOrderModalProps> =
   token,
   onOrderCreated,
 }) => {
+  const { authFetch } = useAuth();
   useScrollLock(isOpen, { onEscape: onClose });
 
   // Customer details state
@@ -175,11 +177,10 @@ export const MerchantCreateOrderModal: React.FC<MerchantCreateOrderModalProps> =
     setErrorMessage(null);
 
     try {
-      const res = await fetch(`${API_BASE}/merchants/my-store/orders`, {
+      const res = await authFetch(`${API_BASE}/merchants/my-store/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           customer: {

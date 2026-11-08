@@ -28,7 +28,7 @@ import { IntegrationsModal } from '../../components/IntegrationsModal';
 import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 export const MerchantWorkspace: React.FC = () => {
-  const { token, user, logout, refreshSession } = useAuth();
+  const { token, user, logout, authFetch } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const mainScrollRef = useRef<HTMLElement>(null);
@@ -144,22 +144,14 @@ export const MerchantWorkspace: React.FC = () => {
 
   // Fetch real data from central backend
   const fetchMerchantData = useCallback(async (silent = false) => {
-    if (!token) return;
+    if (!token || (user && user.role !== 'MERCHANT' && user.role !== 'ADMIN')) return;
     if (!silent) setIsLoading(true);
 
     try {
       // 1. Fetch store profile
-      let activeToken = token;
-      let storeRes = await fetch(`${API_BASE}/merchants/my-store`, {
-        headers: { Authorization: `Bearer ${activeToken}` },
-      });
+      const storeRes = await authFetch(`${API_BASE}/merchants/my-store`);
 
-      if (storeRes.status === 401) {
-        const refreshed = await refreshSession();
-        if (!refreshed) {
-          logout();
-          return;
-        }
+      if (storeRes.status === 401 || storeRes.status === 403) {
         return;
       }
 
@@ -169,25 +161,21 @@ export const MerchantWorkspace: React.FC = () => {
       }
 
       // 2. Fetch catalog products
-      const catRes = await fetch(`${API_BASE}/catalog`);
+      const catRes = await authFetch(`${API_BASE}/catalog`);
       if (catRes.ok) {
         const catData = await catRes.json();
         setProducts(catData.data || []);
       }
 
       // 3. Fetch real orders
-      const orderRes = await fetch(`${API_BASE}/orders`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const orderRes = await authFetch(`${API_BASE}/orders`);
       if (orderRes.ok) {
         const orderData = await orderRes.json();
         setOrders(orderData.data || []);
       }
 
       // 4. Fetch staff list
-      const staffRes = await fetch(`${API_BASE}/merchants/staff`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const staffRes = await authFetch(`${API_BASE}/merchants/staff`);
       if (staffRes.ok) {
         const sData = await staffRes.json();
         const list = Array.isArray(sData.data)
@@ -199,9 +187,7 @@ export const MerchantWorkspace: React.FC = () => {
       }
 
       // 5. Fetch store aggregated analytics
-      const analyticsRes = await fetch(`${API_BASE}/merchants/my-store/analytics`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const analyticsRes = await authFetch(`${API_BASE}/merchants/my-store/analytics`);
       if (analyticsRes.ok) {
         const aData = await analyticsRes.json();
         setStoreAnalytics(aData.data);
@@ -215,7 +201,7 @@ export const MerchantWorkspace: React.FC = () => {
         setIsLoading(false);
       }
     }
-  }, [token]);
+  }, [token, user, authFetch]);
 
   useEffect(() => {
     fetchMerchantData();
@@ -223,28 +209,27 @@ export const MerchantWorkspace: React.FC = () => {
 
   // Proactive live synchronization polling (every 10s)
   useEffect(() => {
-    if (!token) return;
+    if (!token || (user && user.role !== 'MERCHANT' && user.role !== 'ADMIN')) return;
     const pollInterval = setInterval(() => {
       fetchMerchantData(true);
     }, 10000);
     return () => clearInterval(pollInterval);
-  }, [token, fetchMerchantData]);
+  }, [token, user, fetchMerchantData]);
 
   // Handle Explicit Order Acceptance
   const handleAcceptOrder = async (orderId: string) => {
     if (!token) return;
     setIsAdvancingOrder(true);
     try {
-      const res = await fetch(`${API_BASE}/orders/${orderId}/accept`, {
+      const res = await authFetch(`${API_BASE}/orders/${orderId}/accept`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
         const updated = data.data;
         setOrders((prev) => prev.map((o) => (o._id === orderId ? updated : o)));
         showBanner('success', `Order #${updated.orderNumber || orderId} accepted for fulfillment`);
-        fetchMerchantData();
+        fetchMerchantData(true);
       } else {
         const err = await res.json();
         showBanner('error', err.error?.message || 'Could not accept order');
@@ -261,11 +246,10 @@ export const MerchantWorkspace: React.FC = () => {
     if (!token) return;
     setIsAdvancingOrder(true);
     try {
-      const res = await fetch(`${API_BASE}/orders/${orderId}/reject`, {
+      const res = await authFetch(`${API_BASE}/orders/${orderId}/reject`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ reason: reason || 'Merchant declined order' }),
       });
@@ -274,7 +258,7 @@ export const MerchantWorkspace: React.FC = () => {
         const updated = data.data;
         setOrders((prev) => prev.map((o) => (o._id === orderId ? updated : o)));
         showBanner('success', `Order #${updated.orderNumber || orderId} rejected and stock released`);
-        fetchMerchantData();
+        fetchMerchantData(true);
       } else {
         const err = await res.json();
         showBanner('error', err.error?.message || 'Could not reject order');
@@ -292,21 +276,9 @@ export const MerchantWorkspace: React.FC = () => {
     setIsAdvancingOrder(true);
 
     try {
-      let res = await fetch(`${API_BASE}/orders/${orderId}/advance-status`, {
+      const res = await authFetch(`${API_BASE}/orders/${orderId}/advance-status`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (res.status === 401) {
-        const refreshed = await refreshSession();
-        if (refreshed) {
-          res = await fetch(`${API_BASE}/orders/${orderId}/advance-status`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-          });
-        }
-      }
 
       if (res.ok) {
         const data = await res.json();
@@ -337,11 +309,10 @@ export const MerchantWorkspace: React.FC = () => {
         : `${API_BASE}/merchants/my-store/products`;
       const method = isEdit ? 'PATCH' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
@@ -351,7 +322,7 @@ export const MerchantWorkspace: React.FC = () => {
         showBanner('success', `Product "${data.data.name}" ${isEdit ? 'updated' : 'added'} successfully`);
         setIsAddProductOpen(false);
         setProductToEdit(null);
-        fetchMerchantData();
+        fetchMerchantData(true);
       } else {
         showBanner('error', data.error?.message || 'Failed to save product');
       }
@@ -366,11 +337,10 @@ export const MerchantWorkspace: React.FC = () => {
   const handleAdjustStock = async (productId: string, delta: number) => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/merchants/my-store/products/${productId}/stock`, {
+      const res = await authFetch(`${API_BASE}/merchants/my-store/products/${productId}/stock`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ adjustment: delta, reason: 'Merchant stock adjustment' }),
       });
@@ -393,9 +363,8 @@ export const MerchantWorkspace: React.FC = () => {
   const handleArchiveProduct = async (productId: string, productName: string) => {
     if (!token || !window.confirm(`Archive "${productName}" from your active store catalogue?`)) return;
     try {
-      const res = await fetch(`${API_BASE}/merchants/my-store/products/${productId}`, {
+      const res = await authFetch(`${API_BASE}/merchants/my-store/products/${productId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {
@@ -416,11 +385,10 @@ export const MerchantWorkspace: React.FC = () => {
     setIsSavingProfile(true);
 
     try {
-      const res = await fetch(`${API_BASE}/merchants/my-store`, {
+      const res = await authFetch(`${API_BASE}/merchants/my-store`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(updates),
       });
@@ -452,11 +420,10 @@ export const MerchantWorkspace: React.FC = () => {
     setIsInvitingStaff(true);
 
     try {
-      const res = await fetch(`${API_BASE}/merchants/staff/invite`, {
+      const res = await authFetch(`${API_BASE}/merchants/staff/invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ name, email, permissions, role }),
       });
@@ -464,7 +431,7 @@ export const MerchantWorkspace: React.FC = () => {
       const data = await res.json();
       if (res.ok) {
         showBanner('success', `Invitation generated for ${email}`);
-        fetchMerchantData();
+        fetchMerchantData(true);
         return {
           token: data.data.token,
           link: data.data.inviteLink,
@@ -486,9 +453,8 @@ export const MerchantWorkspace: React.FC = () => {
   const handleRevokeStaff = async (staffUserId: string) => {
     if (!token || !window.confirm('Revoke store access for this employee?')) return;
     try {
-      const res = await fetch(`${API_BASE}/merchants/staff/${staffUserId}`, {
+      const res = await authFetch(`${API_BASE}/merchants/staff/${staffUserId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {
@@ -510,11 +476,10 @@ export const MerchantWorkspace: React.FC = () => {
     if (!token) return;
     setIsSavingDelivery(true);
     try {
-      const res = await fetch(`${API_BASE}/merchants/my-store`, {
+      const res = await authFetch(`${API_BASE}/merchants/my-store`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ deliverySettings }),
       });
