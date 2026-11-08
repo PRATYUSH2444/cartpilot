@@ -222,9 +222,9 @@ export class OrderService {
       CONFIRMED: 'ACCEPTED',
       ACCEPTED: 'PREPARING',
       PREPARING: 'PACKED',
-      PACKING: 'OUT_FOR_DELIVERY',
-      PACKED: 'OUT_FOR_DELIVERY',
-      READY_FOR_HANDOVER: 'OUT_FOR_DELIVERY',
+      PACKING: 'PACKED',
+      PACKED: 'DISPATCHED',
+      READY_FOR_HANDOVER: 'DISPATCHED',
       OUT_FOR_DELIVERY: 'DELIVERED',
       DISPATCHED: 'DELIVERED',
     };
@@ -232,7 +232,7 @@ export class OrderService {
     const nextStatus = validTransitions[order.status];
     if (!nextStatus) {
       throw new BadRequestError(
-        `Cannot advance fulfillment from status "${order.status}". Valid prior states: CONFIRMED, PACKING, OUT_FOR_DELIVERY.`
+        `Cannot advance fulfillment from status "${order.status}". Valid transitions are: CONFIRMED -> ACCEPTED -> PREPARING -> PACKED -> DISPATCHED -> DELIVERED.`
       );
     }
 

@@ -74,10 +74,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setToken(data.data.accessToken);
         setUser(profile);
         setIsSessionExpired(false);
+        try { localStorage.setItem('cartpilot_has_session', 'true'); } catch {}
+        try { localStorage.setItem('cartpilot_has_session', 'true'); } catch {}
         return true;
       } else {
         setToken(null);
         setUser(null);
+        try { localStorage.removeItem('cartpilot_has_session'); } catch {}
         return false;
       }
     } catch {
@@ -90,7 +93,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Validate or silently re-authenticate session on mount
   useEffect(() => {
     const initAuth = async () => {
-      await refreshSession();
+      let hasSession = false;
+      try {
+        hasSession = localStorage.getItem('cartpilot_has_session') === 'true';
+      } catch {}
+
+      if (hasSession) {
+        await refreshSession();
+      }
       setIsLoading(false);
     };
     initAuth();
@@ -189,6 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(null);
       setUser(null);
       setIsSessionExpired(false);
+      try { localStorage.removeItem('cartpilot_has_session'); } catch {}
     }
   };
 

@@ -28,7 +28,7 @@ import { IntegrationsModal } from '../../components/IntegrationsModal';
 import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 export const MerchantWorkspace: React.FC = () => {
-  const { token, user, logout } = useAuth();
+  const { token, user, logout, refreshSession } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const mainScrollRef = useRef<HTMLElement>(null);
@@ -149,9 +149,20 @@ export const MerchantWorkspace: React.FC = () => {
 
     try {
       // 1. Fetch store profile
-      const storeRes = await fetch(`${API_BASE}/merchants/my-store`, {
-        headers: { Authorization: `Bearer ${token}` },
+      let activeToken = token;
+      let storeRes = await fetch(`${API_BASE}/merchants/my-store`, {
+        headers: { Authorization: `Bearer ${activeToken}` },
       });
+
+      if (storeRes.status === 401) {
+        const refreshed = await refreshSession();
+        if (!refreshed) {
+          logout();
+          return;
+        }
+        return;
+      }
+
       if (storeRes.ok) {
         const storeData = await storeRes.json();
         setStore(storeData.data);
@@ -281,16 +292,28 @@ export const MerchantWorkspace: React.FC = () => {
     setIsAdvancingOrder(true);
 
     try {
-      const res = await fetch(`${API_BASE}/orders/${orderId}/advance-status`, {
+      let res = await fetch(`${API_BASE}/orders/${orderId}/advance-status`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (res.status === 401) {
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          res = await fetch(`${API_BASE}/orders/${orderId}/advance-status`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+      }
 
       if (res.ok) {
         const data = await res.json();
         const updatedOrder = data.data;
         setOrders((prev) => prev.map((o) => (o._id === orderId ? updatedOrder : o)));
         showBanner('success', `Order #${updatedOrder.orderNumber || orderId} advanced to ${updatedOrder.status}`);
+        fetchMerchantData(true);
       } else {
         const err = await res.json();
         showBanner('error', err.error?.message || 'Could not advance order fulfillment status');
