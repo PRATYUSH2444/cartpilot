@@ -27,9 +27,25 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDevShortcuts, setShowDevShortcuts] = useState(true);
 
-  const { login } = useAuth();
+  const { login, user, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // If already authenticated, redirect straight to user's authorized workspace or saved redirect
+  React.useEffect(() => {
+    if (!authLoading && isAuthenticated && user) {
+      let targetPath = '';
+      try {
+        targetPath = sessionStorage.getItem('cartpilot_redirect') || '';
+        sessionStorage.removeItem('cartpilot_redirect');
+      } catch {}
+
+      if (!targetPath || targetPath === '/login') {
+        targetPath = user.role === 'MERCHANT' ? '/merchant' : user.role === 'ADMIN' ? '/admin' : '/shopper';
+      }
+      navigate(targetPath, { replace: true });
+    }
+  }, [authLoading, isAuthenticated, user, navigate]);
 
   const handleLogin = async (
     e?: React.FormEvent,
@@ -47,8 +63,15 @@ export const LoginPage: React.FC = () => {
     setIsLoading(false);
 
     if (result.success && result.role) {
+      let destination = '';
+      try {
+        destination = sessionStorage.getItem('cartpilot_redirect') || '';
+        sessionStorage.removeItem('cartpilot_redirect');
+      } catch {}
+
       const locationState = location.state as { from?: { pathname?: string } } | null;
-      const fromPath = locationState?.from?.pathname;
+      const fromPath = destination || locationState?.from?.pathname;
+
       if (fromPath && fromPath !== '/login') {
         navigate(fromPath, { replace: true });
         return;

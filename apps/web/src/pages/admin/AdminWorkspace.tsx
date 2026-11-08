@@ -67,7 +67,7 @@ interface AdminMerchantData {
 }
 
 export const AdminWorkspace: React.FC = () => {
-  const { token } = useAuth();
+  const { token, authFetch } = useAuth();
   const [isDark, setIsDark] = useState<boolean>(() => {
     return document.documentElement.classList.contains('dark') || true;
   });
@@ -120,34 +120,28 @@ export const AdminWorkspace: React.FC = () => {
 
     try {
       // 1. Fetch audit events
-      const auditRes = await fetch(`${API_BASE}/audit/events?limit=25`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const auditRes = await authFetch(`${API_BASE}/audit/events?limit=25`);
       if (auditRes.ok) {
         const aData = await auditRes.json();
         setAuditEvents(aData.data?.events || []);
       }
 
       // 2. Fetch pending approvals
-      const appRes = await fetch(`${API_BASE}/approvals/pending`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const appRes = await authFetch(`${API_BASE}/approvals/pending`);
       if (appRes.ok) {
         const apData = await appRes.json();
         setPendingApprovals(apData.data ? [apData.data] : []);
       }
 
       // 3. System health check
-      const healthRes = await fetch(`${API_BASE}/health`);
+      const healthRes = await authFetch(`${API_BASE}/health`);
       if (healthRes.ok) {
         const hData = await healthRes.json();
         setSystemHealth(hData.data);
       }
 
       // 4. Fetch merchants for governance
-      const merchRes = await fetch(`${API_BASE}/merchants/admin/all`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const merchRes = await authFetch(`${API_BASE}/merchants/admin/all`);
       if (merchRes.ok) {
         const mData = await merchRes.json();
         setMerchantsList(mData.data || []);
@@ -157,7 +151,7 @@ export const AdminWorkspace: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [token, authFetch]);
 
   const fetchIntegrations = useCallback(async () => {
     if (!token) return;

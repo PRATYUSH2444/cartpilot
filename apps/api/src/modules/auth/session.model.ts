@@ -9,6 +9,8 @@ export interface ISession extends Document {
   ipAddress: string;
   deviceInfo: string;
   isRevoked: boolean;
+  rotatedAt?: Date;
+  rotatedToSessionId?: mongoose.Types.ObjectId;
   expiresAt: Date;
   lastUsedAt: Date;
   createdAt: Date;
@@ -50,6 +52,15 @@ const SessionSchema = new Schema<ISession>(
       default: false,
       required: true,
       index: true,
+    },
+    rotatedAt: {
+      type: Date,
+      default: null,
+    },
+    rotatedToSessionId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Session',
+      default: null,
     },
     expiresAt: {
       type: Date,

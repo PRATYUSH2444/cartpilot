@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, ArrowLeft, LogOut } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, LogOut, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth, UserRole } from '../../context/AuthContext';
+import { DEMO_CREDENTIALS } from '../../config/demo-credentials';
 
 interface AccessDeniedPageProps {
   userRole: UserRole;
@@ -9,8 +10,9 @@ interface AccessDeniedPageProps {
 }
 
 export const AccessDeniedPage: React.FC<AccessDeniedPageProps> = ({ userRole, allowedRoles }) => {
-  const { logout } = useAuth();
+  const { logout, switchRoleQuick } = useAuth();
   const navigate = useNavigate();
+  const [isSwitching, setIsSwitching] = useState<boolean>(false);
 
   const getAuthorizedPath = (role: UserRole) => {
     switch (role) {
@@ -23,6 +25,27 @@ export const AccessDeniedPage: React.FC<AccessDeniedPageProps> = ({ userRole, al
       default:
         return '/login';
     }
+  };
+
+  const targetRole = allowedRoles[0];
+  const canQuickSwitch = Boolean(targetRole && DEMO_CREDENTIALS && DEMO_CREDENTIALS[targetRole]);
+
+  const handleQuickSwitch = async () => {
+    if (!targetRole) return;
+    setIsSwitching(true);
+    try {
+      const ok = await switchRoleQuick(targetRole);
+      if (ok) {
+        navigate(getAuthorizedPath(targetRole), { replace: true });
+      }
+    } finally {
+      setIsSwitching(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await logout();
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -51,6 +74,26 @@ export const AccessDeniedPage: React.FC<AccessDeniedPageProps> = ({ userRole, al
         </p>
 
         <div className="space-y-3">
+          {canQuickSwitch && (
+            <button
+              onClick={handleQuickSwitch}
+              disabled={isSwitching}
+              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-500 active:scale-[0.99] transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isSwitching ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Switching Account...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In as {targetRole.charAt(0) + targetRole.slice(1).toLowerCase()}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          )}
+
           <button
             onClick={() => navigate(getAuthorizedPath(userRole), { replace: true })}
             className="w-full py-2.5 px-4 rounded-xl bg-acc text-white font-semibold text-xs hover:bg-blue-600 active:scale-[0.99] transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2"
@@ -60,7 +103,7 @@ export const AccessDeniedPage: React.FC<AccessDeniedPageProps> = ({ userRole, al
           </button>
 
           <button
-            onClick={logout}
+            onClick={handleSignOut}
             className="w-full py-2 px-4 rounded-xl border border-brd bg-paper hover:bg-card text-xs font-semibold text-mut hover:text-ink transition-colors flex items-center justify-center gap-2"
           >
             <LogOut className="w-3.5 h-3.5" />

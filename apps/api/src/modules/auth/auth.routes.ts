@@ -11,6 +11,7 @@ import {
   forceChangePassword,
   createAdmin,
   getMe,
+  getPermissions,
   forgotPassword,
   resetPassword,
   sendPhoneOtp,
@@ -47,6 +48,7 @@ authRouter.post('/phone/verify-otp', authRateLimiter, authenticateOptional, veri
 authRouter.post('/logout', authenticateOptional, logout);
 authRouter.post('/logout-all', authenticate, logoutAll);
 authRouter.get('/me', authenticate, getMe);
+authRouter.get('/permissions', authenticate, getPermissions);
 authRouter.get('/sessions', authenticate, getSessions);
 authRouter.delete('/sessions/:sessionId', authenticate, revokeSession);
 authRouter.post('/change-password', authenticate, validate(changePasswordSchema), changePassword);

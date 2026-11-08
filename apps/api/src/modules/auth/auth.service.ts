@@ -399,9 +399,81 @@ export class AuthService {
       throw new UnauthorizedError('Invalid or revoked refresh session');
     }
 
-    // --- TOKEN REUSE DETECTION ---
-    // If a revoked session is presented, an attacker is attempting to replay a previously rotated token.
+    // --- TOKEN REUSE DETECTION WITH CONCURRENCY GRACE WINDOW ---
+    // If a revoked session is presented, verify whether it falls within the 30-second rotation grace window.
+    // This allows legitimate concurrent requests (e.g. React StrictMode double-mount, multi-tab navigation)
+    // to safely receive valid tokens without destructive false-positive session revocation.
     if (session.isRevoked) {
+      const ROTATION_GRACE_WINDOW_MS = 30000;
+      const isWithinGraceWindow =
+        session.rotatedAt &&
+        Date.now() - new Date(session.rotatedAt).getTime() < ROTATION_GRACE_WINDOW_MS;
+
+      if (isWithinGraceWindow && session.rotatedToSessionId) {
+        const activeSession = await SessionModel.findOne({
+          _id: session.rotatedToSessionId,
+          isRevoked: false,
+        });
+
+        if (activeSession && activeSession.expiresAt > new Date()) {
+          const user = await UserModel.findById(session.userId);
+          if (user && user.isActive && !user.isSuspended && user.tokenVersion === decoded.tokenVersion) {
+            let merchantId: string | undefined;
+            let isStaff = false;
+            let staffPermissions: MerchantPermission[] = [];
+            if (user.role === 'MERCHANT') {
+              const mapping = await MerchantUserModel.findOne({ userId: user._id });
+              if (mapping) {
+                merchantId = mapping.merchantId.toString();
+                isStaff = mapping.role === 'STAFF';
+                staffPermissions = mapping.permissions || [];
+              }
+            }
+
+            const accessToken = jwt.sign(
+              {
+                userId: user._id.toString(),
+                email: user.email,
+                role: user.role,
+                tokenVersion: user.tokenVersion,
+                merchantId,
+                isStaff,
+                staffPermissions,
+              },
+              env.JWT_ACCESS_SECRET,
+              { expiresIn: '15m' }
+            );
+
+            const { expiresInStr } = this.getRefreshExpiry(user.role);
+            const activeRefreshToken = jwt.sign(
+              {
+                userId: user._id.toString(),
+                familyId: activeSession.familyId,
+                sessionId: activeSession._id.toString(),
+                tokenVersion: user.tokenVersion,
+              },
+              env.JWT_REFRESH_SECRET,
+              { expiresIn: expiresInStr }
+            );
+
+            return {
+              user: {
+                id: user._id.toString(),
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                merchantId,
+                isStaff,
+                staffPermissions,
+                mustChangePassword: user.mustChangePassword,
+              },
+              accessToken,
+              refreshToken: activeRefreshToken,
+            };
+          }
+        }
+      }
+
       logger.warn(
         { userId: session.userId, familyId: session.familyId },
         '🚨 REFRESH TOKEN REUSE DETECTED: Revoking all sessions in token family'
@@ -460,12 +532,8 @@ export class AuthService {
       }
     }
 
-    // 1. Mark current session as rotated (revoked)
-    session.isRevoked = true;
-    await session.save();
-
-    // 2. Issue rotated session in the SAME family
-    const { accessToken, refreshToken: newRefreshToken } = await this.createSessionTokens(
+    // 1. Issue rotated session in the SAME family
+    const { accessToken, refreshToken: newRefreshToken, session: newSession } = await this.createSessionTokens(
       user,
       context,
       session.familyId,
@@ -473,6 +541,12 @@ export class AuthService {
       isStaff,
       staffPermissions
     );
+
+    // 2. Mark current session as rotated with timestamp and link to new session
+    session.isRevoked = true;
+    session.rotatedAt = new Date();
+    session.rotatedToSessionId = newSession._id;
+    await session.save();
 
     return {
       user: {

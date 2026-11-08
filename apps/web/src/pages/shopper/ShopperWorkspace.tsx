@@ -43,7 +43,7 @@ interface ServerChatMessage {
 }
 
 export const ShopperWorkspace: React.FC = () => {
-  const { token, user, logout, refreshSession } = useAuth();
+  const { token, user, logout, authFetch } = useAuth();
 
   const [isDark, setIsDark] = useState<boolean>(() =>
     document.documentElement.classList.contains('dark')
@@ -143,11 +143,9 @@ export const ShopperWorkspace: React.FC = () => {
 
   const currentLamp = deriveLampState();
 
-  const evaluatePolicy = useCallback(async (authToken: string) => {
+  const evaluatePolicy = useCallback(async (_tokenOverride?: string) => {
     try {
-      const res = await fetch(`${API_BASE}/policy/evaluate`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
+      const res = await authFetch(`${API_BASE}/policy/evaluate`);
       if (res.ok) {
         const data = await res.json();
         setPolicyEval(data.data);
@@ -155,7 +153,7 @@ export const ShopperWorkspace: React.FC = () => {
     } catch (err) {
       console.warn('Policy evaluation failed:', err);
     }
-  }, []);
+  }, [authFetch]);
 
   // Initial load
   useEffect(() => {
@@ -163,19 +161,11 @@ export const ShopperWorkspace: React.FC = () => {
       if (!token) return;
       try {
         const [cartRes, mandateRes, orderRes, catalogRes] = await Promise.all([
-          fetch(`${API_BASE}/cart`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API_BASE}/mandate`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API_BASE}/orders`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API_BASE}/catalog?limit=50`),
+          authFetch(`${API_BASE}/cart`),
+          authFetch(`${API_BASE}/mandate`),
+          authFetch(`${API_BASE}/orders`),
+          authFetch(`${API_BASE}/catalog?limit=50`),
         ]);
-
-        if (cartRes.status === 401 || mandateRes.status === 401 || orderRes.status === 401) {
-          const refreshed = await refreshSession();
-          if (!refreshed) {
-            logout();
-          }
-          return;
-        }
 
         if (cartRes.ok) {
           const d = await cartRes.json();
@@ -198,13 +188,11 @@ export const ShopperWorkspace: React.FC = () => {
           setProducts(d.data || []);
         }
 
-        await evaluatePolicy(token);
+        await evaluatePolicy();
 
         // Fetch addresses
         try {
-          const addrRes = await fetch(`${API_BASE}/addresses`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const addrRes = await authFetch(`${API_BASE}/addresses`);
           if (addrRes.ok) {
             const addrData = await addrRes.json();
             const addrs: UserAddress[] = addrData.data || [];

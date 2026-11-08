@@ -21,11 +21,18 @@ function setRefreshCookie(res: Response, token: string, role?: UserRole): void {
     secure: env.isProduction,
     sameSite: env.isProduction ? 'strict' : 'lax',
     maxAge: durationMs,
-    path: '/api/v1/auth',
+    path: '/',
   });
 }
 
 function clearRefreshCookie(res: Response): void {
+  res.clearCookie(REFRESH_COOKIE_NAME, {
+    httpOnly: true,
+    secure: env.isProduction,
+    sameSite: env.isProduction ? 'strict' : 'lax',
+    path: '/',
+  });
+  // Also clear legacy subpath cookie if present
   res.clearCookie(REFRESH_COOKIE_NAME, {
     httpOnly: true,
     secure: env.isProduction,
@@ -352,6 +359,30 @@ export async function verifyPhoneOtp(
     res.status(200).json({
       success: true,
       data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getPermissions(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED' } });
+      return;
+    }
+    res.status(200).json({
+      success: true,
+      data: {
+        role: req.user.role,
+        permissions: req.user.staffPermissions || [],
+        merchantId: req.user.merchantId,
+        isStaff: req.user.isStaff || false,
+      },
     });
   } catch (error) {
     next(error);

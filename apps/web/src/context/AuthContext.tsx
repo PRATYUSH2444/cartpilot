@@ -1,8 +1,16 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { DEMO_CREDENTIALS } from '../config/demo-credentials';
 import { API_BASE } from '../config/api';
 
 export type UserRole = 'CUSTOMER' | 'MERCHANT' | 'ADMIN';
+
+export type AuthStatus =
+  | 'INITIALIZING'
+  | 'AUTHENTICATED'
+  | 'UNAUTHENTICATED'
+  | 'REFRESHING'
+  | 'SESSION_EXPIRED'
+  | 'ERROR';
 
 export interface UserProfile {
   id: string;
@@ -15,10 +23,12 @@ export interface UserProfile {
   mustChangePassword?: boolean;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: UserProfile | null;
   token: string | null;
+  authStatus: AuthStatus;
   isLoading: boolean;
+  isAuthenticated: boolean;
   isSessionExpired: boolean;
   dismissSessionExpired: () => void;
   login: (
@@ -43,60 +53,123 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Pure in-memory token state — NO access or refresh tokens stored in localStorage (XSS-safe)
+  // Pure in-memory token state — XSS-safe (no access tokens in localStorage)
   const [user, setUser] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>('INITIALIZING');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSessionExpired, setIsSessionExpired] = useState<boolean>(false);
-  const latestTokenRef = React.useRef<string | null>(token);
+
+  // Synchronization refs
+  const latestTokenRef = useRef<string | null>(token);
+  const activeRefreshPromiseRef = useRef<Promise<boolean> | null>(null);
+  const authChannelRef = useRef<BroadcastChannel | null>(null);
 
   useEffect(() => {
     latestTokenRef.current = token;
   }, [token]);
 
-  // Silent session refresh via httpOnly, secure cookie on app startup
+  // Derived convenience boolean
+  const isAuthenticated = Boolean(user && token && (authStatus === 'AUTHENTICATED' || authStatus === 'REFRESHING'));
+
+  // Single-flight atomic session refresh with mutex & cookie support
   const refreshSession = useCallback(async (): Promise<boolean> => {
-    try {
-      const res = await fetch(`${API_BASE}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({}),
-      });
+    // If a refresh is already in-flight, reuse it (prevents concurrent race conditions)
+    if (activeRefreshPromiseRef.current) {
+      return activeRefreshPromiseRef.current;
+    }
 
-      if (res.ok) {
-        const data = await res.json();
-        const profile: UserProfile = {
-          id: data.data.user.id || data.data.user.userId,
-          email: data.data.user.email,
-          name: data.data.user.name,
-          role: data.data.user.role,
-          merchantId: data.data.user.merchantId,
-          isStaff: data.data.user.isStaff,
-          staffPermissions: data.data.user.staffPermissions,
-          mustChangePassword: data.data.user.mustChangePassword,
-        };
+    const refreshPromise = (async (): Promise<boolean> => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({}),
+        });
 
-        latestTokenRef.current = data.data.accessToken;
-        setToken(data.data.accessToken);
-        setUser(profile);
-        setIsSessionExpired(false);
-        try { localStorage.setItem('cartpilot_has_session', 'true'); } catch {}
-        return true;
-      } else {
+        if (res.ok) {
+          const data = await res.json();
+          const profile: UserProfile = {
+            id: data.data.user.id || data.data.user.userId,
+            email: data.data.user.email,
+            name: data.data.user.name,
+            role: data.data.user.role,
+            merchantId: data.data.user.merchantId,
+            isStaff: data.data.user.isStaff,
+            staffPermissions: data.data.user.staffPermissions,
+            mustChangePassword: data.data.user.mustChangePassword,
+          };
+
+          latestTokenRef.current = data.data.accessToken;
+          setToken(data.data.accessToken);
+          setUser(profile);
+          setAuthStatus('AUTHENTICATED');
+          setIsSessionExpired(false);
+
+          try {
+            localStorage.setItem('cartpilot_has_session', 'true');
+            localStorage.setItem('cartpilot_user_role', profile.role);
+          } catch {}
+
+          return true;
+        } else {
+          latestTokenRef.current = null;
+          setToken(null);
+          setUser(null);
+          setAuthStatus('UNAUTHENTICATED');
+          try {
+            localStorage.removeItem('cartpilot_has_session');
+            localStorage.removeItem('cartpilot_user_role');
+          } catch {}
+          return false;
+        }
+      } catch {
         latestTokenRef.current = null;
         setToken(null);
         setUser(null);
-        try { localStorage.removeItem('cartpilot_has_session'); } catch {}
+        setAuthStatus('UNAUTHENTICATED');
         return false;
+      } finally {
+        activeRefreshPromiseRef.current = null;
       }
-    } catch {
-      latestTokenRef.current = null;
-      setToken(null);
-      setUser(null);
-      return false;
-    }
+    })();
+
+    activeRefreshPromiseRef.current = refreshPromise;
+    return refreshPromise;
   }, []);
+
+  // BroadcastChannel multi-tab synchronization
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    try {
+      const channel = new BroadcastChannel('cartpilot_auth_sync');
+      authChannelRef.current = channel;
+
+      channel.onmessage = (event) => {
+        if (!event.data) return;
+        const { type } = event.data;
+        if (type === 'AUTH_LOGOUT') {
+          latestTokenRef.current = null;
+          setToken(null);
+          setUser(null);
+          setAuthStatus('UNAUTHENTICATED');
+          try {
+            localStorage.removeItem('cartpilot_has_session');
+            localStorage.removeItem('cartpilot_user_role');
+          } catch {}
+        } else if (type === 'AUTH_LOGIN' || type === 'AUTH_REFRESH') {
+          refreshSession();
+        }
+      };
+
+      return () => {
+        channel.close();
+      };
+    } catch {
+      // BroadcastChannel optional fallback
+    }
+  }, [refreshSession]);
 
   // Proactive automated token refresh timer: refreshes before access token expires (15m expiry)
   useEffect(() => {
@@ -133,7 +206,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [token, refreshSession]);
 
-  // Unified authenticated fetch with automatic retry on 401
+  // Silent session restoration on application startup / refresh
+  useEffect(() => {
+    let isMounted = true;
+    const initAuth = async () => {
+      try {
+        setAuthStatus('INITIALIZING');
+        setIsLoading(true);
+        const restored = await refreshSession();
+        if (!restored && isMounted) {
+          setAuthStatus('UNAUTHENTICATED');
+        }
+      } catch {
+        if (isMounted) setAuthStatus('UNAUTHENTICATED');
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    initAuth();
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshSession]);
+
+  // Unified authenticated fetch with automatic 401 retry
   const authFetch = useCallback(
     async (url: string, options: RequestInit = {}): Promise<Response> => {
       const reqOptions: RequestInit = { ...options };
@@ -162,22 +258,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [refreshSession]
   );
 
-  // Validate or silently re-authenticate session on mount
-  useEffect(() => {
-    const initAuth = async () => {
-      let hasSession = false;
-      try {
-        hasSession = localStorage.getItem('cartpilot_has_session') === 'true';
-      } catch {}
-
-      if (hasSession) {
-        await refreshSession();
-      }
-      setIsLoading(false);
-    };
-    initAuth();
-  }, [refreshSession]);
-
   const login = async (email: string, password: string) => {
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
@@ -201,9 +281,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           mustChangePassword: data.data.user.mustChangePassword,
         };
 
+        latestTokenRef.current = accessToken;
         setToken(accessToken);
         setUser(profile);
+        setAuthStatus('AUTHENTICATED');
         setIsSessionExpired(false);
+
+        try {
+          localStorage.setItem('cartpilot_has_session', 'true');
+          localStorage.setItem('cartpilot_user_role', profile.role);
+          authChannelRef.current?.postMessage({
+            type: 'AUTH_LOGIN',
+            role: profile.role,
+            user: profile,
+          });
+        } catch {}
 
         return {
           success: true,
@@ -240,9 +332,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: data.data.user.role,
         };
 
+        latestTokenRef.current = accessToken;
         setToken(accessToken);
         setUser(profile);
+        setAuthStatus('AUTHENTICATED');
         setIsSessionExpired(false);
+
+        try {
+          localStorage.setItem('cartpilot_has_session', 'true');
+          localStorage.setItem('cartpilot_user_role', profile.role);
+          authChannelRef.current?.postMessage({
+            type: 'AUTH_LOGIN',
+            role: profile.role,
+            user: profile,
+          });
+        } catch {}
 
         return { success: true, role: profile.role };
       } else {
@@ -258,38 +362,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      if (token) {
+      if (latestTokenRef.current) {
         await fetch(`${API_BASE}/auth/logout`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${latestTokenRef.current}` },
           credentials: 'include',
         });
       }
     } catch {
       // Ignored during client teardown
     } finally {
+      latestTokenRef.current = null;
       setToken(null);
       setUser(null);
+      setAuthStatus('UNAUTHENTICATED');
       setIsSessionExpired(false);
-      try { localStorage.removeItem('cartpilot_has_session'); } catch {}
+      try {
+        localStorage.removeItem('cartpilot_has_session');
+        localStorage.removeItem('cartpilot_user_role');
+        sessionStorage.removeItem('cartpilot_redirect');
+        authChannelRef.current?.postMessage({ type: 'AUTH_LOGOUT' });
+      } catch {}
     }
   };
 
   const logoutAll = async () => {
     try {
-      if (token) {
+      if (latestTokenRef.current) {
         await fetch(`${API_BASE}/auth/logout-all`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${latestTokenRef.current}` },
           credentials: 'include',
         });
       }
     } catch {
       // Ignored
     } finally {
+      latestTokenRef.current = null;
       setToken(null);
       setUser(null);
+      setAuthStatus('UNAUTHENTICATED');
       setIsSessionExpired(false);
+      try {
+        localStorage.removeItem('cartpilot_has_session');
+        localStorage.removeItem('cartpilot_user_role');
+        sessionStorage.removeItem('cartpilot_redirect');
+        authChannelRef.current?.postMessage({ type: 'AUTH_LOGOUT' });
+      } catch {}
     }
   };
 
@@ -307,9 +426,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const setSession = (accessToken: string, userProfile: UserProfile) => {
+    latestTokenRef.current = accessToken;
     setToken(accessToken);
     setUser(userProfile);
+    setAuthStatus('AUTHENTICATED');
     setIsSessionExpired(false);
+    try {
+      localStorage.setItem('cartpilot_has_session', 'true');
+      localStorage.setItem('cartpilot_user_role', userProfile.role);
+    } catch {}
   };
 
   return (
@@ -317,7 +442,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         token,
+        authStatus,
         isLoading,
+        isAuthenticated,
         isSessionExpired,
         dismissSessionExpired,
         login,
