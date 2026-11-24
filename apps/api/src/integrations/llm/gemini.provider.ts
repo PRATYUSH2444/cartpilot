@@ -15,7 +15,7 @@ export class GeminiProvider implements LLMProvider {
 
   constructor(apiKey?: string, model?: string) {
     this.apiKey = apiKey || env.GEMINI_API_KEY || '';
-    this.model = model || env.GEMINI_MODEL || 'gemini-3.8-flash';
+    this.model = model || env.GEMINI_MODEL || 'gemini-flash-latest';
   }
 
   public async generateResponse(
@@ -107,9 +107,14 @@ export class GeminiProvider implements LLMProvider {
         tools: functionDeclarations.length > 0 ? [{ functionDeclarations }] : undefined,
       };
 
-      const candidateModels = [this.model, 'gemini-2.0-flash', 'gemini-1.5-flash'].filter(
-        (m, idx, arr) => arr.indexOf(m) === idx
-      );
+      const candidateModels = [
+        'gemini-flash-latest',
+        this.model,
+        'gemini-3.8-flash',
+        'gemini-3.7-flash',
+        'gemini-3.5-flash',
+        'gemini-flash-lite-latest',
+      ].filter((m, idx, arr) => Boolean(m) && arr.indexOf(m) === idx);
 
       let response: Response | null = null;
       let lastErrorText = '';
@@ -121,7 +126,7 @@ export class GeminiProvider implements LLMProvider {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody),
-            signal: AbortSignal.timeout(8000),
+            signal: AbortSignal.timeout(12000),
           });
 
           if (res.ok) {
