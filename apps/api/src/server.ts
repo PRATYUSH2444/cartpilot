@@ -10,7 +10,10 @@ async function bootstrap(): Promise<void> {
   // Attempt database connection
   try {
     await connectDatabase();
-    if (env.NODE_ENV !== 'production') {
+    const { ProductModel } = await import('./modules/catalog/product.model.js');
+    const productCount = await ProductModel.countDocuments();
+    if (productCount === 0 || env.NODE_ENV !== 'production') {
+      logger.info({ productCount }, '🌱 Empty database detected: seeding initial products and accounts...');
       const { runSeed } = await import('./database/seed.js');
       await runSeed(false);
     }
