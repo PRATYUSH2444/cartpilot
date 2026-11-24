@@ -479,6 +479,7 @@ export const ShopperWorkspace: React.FC = () => {
     setIsLoading(true);
     try {
       for (const item of items) {
+        if (!item.productId) continue;
         await fetch(`${API_BASE}/cart/items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

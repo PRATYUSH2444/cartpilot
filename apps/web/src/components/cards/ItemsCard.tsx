@@ -1,53 +1,80 @@
 import React, { useState } from 'react';
-import { Plus, Minus, Check, Sparkles, ShoppingCart, Layers } from 'lucide-react';
-import { Product, PopulatedCartItem } from '../../types';
+import { Plus, Minus, Check, ShoppingCart, Sparkles, CheckCircle2 } from 'lucide-react';
+import { PopulatedCartItem } from '../../types';
 
-export interface ProposedItem {
-  productId: string;
-  name: string;
-  category?: string;
-  packageSize: number;
-  packageUnit: string;
+export interface IngredientItemModel {
+  ingredientName: string;
+  requiredAmount?: number;
+  requiredUnit?: string;
+  status: 'AVAILABLE' | 'PARTIALLY_AVAILABLE' | 'OUT_OF_STOCK' | 'NOT_LISTED' | 'ALTERNATIVE_AVAILABLE';
+  isMandatory?: boolean;
+  matchedProduct?: {
+    id: string;
+    name: string;
+    category?: string;
+    packageSize: number;
+    packageUnit: string;
+    unitPricePaise: number;
+    formattedUnitPrice: string;
+    availableStock: number;
+  };
+  // Fallbacks for direct catalog proposals
+  productId?: string;
+  name?: string;
+  packageSize?: number;
+  packageUnit?: string;
   unitPricePaise?: number;
   pricePaise?: number;
+  formattedUnitPrice?: string;
+  availableStock?: number;
   quantity?: number;
   packCount?: number;
   subtotalPaise?: number;
-  availableStock?: number;
-  imageUrl?: string;
-  isOptional?: boolean;
-  explain?: {
-    matchMethod: 'DIRECT_EXACT' | 'DIRECT_ALIAS' | 'NORMALIZED_KEYWORD' | 'CATEGORY_FALLBACK';
-    confidenceScore: number;
-    matchedAlias?: string;
-    leftoverPackGrams?: number;
-    leftoverPackCostPaise?: number;
-    ingredientSource: 'FRESH_GREENS' | 'DESI_KIRANA' | 'STANDARD_CATALOG';
-    fssaiCertified: boolean;
+  formattedSubtotal?: string;
+  surplusNote?: string;
+  alternativeSuggestion?: {
+    name: string;
+    reason: string;
+    availableProduct?: {
+      id: string;
+      name: string;
+      packageSize: number;
+      packageUnit: string;
+      pricePaise: number;
+      formattedPrice: string;
+      availableStock: number;
+    };
   };
 }
 
-export interface ProposalPayload {
+export interface DynamicRecipeCardPayload {
   status?: string;
   dishName?: string;
   servings?: number;
-  rationale?: string;
-  items?: ProposedItem[];
+  cuisine?: string;
+  instructions?: string[];
+  totalIngredientsCount?: number;
+  availableCount?: number;
+  missingCount?: number;
+  items?: IngredientItemModel[];
+  availableItems?: IngredientItemModel[];
+  missingItems?: IngredientItemModel[];
   pricing?: {
+    subtotalPaise?: number;
+    gstPaise?: number;
+    deliveryFeePaise?: number;
     totalPaise?: number;
-    formatted?: { total?: string };
-  };
-  budgetComparison?: {
-    budgetPaise: number;
-    subtotalPaise: number;
-    totalPaise: number;
-    isOverBudget: boolean;
-    differencePaise: number;
+    formatted?: {
+      subtotal?: string;
+      gst?: string;
+      delivery?: string;
+      total?: string;
+    };
   };
 }
 
 interface ItemsCardProps {
-  cardData: Product[] | ProposalPayload;
+  cardData: DynamicRecipeCardPayload | any;
   onAddToCart: (productId: string, quantity: number) => void;
   onAddAllToCart?: (items: Array<{ productId: string; quantity: number }>) => void;
   cartItems?: PopulatedCartItem[];
@@ -61,237 +88,234 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
   onAddAllToCart,
   cartItems,
   onUpdateQuantity,
-  title = 'Catalog Recommendations',
+  title = 'Recipe & Ingredient Intelligence',
 }) => {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [isAddingAll, setIsAddingAll] = useState(false);
-  const [expandedExplainId, setExpandedExplainId] = useState<string | null>(null);
 
-  // Normalize input data
-  const isProposal =
-    !Array.isArray(cardData) && cardData && Array.isArray((cardData as ProposalPayload).items);
+  // Normalize card payload
+  const payload: DynamicRecipeCardPayload = cardData || {};
+  const rawItems: IngredientItemModel[] =
+    payload.items || (Array.isArray(cardData) ? cardData : []);
 
-  const proposal = isProposal ? (cardData as ProposalPayload) : null;
-  const itemsList: ProposedItem[] = isProposal
-    ? proposal!.items || []
-    : (cardData as Product[]).map((p) => ({
-        productId: p._id,
-        name: p.name,
-        category: p.category,
-        packageSize: p.packageSize,
-        packageUnit: p.packageUnit,
-        unitPricePaise: p.pricePaise,
-        pricePaise: p.pricePaise,
-        quantity: 1,
-        packCount: 1,
-        availableStock: p.availableStock,
-        imageUrl: p.imageUrl,
-      }));
+  // Standardize items into a unified text-first model
+  const standardizedItems = rawItems.map((item) => {
+    const isDirectCatalog = Boolean(item.productId && !item.matchedProduct);
+    const prodId = item.matchedProduct?.id || item.productId || '';
+    const prodName = item.matchedProduct?.name || item.name || item.ingredientName;
+    const pkgSize = item.matchedProduct?.packageSize || item.packageSize || 100;
+    const pkgUnit = item.matchedProduct?.packageUnit || item.packageUnit || 'G';
+    const unitPrice =
+      (item.matchedProduct?.unitPricePaise || item.unitPricePaise || item.pricePaise || 0) / 100;
+    const reqAmount = item.requiredAmount || pkgSize;
+    const reqUnit = item.requiredUnit || pkgUnit;
+    const packs = item.packCount || item.quantity || 1;
+    const stock = item.matchedProduct?.availableStock ?? item.availableStock ?? 0;
+    const status = item.status || (isDirectCatalog ? 'AVAILABLE' : 'AVAILABLE');
 
-  const handleAdd = async (productId: string, qty = 1) => {
+    return {
+      raw: item,
+      productId: prodId,
+      ingredientName: item.ingredientName || prodName,
+      productName: prodName,
+      requiredAmount: reqAmount,
+      requiredUnit: reqUnit,
+      packageSize: pkgSize,
+      packageUnit: pkgUnit,
+      unitPrice,
+      packCount: packs,
+      availableStock: stock,
+      status,
+      surplusNote: item.surplusNote,
+      alternativeSuggestion: item.alternativeSuggestion,
+      isAvailable: status === 'AVAILABLE' && Boolean(prodId),
+    };
+  });
+
+  const availableItemsList = standardizedItems.filter((i) => i.isAvailable);
+  const missingItemsList = standardizedItems.filter((i) => !i.isAvailable);
+
+  const totalPaise = payload.pricing?.totalPaise ||
+    availableItemsList.reduce((acc, i) => acc + Math.round(i.unitPrice * 100) * i.packCount, 0);
+  const formattedTotal = payload.pricing?.formatted?.total || `₹${(totalPaise / 100).toFixed(2)}`;
+
+  const handleAddSingle = async (productId: string, qty: number) => {
+    if (!productId) return;
     setAddingId(productId);
     await onAddToCart(productId, qty);
-    setTimeout(() => setAddingId(null), 600);
+    setTimeout(() => setAddingId(null), 500);
   };
 
   const handleAddAll = async () => {
-    if (!onAddAllToCart || itemsList.length === 0) return;
+    if (!onAddAllToCart || availableItemsList.length === 0) return;
     setIsAddingAll(true);
-    const toAdd = itemsList.map((i) => ({
+    const itemsToAdd = availableItemsList.map((i) => ({
       productId: i.productId,
-      quantity: i.quantity || i.packCount || 1,
+      quantity: i.packCount,
     }));
-    await onAddAllToCart(toAdd);
-    setTimeout(() => setIsAddingAll(false), 800);
+    await onAddAllToCart(itemsToAdd);
+    setTimeout(() => setIsAddingAll(false), 700);
   };
 
-  const cardTitle = proposal?.dishName
-    ? `Curated Ingredients for ${proposal.dishName} (${proposal.servings || 4} Servings)`
-    : proposal?.rationale || title;
-
-  const budgetComp = proposal?.budgetComparison;
-
   return (
-    <div className="w-full rounded-2xl border border-brd bg-card/85 dark:bg-card-top/85 backdrop-blur-xl p-5 shadow-lg shadow-black/5 transition-all">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3 mb-4 border-b border-brd">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-sm font-display font-bold text-ink tracking-tight">{cardTitle}</h3>
-            {proposal?.pricing?.formatted?.total && (
-              <p className="text-xs text-mut font-mono">
-                Estimated Total:{' '}
-                <span className="font-bold text-ink">{proposal.pricing.formatted.total}</span>
-              </p>
+    <div className="w-full rounded-2xl border border-[--line] bg-[--surface] p-4.5 sm:p-5 shadow-sm space-y-4 font-sans text-[--ink]">
+      {/* ── Card Header ──────────────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[--line]">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <Sparkles className="w-3.5 h-3.5" />
+            </span>
+            <h3 className="text-sm font-bold tracking-tight">
+              {payload.dishName ? `${payload.dishName}` : title}
+            </h3>
+            {payload.servings && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[--surface-2] text-[--mut]">
+                {payload.servings} servings
+              </span>
+            )}
+            {payload.cuisine && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium">
+                {payload.cuisine}
+              </span>
             )}
           </div>
+          <p className="text-xs text-[--mut] font-mono pl-7">
+            Estimated Total: <span className="font-bold text-[--ink]">{formattedTotal}</span>
+          </p>
         </div>
+
+        {/* Status Counts Pill */}
         <div className="flex items-center gap-2">
-          {budgetComp && (
-            <span
-              className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${
-                budgetComp.isOverBudget
-                  ? 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-                  : 'bg-blue-500/10 text-acc border-blue-500/20'
-              }`}
-            >
-              {budgetComp.isOverBudget
-                ? `+₹${(budgetComp.differencePaise / 100).toFixed(0)} Over Budget`
-                : `₹${(budgetComp.totalPaise / 100).toFixed(0)} of ₹${(budgetComp.budgetPaise / 100).toFixed(0)} Budget`}
+          <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/20 flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" />
+            {availableItemsList.length} of {standardizedItems.length} available
+          </span>
+          {missingItemsList.length > 0 && (
+            <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold border border-amber-500/20">
+              {missingItemsList.length} missing
             </span>
           )}
-          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
-            100% Certified Vegetarian
-          </span>
         </div>
       </div>
 
-      {/* Products list */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {itemsList.map((item) => {
-          const unitPrice = (item.unitPricePaise || item.pricePaise || 0) / 100;
-          const qty = item.quantity || item.packCount || 1;
-          const itemSubtotal = (unitPrice * qty).toFixed(2);
+      {/* ── Text-First Ingredient Grid (No Image Thumbnails) ────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        {standardizedItems.map((item, idx) => {
+          const cartItem = cartItems?.find((c) => c.productId === item.productId);
+          const inCartQty = cartItem?.quantity ?? 0;
           const isAdding = addingId === item.productId;
-          const isExplainOpen = expandedExplainId === item.productId;
-          const explain = item.explain;
 
           return (
             <div
-              key={item.productId}
-              className="p-3.5 rounded-xl border border-brd bg-paper/50 hover:border-acc/40 transition-all flex flex-col justify-between group"
+              key={item.productId || `item-${idx}`}
+              className={`p-3 rounded-xl border transition-all text-xs flex flex-col justify-between ${
+                item.isAvailable
+                  ? 'bg-[--surface-2]/60 border-[--line] hover:border-[--brand]/40'
+                  : 'bg-amber-500/5 border-amber-500/20'
+              }`}
             >
-              <div>
+              {/* Ingredient & Product Meta */}
+              <div className="space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="w-3.5 h-3.5 border border-emerald-600 flex items-center justify-center p-[2px]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                      </span>
-                      {item.category && (
-                        <span className="text-[10px] font-mono text-mut uppercase">
-                          {item.category}
-                        </span>
-                      )}
-                      {item.isOptional && (
-                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-600 font-semibold">
-                          Optional
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="text-xs font-bold text-ink font-display line-clamp-1 group-hover:text-acc transition-colors">
-                      {item.name}
-                    </h4>
+                  <div className="space-y-0.5">
+                    <span className="text-[11px] font-semibold text-[--ink] block leading-snug">
+                      {item.ingredientName}
+                    </span>
+                    <span className="text-[10px] text-[--mut] font-mono block">
+                      Required: {item.requiredAmount} {item.requiredUnit}
+                    </span>
                   </div>
-                  <span className="text-xs font-mono font-bold text-ink">
-                    ₹{unitPrice.toFixed(2)}
-                  </span>
-                </div>
 
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-brd/40 text-ink">
-                    Pack: {item.packageSize} {item.packageUnit}
-                  </span>
-                  {qty > 1 && (
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-acc font-semibold">
-                      Required: {qty} packs (₹{itemSubtotal})
+                  {/* Status Badge */}
+                  {item.status === 'AVAILABLE' && (
+                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                      Available
                     </span>
                   )}
-                  {explain && (
-                    <button
-                      onClick={() => setExpandedExplainId(isExplainOpen ? null : item.productId)}
-                      className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 font-medium transition-all"
-                    >
-                      {isExplainOpen ? 'Hide reasoning' : 'Why this item?'}
-                    </button>
+                  {item.status === 'OUT_OF_STOCK' && (
+                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 font-bold border border-rose-500/20">
+                      Out of stock
+                    </span>
+                  )}
+                  {item.status === 'NOT_LISTED' && (
+                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-bold border border-amber-500/20">
+                      Missing from store
+                    </span>
+                  )}
+                  {item.status === 'ALTERNATIVE_AVAILABLE' && (
+                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 font-bold border border-purple-500/20">
+                      Alternative offered
+                    </span>
                   )}
                 </div>
 
-                {/* Novelty N8: Explain reasoning drawer */}
-                {explain && isExplainOpen && (
-                  <div className="mt-2.5 p-2 rounded-lg bg-purple-500/5 border border-purple-500/20 text-[10px] space-y-1 font-mono text-mut">
-                    <div className="flex justify-between text-ink font-semibold">
-                      <span>Match Method:</span>
-                      <span className="text-purple-600 dark:text-purple-400">
-                        {(explain.matchMethod || (explain as any).method || 'DIRECT_EXACT')} ({Math.round(((explain.confidenceScore ?? (explain as any).confidence ?? 1) * 100))}% match)
+                {/* Available Product Details */}
+                {item.isAvailable ? (
+                  <div className="pt-1.5 border-t border-[--line]/60 grid grid-cols-2 gap-1 text-[10px] font-mono text-[--mut]">
+                    <div>
+                      <span className="text-[--ink] font-medium block truncate" title={item.productName}>
+                        {item.productName}
                       </span>
+                      <span>Pack: {item.packageSize} {item.packageUnit}</span>
                     </div>
-                    {explain.matchedAlias && (
-                      <div className="flex justify-between">
-                        <span>Matched Alias:</span>
-                        <span className="text-ink">"{explain.matchedAlias}"</span>
-                      </div>
-                    )}
-                    {explain.leftoverPackGrams !== undefined && explain.leftoverPackGrams > 0 && (
-                      <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                        <span>Leftover Saved:</span>
-                        <span>
-                          {(explain.leftoverPackGrams ?? (explain as any).leftoverAmount)}g (₹
-                          {((explain.leftoverPackCostPaise || 0) / 100).toFixed(0)} saved)
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span>Source / Safety:</span>
-                      <span className="text-ink">
-                        {(explain.ingredientSource ? explain.ingredientSource.replace(/_/g, ' ') : ((explain as any).sourceStamp || 'Fresh Greens Organics'))} ·{' '}
-                        {explain.fssaiCertified ? 'FSSAI Certified' : 'Verified'}
+                    <div className="text-right">
+                      <span className="font-bold text-[--ink] text-[11px] block">
+                        ₹{item.unitPrice.toFixed(2)}
                       </span>
+                      <span>Stock: {item.availableStock}</span>
                     </div>
+                  </div>
+                ) : (
+                  <div className="pt-1.5 border-t border-amber-500/20 text-[10px] text-amber-700 dark:text-amber-300 font-mono space-y-0.5">
+                    <p>Not sold in current store catalogue.</p>
+                    {item.alternativeSuggestion && (
+                      <p className="text-purple-600 dark:text-purple-400">
+                        💡 Suggestion: {item.alternativeSuggestion.name} ({item.alternativeSuggestion.reason})
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* Action footer */}
-              <div className="mt-3 pt-2.5 border-t border-brd/60 flex items-center justify-between">
-                <span className="text-[10px] text-mut font-mono">
-                  Stock: {item.availableStock !== undefined ? item.availableStock : 'In Stock'}
-                </span>
+              {/* Action Bar (Quantity + Add to Cart) */}
+              {item.isAvailable && (
+                <div className="mt-3 pt-2 border-t border-[--line]/60 flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-[--mut]">
+                    Pack count: {item.packCount}
+                  </span>
 
-                {(() => {
-                  const cartItem = cartItems?.find((c) => c.productId === item.productId);
-                  const currentCartQty = cartItem?.quantity ?? 0;
-
-                  if (currentCartQty > 0 && onUpdateQuantity) {
-                    return (
-                      <div className="flex items-center border border-brd rounded-lg bg-card overflow-hidden">
-                        <button
-                          onClick={() => onUpdateQuantity(item.productId, currentCartQty - 1)}
-                          className="p-1 px-2 hover:bg-paper text-mut hover:text-ink transition-colors cursor-pointer"
-                          aria-label="Decrease quantity"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="w-6 text-center font-mono text-xs font-bold text-ink">
-                          {currentCartQty}
-                        </span>
-                        <button
-                          onClick={() => onUpdateQuantity(item.productId, currentCartQty + 1)}
-                          disabled={item.availableStock !== undefined && currentCartQty >= item.availableStock}
-                          className="p-1 px-2 hover:bg-paper text-mut hover:text-ink transition-colors disabled:opacity-40 cursor-pointer"
-                          aria-label="Increase quantity"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                    );
-                  }
-
-                  return (
+                  {inCartQty > 0 && onUpdateQuantity ? (
+                    <div className="flex items-center border border-[--line] rounded-lg bg-[--surface] overflow-hidden">
+                      <button
+                        onClick={() => onUpdateQuantity(item.productId, inCartQty - 1)}
+                        className="px-2 py-0.5 hover:bg-[--surface-2] text-[--mut] hover:text-[--ink] transition-colors cursor-pointer"
+                        aria-label="Decrease quantity"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="w-6 text-center font-mono text-xs font-bold text-[--ink]">
+                        {inCartQty}
+                      </span>
+                      <button
+                        onClick={() => onUpdateQuantity(item.productId, inCartQty + 1)}
+                        disabled={inCartQty >= item.availableStock}
+                        className="px-2 py-0.5 hover:bg-[--surface-2] text-[--mut] hover:text-[--ink] transition-colors disabled:opacity-40 cursor-pointer"
+                        aria-label="Increase quantity"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      onClick={() => handleAdd(item.productId, qty)}
-                      disabled={
-                        isAdding || (item.availableStock !== undefined && item.availableStock < qty)
-                      }
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      onClick={() => handleAddSingle(item.productId, item.packCount)}
+                      disabled={isAdding || item.availableStock < item.packCount}
+                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
                         isAdding
                           ? 'bg-emerald-600 text-white'
-                          : item.availableStock !== undefined && item.availableStock < qty
-                            ? 'bg-brd text-mut cursor-not-allowed'
-                            : 'bg-card text-ink border border-brd hover:border-acc hover:text-acc shadow-sm'
+                          : item.availableStock < item.packCount
+                            ? 'bg-[--line] text-[--mut] cursor-not-allowed'
+                            : 'bg-[--surface] border border-[--line] hover:border-[--brand] hover:text-[--brand] text-[--ink] shadow-xs'
                       }`}
                     >
                       {isAdding ? (
@@ -300,37 +324,42 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
                         </>
                       ) : (
                         <>
-                          <Plus className="w-3 h-3" /> Add {qty > 1 ? `${qty} packs` : ''}
+                          <Plus className="w-3 h-3" /> Add to Cart
                         </>
                       )}
                     </button>
-                  );
-                })()}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
-      {/* Add All To Cart Banner if proposal has multiple items */}
-      {isProposal && onAddAllToCart && itemsList.length > 1 && (
-        <div className="mt-4 pt-3 border-t border-brd flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-xs text-mut">
-            <Layers className="w-4 h-4 text-acc" />
-            <span>{itemsList.length} items suggested by AI recipe engine</span>
+      {/* ── Summary & One-Click "Add All Available" ─────────────────────────── */}
+      {availableItemsList.length > 0 && onAddAllToCart && (
+        <div className="mt-3 pt-3 border-t border-[--line] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[--surface-2]/40 -mx-4.5 -mb-4.5 p-3.5 rounded-b-2xl">
+          <div className="text-xs text-[--mut] font-mono space-y-0.5">
+            <p>
+              Subtotal: <span className="font-bold text-[--ink]">{formattedTotal}</span> (5% GST included)
+            </p>
+            <p className="text-[10px]">
+              {availableItemsList.length} items ready to order · 100% Certified Vegetarian
+            </p>
           </div>
+
           <button
             onClick={handleAddAll}
             disabled={isAddingAll}
-            className="px-4 py-2 rounded-xl bg-acc hover:bg-blue-600 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[--brand] hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
           >
             {isAddingAll ? (
               <>
-                <Check className="w-4 h-4" /> Added All to Cart
+                <Check className="w-3.5 h-3.5" /> Added All to Cart
               </>
             ) : (
               <>
-                <ShoppingCart className="w-4 h-4" /> Add All {itemsList.length} Items to Cart
+                <ShoppingCart className="w-3.5 h-3.5" /> Add All {availableItemsList.length} Available Items
               </>
             )}
           </button>

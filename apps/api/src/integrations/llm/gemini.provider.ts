@@ -56,13 +56,18 @@ export class GeminiProvider implements LLMProvider {
         .filter((m) => m.role !== 'system')
         .map((m) => {
           if (m.role === 'tool') {
+            const resp =
+              typeof m.toolResult === 'object' && m.toolResult !== null && !Array.isArray(m.toolResult)
+                ? m.toolResult
+                : { result: m.toolResult };
+
             return {
               role: 'function',
               parts: [
                 {
                   functionResponse: {
                     name: m.toolCalls?.[0]?.name || 'tool_response',
-                    response: m.toolResult || {},
+                    response: resp,
                   },
                 },
               ],
@@ -102,54 +107,52 @@ export class GeminiProvider implements LLMProvider {
         tools: functionDeclarations.length > 0 ? [{ functionDeclarations }] : undefined,
       };
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
-      let response: Response;
-      try {
-        response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-          signal: AbortSignal.timeout(5000),
-        });
-      } catch (err: any) {
-        logger.warn({ model: this.model, err: err?.message }, 'Primary Gemini model call timed out or failed');
-        response = new Response(JSON.stringify({ error: { message: err?.message || 'Timeout' } }), {
-          status: 504,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
+      const candidateModels = [this.model, 'gemini-2.0-flash', 'gemini-1.5-flash'].filter(
+        (m, idx, arr) => arr.indexOf(m) === idx
+      );
 
-      // If the primary model failed, try fast fallback to gemini-2.0-flash
-      if (!response.ok && this.model !== 'gemini-2.0-flash') {
+      let response: Response | null = null;
+      let lastErrorText = '';
+
+      for (const modelCandidate of candidateModels) {
         try {
-          logger.info('Attempting fallback to gemini-2.0-flash...');
-          const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.apiKey}`;
-          const fallbackResponse = await fetch(fallbackUrl, {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelCandidate}:generateContent?key=${this.apiKey}`;
+          const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody),
-            signal: AbortSignal.timeout(4000),
+            signal: AbortSignal.timeout(8000),
           });
-          if (fallbackResponse.ok) {
-            response = fallbackResponse;
+
+          if (res.ok) {
+            response = res;
+            break;
           }
-        } catch (fbErr: any) {
-          logger.warn({ err: fbErr?.message }, 'Gemini fallback model call failed');
+
+          lastErrorText = await res.text().catch(() => '');
+          logger.warn(
+            { model: modelCandidate, status: res.status, error: lastErrorText },
+            'Gemini candidate model returned non-OK status'
+          );
+        } catch (err: any) {
+          logger.warn({ model: modelCandidate, err: err?.message }, 'Gemini model request failed');
         }
       }
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        logger.warn(
-          { status: response.status, errorText },
-          'Gemini API call failed; returning simulated flag for Deterministic Planner fallback'
-        );
+      if (!response || !response.ok) {
+        let parsedMessage = 'Gemini AI service is momentarily busy';
+        try {
+          const errObj = JSON.parse(lastErrorText);
+          parsedMessage = errObj.error?.message || lastErrorText;
+        } catch {
+          if (lastErrorText) parsedMessage = lastErrorText;
+        }
 
-        return {
-          text: '',
-          isSimulated: true,
-          provider: 'gemini',
-        };
+        throw new AppError(
+          'AI_SERVICE_UNAVAILABLE',
+          `Gemini AI service: ${parsedMessage}`,
+          503
+        );
       }
 
       const data = (await response.json()) as any;
