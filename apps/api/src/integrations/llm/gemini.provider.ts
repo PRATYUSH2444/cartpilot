@@ -103,11 +103,28 @@ export class GeminiProvider implements LLMProvider {
       };
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
-      const response = await fetch(url, {
+      let response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
       });
+
+      // If the configured model is deprecated or unavailable, automatically fall back to gemini-1.5-flash
+      if (!response.ok && this.model !== 'gemini-1.5-flash') {
+        logger.warn(
+          { model: this.model, status: response.status },
+          'Configured Gemini model failed; attempting automatic fallback to gemini-1.5-flash...'
+        );
+        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
+        const fallbackResponse = await fetch(fallbackUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+        if (fallbackResponse.ok) {
+          response = fallbackResponse;
+        }
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
