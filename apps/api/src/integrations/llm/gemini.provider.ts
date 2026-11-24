@@ -15,7 +15,7 @@ export class GeminiProvider implements LLMProvider {
 
   constructor(apiKey?: string, model?: string) {
     this.apiKey = apiKey || env.GEMINI_API_KEY || '';
-    this.model = model || env.GEMINI_MODEL || 'gemini-flash-latest';
+    this.model = model || env.GEMINI_MODEL || 'gemini-flash-lite-latest';
   }
 
   public async generateResponse(
@@ -133,14 +133,14 @@ export class GeminiProvider implements LLMProvider {
       };
 
       const candidateModels = [
+        'gemini-flash-lite-latest',
         this.model,
-        'gemini-3.8-flash',
-        'gemini-3.7-flash',
-        'gemini-3.5-flash',
+        'gemini-3.1-flash-lite-preview',
         'gemini-3.1-flash-lite',
-        'gemini-2.5-flash-lite',
+        'gemini-3.5-flash',
+        'gemini-3.7-flash',
+        'gemini-3.8-flash',
         'gemini-flash-latest',
-        'gemini-2.5-pro',
       ].filter((m, idx, arr) => Boolean(m) && arr.indexOf(m) === idx);
 
       let response: Response | null = null;
