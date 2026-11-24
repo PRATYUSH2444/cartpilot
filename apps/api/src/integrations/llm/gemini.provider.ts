@@ -15,7 +15,7 @@ export class GeminiProvider implements LLMProvider {
 
   constructor(apiKey?: string, model?: string) {
     this.apiKey = apiKey || env.GEMINI_API_KEY || '';
-    this.model = model || env.GEMINI_MODEL || 'gemini-1.5-flash';
+    this.model = model || env.GEMINI_MODEL || 'gemini-3.8-flash';
   }
 
   public async generateResponse(
@@ -109,13 +109,17 @@ export class GeminiProvider implements LLMProvider {
         body: JSON.stringify(requestBody),
       });
 
-      // If the configured model is deprecated or unavailable, automatically fall back to gemini-1.5-flash
-      if (!response.ok && this.model !== 'gemini-1.5-flash') {
+      // If the configured model is deprecated or unavailable, try candidate models: gemini-3.8-flash, gemini-2.0-flash, gemini-1.5-flash
+      const candidateModels = ['gemini-3.8-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+      for (const fallbackModel of candidateModels) {
+        if (response.ok) break;
+        if (fallbackModel === this.model) continue;
+
         logger.warn(
-          { model: this.model, status: response.status },
-          'Configured Gemini model failed; attempting automatic fallback to gemini-1.5-flash...'
+          { currentModel: this.model, fallbackModel, status: response.status },
+          'Configured Gemini model failed; attempting fallback...'
         );
-        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
+        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${fallbackModel}:generateContent?key=${this.apiKey}`;
         const fallbackResponse = await fetch(fallbackUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -123,6 +127,7 @@ export class GeminiProvider implements LLMProvider {
         });
         if (fallbackResponse.ok) {
           response = fallbackResponse;
+          break;
         }
       }
 
