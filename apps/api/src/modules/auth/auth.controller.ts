@@ -19,7 +19,7 @@ function setRefreshCookie(res: Response, token: string, role?: UserRole): void {
   res.cookie(REFRESH_COOKIE_NAME, token, {
     httpOnly: true,
     secure: env.isProduction,
-    sameSite: env.isProduction ? 'strict' : 'lax',
+    sameSite: env.isProduction ? 'none' : 'lax',
     maxAge: durationMs,
     path: '/',
   });
@@ -29,14 +29,14 @@ function clearRefreshCookie(res: Response): void {
   res.clearCookie(REFRESH_COOKIE_NAME, {
     httpOnly: true,
     secure: env.isProduction,
-    sameSite: env.isProduction ? 'strict' : 'lax',
+    sameSite: env.isProduction ? 'none' : 'lax',
     path: '/',
   });
   // Also clear legacy subpath cookie if present
   res.clearCookie(REFRESH_COOKIE_NAME, {
     httpOnly: true,
     secure: env.isProduction,
-    sameSite: env.isProduction ? 'strict' : 'lax',
+    sameSite: env.isProduction ? 'none' : 'lax',
     path: '/api/v1/auth',
   });
 }

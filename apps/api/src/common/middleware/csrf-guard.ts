@@ -18,13 +18,21 @@ export function isAllowedOrigin(origin: string): boolean {
 
   const cleanOrigin = origin.trim().replace(/\/+$/, '');
 
-  // 1. Check configured CORS_ORIGIN (supports comma-separated list)
+  // 1. Check configured CORS_ORIGIN (supports comma-separated list or wildcard)
   const configuredOrigins = env.CORS_ORIGIN.split(',')
     .map((o) => o.trim().replace(/\/+$/, ''))
     .filter(Boolean);
-  if (configuredOrigins.includes(cleanOrigin)) {
+  if (configuredOrigins.includes('*') || configuredOrigins.includes(cleanOrigin)) {
     return true;
   }
+
+  // 2. Automatically allow Vercel domains (*.vercel.app)
+  try {
+    const url = new URL(cleanOrigin);
+    if (url.hostname.endsWith('.vercel.app')) {
+      return true;
+    }
+  } catch {}
 
   // 2. Standard loopback origins
   const standardLocalOrigins = [
