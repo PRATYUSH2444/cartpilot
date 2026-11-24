@@ -266,8 +266,11 @@ export class ChatService {
       await session.save();
     }
 
-    // 3. Fetch past messages for conversational context
-    const previousMessages = await ChatMessageModel.find({ sessionId: session._id })
+    // 3. Fetch past messages for conversational context (excluding current user message to prevent duplicates)
+    const previousMessages = await ChatMessageModel.find({
+      sessionId: session._id,
+      _id: { $ne: userMessage._id },
+    })
       .sort({ createdAt: 1 })
       .limit(20)
       .lean();

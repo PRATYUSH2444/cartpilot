@@ -51,53 +51,78 @@ export class GeminiProvider implements LLMProvider {
         parameters: t.parameters,
       }));
 
-      // 2. Convert conversation history to Gemini contents format
-      const contents = messages
-        .filter((m) => m.role !== 'system')
-        .map((m) => {
-          if (m.role === 'tool') {
-            const resp =
-              typeof m.toolResult === 'object' && m.toolResult !== null && !Array.isArray(m.toolResult)
-                ? m.toolResult
-                : { result: m.toolResult };
+      // 2. Convert conversation history to Gemini contents format with strict alternation & user-first turn
+      const rawContents: Array<{ role: string; parts: any[] }> = [];
 
-            return {
-              role: 'function',
-              parts: [
-                {
-                  functionResponse: {
-                    name: m.toolCalls?.[0]?.name || 'tool_response',
-                    response: resp,
-                  },
+      for (const m of messages) {
+        if (m.role === 'system') continue;
+
+        if (m.role === 'tool') {
+          const resp =
+            typeof m.toolResult === 'object' && m.toolResult !== null && !Array.isArray(m.toolResult)
+              ? m.toolResult
+              : { result: m.toolResult };
+
+          rawContents.push({
+            role: 'function',
+            parts: [
+              {
+                functionResponse: {
+                  name: m.toolCalls?.[0]?.name || 'tool_response',
+                  response: resp,
                 },
-              ],
-            };
-          }
+              },
+            ],
+          });
+          continue;
+        }
 
-          if (m.role === 'assistant') {
-            const parts: any[] = [];
-            if (m.content) parts.push({ text: m.content });
-            if (m.toolCalls && m.toolCalls.length > 0) {
-              for (const tc of m.toolCalls) {
-                parts.push({
-                  functionCall: {
-                    name: tc.name,
-                    args: tc.arguments,
-                  },
-                });
-              }
+        if (m.role === 'assistant') {
+          const parts: any[] = [];
+          if (m.content) parts.push({ text: m.content });
+          if (m.toolCalls && m.toolCalls.length > 0) {
+            for (const tc of m.toolCalls) {
+              parts.push({
+                functionCall: {
+                  name: tc.name,
+                  args: tc.arguments,
+                },
+              });
             }
-            return {
-              role: 'model',
-              parts,
-            };
           }
+          if (parts.length > 0) {
+            rawContents.push({ role: 'model', parts });
+          }
+          continue;
+        }
 
-          return {
+        if (m.content && m.content.trim()) {
+          rawContents.push({
             role: 'user',
             parts: [{ text: m.content }],
-          };
-        });
+          });
+        }
+      }
+
+      // Gemini constraint 1: First turn in contents MUST be 'user'
+      while (rawContents.length > 0 && rawContents[0]?.role !== 'user') {
+        rawContents.shift();
+      }
+
+      if (rawContents.length === 0) {
+        rawContents.push({ role: 'user', parts: [{ text: 'Hello' }] });
+      }
+
+      // Gemini constraint 2: Merge consecutive same-role turns into a single turn
+      const contents: Array<{ role: string; parts: any[] }> = [];
+      for (const item of rawContents) {
+        const last = contents[contents.length - 1];
+        if (last && last.role === item.role) {
+          last.parts.push(...item.parts);
+        } else {
+          contents.push(item);
+        }
+      }
 
       const requestBody = {
         systemInstruction: {
@@ -108,12 +133,14 @@ export class GeminiProvider implements LLMProvider {
       };
 
       const candidateModels = [
-        'gemini-flash-latest',
         this.model,
         'gemini-3.8-flash',
         'gemini-3.7-flash',
         'gemini-3.5-flash',
-        'gemini-flash-lite-latest',
+        'gemini-3.1-flash-lite',
+        'gemini-2.5-flash-lite',
+        'gemini-flash-latest',
+        'gemini-2.5-pro',
       ].filter((m, idx, arr) => Boolean(m) && arr.indexOf(m) === idx);
 
       let response: Response | null = null;
