@@ -134,13 +134,13 @@ export class GeminiProvider implements LLMProvider {
 
       const candidateModels = [
         'gemini-flash-lite-latest',
-        this.model,
+        'gemini-3.1-pro-preview',
+        'gemini-3-flash-preview',
         'gemini-3.1-flash-lite-preview',
-        'gemini-3.1-flash-lite',
+        this.model,
         'gemini-3.5-flash',
         'gemini-3.7-flash',
         'gemini-3.8-flash',
-        'gemini-flash-latest',
       ].filter((m, idx, arr) => Boolean(m) && arr.indexOf(m) === idx);
 
       let response: Response | null = null;

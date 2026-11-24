@@ -22,14 +22,13 @@ healthRouter.get('/health/ai-models', async (_req, res) => {
 
 healthRouter.get('/health/ai-test', async (_req, res) => {
   const models = [
+    'gemini-flash-lite-latest',
+    'gemini-3.1-pro-preview',
+    'gemini-3-flash-preview',
+    'gemini-3.1-flash-lite-preview',
     'gemini-3.8-flash',
     'gemini-3.7-flash',
     'gemini-3.5-flash',
-    'gemini-3.1-flash-lite',
-    'gemini-2.5-flash-lite',
-    'gemini-2.5-flash',
-    'gemini-flash-latest',
-    'gemini-flash-lite-latest',
   ];
   const results: Record<string, any> = {};
   for (const m of models) {
@@ -39,12 +38,31 @@ healthRouter.get('/health/ai-test', async (_req, res) => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Hello' }] }] }),
-          signal: AbortSignal.timeout(6000),
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: 'Plan mushroom chilly' }] }],
+            tools: [
+              {
+                functionDeclarations: [
+                  {
+                    name: 'matchIngredientsToCatalog',
+                    description: 'Match ingredients',
+                    parameters: {
+                      type: 'OBJECT',
+                      properties: {
+                        dishName: { type: 'STRING' },
+                      },
+                      required: ['dishName'],
+                    },
+                  },
+                ],
+              },
+            ],
+          }),
+          signal: AbortSignal.timeout(8000),
         }
       );
       const text = await resp.text();
-      results[m] = { status: resp.status, ok: resp.ok, text: text.substring(0, 150) };
+      results[m] = { status: resp.status, ok: resp.ok, text: text.substring(0, 200) };
     } catch (e: any) {
       results[m] = { error: e.message };
     }
