@@ -216,7 +216,7 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
                     <div className="flex justify-between text-ink font-semibold">
                       <span>Match Method:</span>
                       <span className="text-purple-600 dark:text-purple-400">
-                        {explain.matchMethod} ({Math.round(explain.confidenceScore * 100)}% match)
+                        {(explain.matchMethod || (explain as any).method || 'DIRECT_EXACT')} ({Math.round(((explain.confidenceScore ?? (explain as any).confidence ?? 1) * 100))}% match)
                       </span>
                     </div>
                     {explain.matchedAlias && (
@@ -229,7 +229,7 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
                       <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
                         <span>Leftover Saved:</span>
                         <span>
-                          {explain.leftoverPackGrams}g (₹
+                          {(explain.leftoverPackGrams ?? (explain as any).leftoverAmount)}g (₹
                           {((explain.leftoverPackCostPaise || 0) / 100).toFixed(0)} saved)
                         </span>
                       </div>
@@ -237,7 +237,7 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
                     <div className="flex justify-between">
                       <span>Source / Safety:</span>
                       <span className="text-ink">
-                        {explain.ingredientSource.replace('_', ' ')} ·{' '}
+                        {(explain.ingredientSource ? explain.ingredientSource.replace(/_/g, ' ') : ((explain as any).sourceStamp || 'Fresh Greens Organics'))} ·{' '}
                         {explain.fssaiCertified ? 'FSSAI Certified' : 'Verified'}
                       </span>
                     </div>

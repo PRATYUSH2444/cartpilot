@@ -305,7 +305,7 @@ export const MerchantProductsView: React.FC<ProductsViewProps> = ({
           >
             {categories.map((c) => (
               <option key={c} value={c}>
-                {c === 'ALL' ? 'All Categories' : c.replace('_', ' ')}
+                {c === 'ALL' ? 'All Categories' : c ? c.replace(/_/g, ' ') : ''}
               </option>
             ))}
           </select>
@@ -409,7 +409,7 @@ export const MerchantProductsView: React.FC<ProductsViewProps> = ({
 
                       <td className="py-3 px-3">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                          {p.category.replace('_', ' ')}
+                          {p.category ? p.category.replace(/_/g, ' ') : 'GENERAL'}
                         </span>
                       </td>
 

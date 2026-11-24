@@ -405,7 +405,7 @@ export const MerchantCreateOrderModal: React.FC<MerchantCreateOrderModalProps> =
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                   }`}
                 >
-                  {cat.replace(/_/g, ' ')}
+                  {cat ? cat.replace(/_/g, ' ') : ''}
                 </button>
               ))}
             </div>

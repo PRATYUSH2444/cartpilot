@@ -536,7 +536,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                             : 'bg-card border-brd text-mut hover:text-ink'
                         }`}
                       >
-                        {tag === 'VEGETARIAN' ? '🌱 100% Vegetarian (Mandatory)' : tag.replace('_', ' ')}
+                        {tag === 'VEGETARIAN' ? '🌱 100% Vegetarian (Mandatory)' : tag ? tag.replace(/_/g, ' ') : ''}
                       </button>
                     );
                   })}
