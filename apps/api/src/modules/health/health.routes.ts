@@ -19,3 +19,35 @@ healthRouter.get('/health/ai-models', async (_req, res) => {
     return res.status(500).json({ error: err.message });
   }
 });
+
+healthRouter.get('/health/ai-test', async (_req, res) => {
+  const models = [
+    'gemini-3.8-flash',
+    'gemini-3.7-flash',
+    'gemini-3.5-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash-lite',
+    'gemini-2.5-flash',
+    'gemini-flash-latest',
+    'gemini-flash-lite-latest',
+  ];
+  const results: Record<string, any> = {};
+  for (const m of models) {
+    try {
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${env.GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Hello' }] }] }),
+          signal: AbortSignal.timeout(6000),
+        }
+      );
+      const text = await resp.text();
+      results[m] = { status: resp.status, ok: resp.ok, text: text.substring(0, 150) };
+    } catch (e: any) {
+      results[m] = { error: e.message };
+    }
+  }
+  return res.json(results);
+});
