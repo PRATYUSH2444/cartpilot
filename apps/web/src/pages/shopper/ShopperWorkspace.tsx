@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
   CartData,
@@ -65,6 +65,7 @@ export const ShopperWorkspace: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [composerText, setComposerText] = useState('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const chatAbortControllerRef = useRef<AbortController | null>(null);
   const [activeChatSessionId, setActiveChatSessionId] = useState<string>('');
   const [chatSessions, setChatSessions] = useState<
     { _id: string; title: string; updatedAt?: string }[]
@@ -521,6 +522,12 @@ export const ShopperWorkspace: React.FC = () => {
     const trimmed = text.trim();
     if (!trimmed || !token) return;
 
+    if (chatAbortControllerRef.current) {
+      chatAbortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    chatAbortControllerRef.current = abortController;
+
     const userMsgId = `user-${Date.now()}`;
     setMessages((prev) => [
       ...prev,
@@ -534,6 +541,10 @@ export const ShopperWorkspace: React.FC = () => {
     setComposerText('');
     setIsLoading(true);
 
+    const timeoutId = setTimeout(() => {
+      abortController.abort();
+    }, 20000); // 20-second timeout safeguard to prevent hanging
+
     try {
       let sessionId = activeChatSessionId;
       if (!sessionId) {
@@ -541,6 +552,7 @@ export const ShopperWorkspace: React.FC = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ title: 'Weekly Grocery Shopping' }),
+          signal: abortController.signal,
         });
         if (createRes.ok) {
           const sData = await createRes.json();
@@ -554,6 +566,7 @@ export const ShopperWorkspace: React.FC = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ content: trimmed }),
+          signal: abortController.signal,
         });
 
         if (res.ok) {
@@ -583,13 +596,45 @@ export const ShopperWorkspace: React.FC = () => {
             }
           }
         } else {
-          const errData = await res.json();
-          showBanner('error', errData.error?.message || 'Failed to get agent response');
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData.error?.message || 'The AI assistant is momentarily syncing. Please try again.';
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `agent-err-${Date.now()}`,
+              sender: 'agent',
+              content: `I ran into a temporary delay processing that request. Please ask again or explore our catalog in the **Browse** tab.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            },
+          ]);
+          showBanner('error', errMsg);
         }
       }
-    } catch {
-      showBanner('error', 'Network error connecting to AI agent');
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `agent-aborted-${Date.now()}`,
+            sender: 'agent',
+            content: 'Response generation stopped.',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `agent-err-${Date.now()}`,
+            sender: 'agent',
+            content: 'Network connection interrupted. Please try asking again in a moment!',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+        showBanner('error', 'Network error connecting to AI agent');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };
@@ -726,7 +771,12 @@ export const ShopperWorkspace: React.FC = () => {
               composerText={composerText}
               setComposerText={setComposerText}
               onSendMessage={handleSendMessage}
-              onStopGeneration={() => setIsLoading(false)}
+              onStopGeneration={() => {
+                if (chatAbortControllerRef.current) {
+                  chatAbortControllerRef.current.abort();
+                }
+                setIsLoading(false);
+              }}
               onOpenDrawer={() => setIsConversationDrawerOpen(true)}
               onNewChat={handleNewChat}
               cart={cart}

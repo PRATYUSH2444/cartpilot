@@ -103,55 +103,50 @@ export class GeminiProvider implements LLMProvider {
       };
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
-      let response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-
-      // If the configured model is deprecated, busy, or unavailable, try fallback models with brief backoff
-      const candidateModels = ['gemini-3.8-flash', 'gemini-3.8-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-      for (const fallbackModel of candidateModels) {
-        if (response.ok) break;
-        if (fallbackModel === this.model) continue;
-
-        logger.warn(
-          { currentModel: this.model, fallbackModel, status: response.status },
-          'Configured Gemini model busy or failed; attempting fallback model...'
-        );
-        // Small backoff in case of rate limit/spikes
-        await new Promise((r) => setTimeout(r, 600));
-
-        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${fallbackModel}:generateContent?key=${this.apiKey}`;
-        const fallbackResponse = await fetch(fallbackUrl, {
+      let response: Response;
+      try {
+        response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(5000),
         });
-        if (fallbackResponse.ok) {
-          response = fallbackResponse;
-          break;
+      } catch (err: any) {
+        logger.warn({ model: this.model, err: err?.message }, 'Primary Gemini model call timed out or failed');
+        response = new Response(JSON.stringify({ error: { message: err?.message || 'Timeout' } }), {
+          status: 504,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // If the primary model failed, try fast fallback to gemini-2.0-flash
+      if (!response.ok && this.model !== 'gemini-2.0-flash') {
+        try {
+          logger.info('Attempting fallback to gemini-2.0-flash...');
+          const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.apiKey}`;
+          const fallbackResponse = await fetch(fallbackUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+            signal: AbortSignal.timeout(4000),
+          });
+          if (fallbackResponse.ok) {
+            response = fallbackResponse;
+          }
+        } catch (fbErr: any) {
+          logger.warn({ err: fbErr?.message }, 'Gemini fallback model call failed');
         }
       }
 
       if (!response.ok) {
-        const errorText = await response.text();
-        let parsedError = errorText;
-        try {
-          const errJson = JSON.parse(errorText);
-          parsedError = errJson.error?.message || errorText;
-        } catch {
-          // ignore parse error
-        }
-
-        logger.error(
-          { status: response.status, parsedError },
-          'Gemini API call failed across candidate models'
+        const errorText = await response.text().catch(() => '');
+        logger.warn(
+          { status: response.status, errorText },
+          'Gemini API call failed; returning simulated flag for Deterministic Planner fallback'
         );
 
-        // Graceful user-friendly message rather than a 503 application crash
         return {
-          text: `I apologize, but the AI service is momentarily experiencing a temporary high-traffic demand spike from Google. Please ask me again in just a moment! In the meantime, you can browse all 43 fresh organic items in the **Browse** tab.`,
+          text: '',
           isSimulated: true,
           provider: 'gemini',
         };

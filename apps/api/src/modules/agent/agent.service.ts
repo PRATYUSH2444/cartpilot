@@ -1,6 +1,7 @@
 import { LLMFactory } from '../../integrations/llm/llm-factory.js';
 import { AgentMessage } from '../../integrations/llm/llm-provider.interface.js';
 import { ToolSandbox, ToolExecutionRecord } from './tools/tool-sandbox.js';
+import { DeterministicPlanner } from './deterministic-planner.js';
 import { logger } from '../../common/logging/logger.js';
 
 export interface AgentTurnResult {
@@ -58,92 +59,103 @@ CRITICAL INVARIANTS & SECURITY BOUNDARIES:
     let loopCount = 0;
     const maxLoops = 5;
 
-    while (loopCount < maxLoops) {
-      loopCount++;
+    try {
+      while (loopCount < maxLoops) {
+        loopCount++;
 
-      const llmResponse = await provider.generateResponse(
-        messages,
-        toolDeclarations,
-        this.SYSTEM_PROMPT
-      );
-
-      if (llmResponse.text) {
-        finalContent = llmResponse.text;
-      }
-
-      // If no tool calls requested, we are done
-      if (!llmResponse.toolCalls || llmResponse.toolCalls.length === 0) {
-        break;
-      }
-
-      // Add assistant response with tool calls to conversation
-      messages.push({
-        role: 'assistant',
-        content: llmResponse.text || '',
-        toolCalls: llmResponse.toolCalls,
-      });
-
-      // Execute each tool call within sandboxed boundaries
-      for (const tc of llmResponse.toolCalls) {
-        logger.info(
-          { toolName: tc.name, args: tc.arguments, step: loopCount },
-          'Executing agent tool call'
+        const llmResponse = await provider.generateResponse(
+          messages,
+          toolDeclarations,
+          this.SYSTEM_PROMPT
         );
 
-        const execResult = await ToolSandbox.executeTool(tc.name, tc.arguments, {
-          userId,
-          currentStepCount: recordedToolExecutions.length,
-        });
-
-        recordedToolExecutions.push(execResult.record);
-
-        // Check if tool produced a structured UI card
-        if (tc.name === 'proposeCartItems' && execResult.result) {
-          detectedCardType = 'items';
-          detectedCardData = execResult.result;
-        } else if (tc.name === 'resolveRecipe' && execResult.result?.matchedItems?.length > 0) {
-          detectedCardType = 'items';
-          detectedCardData = {
-            status: 'RESOLVED_RECIPE',
-            dishName: execResult.result.dishName,
-            servings: execResult.result.servings,
-            items: execResult.result.matchedItems,
-            ambiguousItems: execResult.result.ambiguousItems,
-            missingItems: execResult.result.missingItems,
-            pricing: {
-              totalPaise: execResult.result.estimatedTotalPaise,
-              formatted: { total: execResult.result.formattedEstimatedTotal },
-            },
-          };
-        } else if (tc.name === 'getCart' && execResult.result) {
-          detectedCardType = 'cart';
-          detectedCardData = execResult.result;
+        // If provider indicates simulated/fallback mode, delegate to Deterministic Planner
+        if (llmResponse.isSimulated) {
+          logger.info('Provider returned isSimulated; activating Deterministic Shopping Planner');
+          return await DeterministicPlanner.planTurn(userId, userText);
         }
 
-        // Append tool execution output back to LLM context
+        if (llmResponse.text) {
+          finalContent = llmResponse.text;
+        }
+
+        // If no tool calls requested, we are done
+        if (!llmResponse.toolCalls || llmResponse.toolCalls.length === 0) {
+          break;
+        }
+
+        // Add assistant response with tool calls to conversation
         messages.push({
-          role: 'tool',
-          content: execResult.error
-            ? `Error executing ${tc.name}: ${execResult.error}`
-            : JSON.stringify(execResult.result),
-          toolCalls: [tc],
-          toolCallId: tc.id,
-          toolResult: execResult.result,
+          role: 'assistant',
+          content: llmResponse.text || '',
+          toolCalls: llmResponse.toolCalls,
         });
+
+        // Execute each tool call within sandboxed boundaries
+        for (const tc of llmResponse.toolCalls) {
+          logger.info(
+            { toolName: tc.name, args: tc.arguments, step: loopCount },
+            'Executing agent tool call'
+          );
+
+          const execResult = await ToolSandbox.executeTool(tc.name, tc.arguments, {
+            userId,
+            currentStepCount: recordedToolExecutions.length,
+          });
+
+          recordedToolExecutions.push(execResult.record);
+
+          // Check if tool produced a structured UI card
+          if (tc.name === 'proposeCartItems' && execResult.result) {
+            detectedCardType = 'items';
+            detectedCardData = execResult.result;
+          } else if (tc.name === 'resolveRecipe' && execResult.result?.matchedItems?.length > 0) {
+            detectedCardType = 'items';
+            detectedCardData = {
+              status: 'RESOLVED_RECIPE',
+              dishName: execResult.result.dishName,
+              servings: execResult.result.servings,
+              items: execResult.result.matchedItems,
+              ambiguousItems: execResult.result.ambiguousItems,
+              missingItems: execResult.result.missingItems,
+              pricing: {
+                totalPaise: execResult.result.estimatedTotalPaise,
+                formatted: { total: execResult.result.formattedEstimatedTotal },
+              },
+            };
+          } else if (tc.name === 'getCart' && execResult.result) {
+            detectedCardType = 'cart';
+            detectedCardData = execResult.result;
+          }
+
+          // Append tool execution output back to LLM context
+          messages.push({
+            role: 'tool',
+            content: execResult.error
+              ? `Error executing ${tc.name}: ${execResult.error}`
+              : JSON.stringify(execResult.result),
+            toolCalls: [tc],
+            toolCallId: tc.id,
+            toolResult: execResult.result,
+          });
+        }
       }
-    }
 
-    // Fallback message if LLM returned empty string
-    if (!finalContent.trim()) {
-      finalContent =
-        'I have analyzed your request and prepared the grocery proposal. Please review the details above.';
-    }
+      // If LLM returned empty string, fall back to Deterministic Planner
+      if (!finalContent.trim()) {
+        logger.info('LLM produced empty content; falling back to Deterministic Shopping Planner');
+        return await DeterministicPlanner.planTurn(userId, userText);
+      }
 
-    return {
-      content: finalContent,
-      toolCalls: recordedToolExecutions,
-      cardType: detectedCardType,
-      cardData: detectedCardData,
-    };
+      return {
+        content: finalContent,
+        toolCalls: recordedToolExecutions,
+        cardType: detectedCardType,
+        cardData: detectedCardData,
+      };
+    } catch (err: any) {
+      logger.warn({ err: err?.message }, 'Agent LLM turn encountered error; falling back to Deterministic Shopping Planner');
+      return await DeterministicPlanner.planTurn(userId, userText);
+    }
   }
 }
