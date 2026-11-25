@@ -6,6 +6,7 @@ import {
   Minus,
   Star,
   SlidersHorizontal,
+  Heart,
 } from 'lucide-react';
 import { Product, CartData } from '../../types';
 
@@ -16,6 +17,8 @@ interface BrowseScreenProps {
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onSelectProduct: (product: Product) => void;
   initialCategory?: string;
+  favorites?: string[];
+  onToggleFavorite?: (productId: string) => void;
 }
 
 const CATEGORIES = [
@@ -49,6 +52,8 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
   onUpdateQuantity,
   onSelectProduct,
   initialCategory = 'ALL',
+  favorites = [],
+  onToggleFavorite,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('All');
@@ -98,25 +103,26 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
   return (
     <div className="flex-1 overflow-y-auto pb-8 bg-[--bg]">
       {/* ── Top Search & Filter Bar ────────────────────────────────────────── */}
-      <div className="sticky top-0 z-30 bg-[--bg]/95 backdrop-blur-md px-4 pt-3 pb-2 border-b border-[--line]/60 space-y-2.5">
-        <div className="relative">
-          <Search className="w-4 h-4 text-[--mut] absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search products, brands, categories…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-9 py-2.5 rounded-[var(--radius-input)] bg-[--surface] border border-[--line] text-xs text-[--ink] placeholder:text-[--mut] focus:outline-none focus:ring-2 focus:ring-[--brand]/20 focus:border-[--brand]"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[--mut] hover:text-[--ink] p-0.5 cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
+      <div className="sticky top-0 z-30 bg-[--bg]/95 backdrop-blur-md border-b border-[--line]/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-2 space-y-2.5">
+          <div className="relative">
+            <Search className="w-4 h-4 text-[--mut] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search products, brands, categories…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-9 py-2.5 rounded-[var(--radius-input)] bg-[--surface] border border-[--line] text-xs text-[--ink] placeholder:text-[--mut] focus:outline-none focus:ring-2 focus:ring-[--brand]/20 focus:border-[--brand]"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[--mut] hover:text-[--ink] p-0.5 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
 
         {/* Category Circle Icons Row */}
         <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar scroll-smooth">
@@ -142,29 +148,30 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
           })}
         </div>
 
-        {/* Subcategory Pills Row */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-          {currentSubcategories.map((sub) => {
-            const isSubSelected = selectedSubcategory === sub;
-            return (
-              <button
-                key={sub}
-                onClick={() => setSelectedSubcategory(sub)}
-                className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
-                  isSubSelected
-                    ? 'bg-[--brand-soft] text-[--brand] font-bold border border-[--brand]/30'
-                    : 'bg-[--surface-2] text-[--mut] hover:text-[--ink]'
-                }`}
-              >
-                {sub}
-              </button>
-            );
-          })}
+          {/* Subcategory Pills Row */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            {currentSubcategories.map((sub) => {
+              const isSubSelected = selectedSubcategory === sub;
+              return (
+                <button
+                  key={sub}
+                  onClick={() => setSelectedSubcategory(sub)}
+                  className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
+                    isSubSelected
+                      ? 'bg-[--brand-soft] text-[--brand] font-bold border border-[--brand]/30'
+                      : 'bg-[--surface-2] text-[--mut] hover:text-[--ink]'
+                  }`}
+                >
+                  {sub}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* ── Products Grid ─────────────────────────────────────────────────── */}
-      <div className="max-w-[760px] mx-auto px-4 pt-4 space-y-3">
+      {/* ── Products Grid (Responsive Multi-Column) ─────────────────────────── */}
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 space-y-4">
         <div className="flex items-center justify-between text-xs text-[--mut]">
           <span>
             Showing <strong className="text-[--ink]">{filteredProducts.length}</strong> vegetarian
@@ -196,11 +203,12 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
             {filteredProducts.map((prod) => {
               const qty = getCartQuantity(prod._id);
               const priceRupees = (prod.pricePaise / 100).toFixed(0);
               const origPrice = Math.round(Number(priceRupees) * 1.15);
+              const isFav = favorites.includes(prod._id);
 
               return (
                 <div
@@ -209,6 +217,33 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                   className="rounded-[var(--radius-card)] bg-[--surface] border border-[--line] hover:border-[--brand]/40 p-3 flex flex-col justify-between shadow-card transition-all cursor-pointer group"
                 >
                   <div className="space-y-2">
+                    {/* Top row: Pure Veg Badge & Wishlist Heart */}
+                    <div className="flex items-center justify-between">
+                      <div
+                        className="w-4 h-4 rounded-xs border border-emerald-600 bg-white flex items-center justify-center shadow-xs"
+                        title="100% Pure Vegetarian"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onToggleFavorite) onToggleFavorite(prod._id);
+                        }}
+                        className="p-1 rounded-full text-stone-300 hover:text-rose-500 transition-colors"
+                        aria-label="Wishlist"
+                        title={isFav ? 'Remove from wishlist' : 'Add to wishlist'}
+                      >
+                        <Heart
+                          className={`w-4 h-4 ${
+                            isFav ? 'fill-rose-500 text-rose-500' : 'text-stone-300'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
                     {/* Image Area */}
                     <div className="relative aspect-square rounded-xl bg-[--surface-2] overflow-hidden flex items-center justify-center">
                       {prod.imageUrl ? (
@@ -220,14 +255,6 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                       ) : (
                         <span className="text-4xl">🥬</span>
                       )}
-
-                      {/* Pure Veg Green Badge */}
-                      <div
-                        className="absolute top-2 left-2 w-4 h-4 rounded-xs border border-emerald-600 bg-white flex items-center justify-center shadow-xs"
-                        title="100% Pure Vegetarian"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-emerald-600" />
-                      </div>
 
                       {/* Discount Pill */}
                       <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-rose-500 text-white font-mono font-bold text-[9px] shadow-xs">

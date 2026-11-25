@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Check,
   Loader2,
+  Wallet,
 } from 'lucide-react';
 import { CartData, UserAddress, OrderData } from '../../types';
 import { API_BASE } from '../../config/api';
@@ -19,6 +20,8 @@ interface CheckoutModalProps {
   onOpenAddressSelector: () => void;
   onOrderSuccess: (order: OrderData) => void;
   token: string | null;
+  walletBalance?: number;
+  onDeductWallet?: (amountRupees: number) => void;
 }
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
@@ -29,8 +32,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onOpenAddressSelector,
   onOrderSuccess,
   token,
+  walletBalance = 349.0,
+  onDeductWallet,
 }) => {
-  const [selectedMethod, setSelectedMethod] = useState<'RAZORPAY' | 'UPI' | 'COD'>('RAZORPAY');
+  const [selectedMethod, setSelectedMethod] = useState<'RAZORPAY' | 'WALLET' | 'UPI' | 'COD'>('RAZORPAY');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,40 +51,55 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const deliveryRupees = (deliveryFeePaise / 100).toFixed(0);
   const platformFeeRupees = (platformFeePaise / 100).toFixed(0);
   const discountRupees = (discountPaise / 100).toFixed(0);
-  const totalRupees = (totalPaise / 100).toFixed(0);
+  const totalRupees = Math.round(totalPaise / 100);
+
+  const isWalletSufficient = walletBalance >= totalRupees;
 
   const handlePlaceOrder = async () => {
     if (!token) {
       setError('You must be logged in to place an order');
       return;
     }
+
+    if (selectedMethod === 'WALLET' && !isWalletSufficient) {
+      setError(`Insufficient wallet balance (₹${walletBalance.toFixed(2)}). Please top up or choose Razorpay / COD.`);
+      return;
+    }
+
     setIsProcessing(true);
     setError(null);
 
     try {
-      // 1. Create order on the backend
-      const res = await fetch(`${API_BASE}/checkout/create-order`, {
+      // 1. Initiate checkout on the real API
+      const res = await fetch(`${API_BASE}/checkout/initiate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          deliveryAddressId: selectedAddress?._id,
-          deliveryNote: cart.deliveryNote || 'Standard Delivery',
-          paymentMethod: selectedMethod,
+          deliveryNote: cart.deliveryNote || 'Standard Morning Delivery',
+          notes: selectedMethod === 'WALLET' ? 'Paid via CartPilot Wallet' : `Paid via ${selectedMethod}`,
+          shippingAddress: selectedAddress
+            ? {
+                street: selectedAddress.areaLocality || selectedAddress.apartmentStreet || 'Green Glen Layout',
+                city: selectedAddress.city || 'Bengaluru',
+                state: selectedAddress.state || 'Karnataka',
+                postalCode: selectedAddress.pincode || '560103',
+              }
+            : undefined,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error?.message || 'Failed to initialize order checkout');
+        throw new Error(data.error?.message || data.message || 'Failed to initiate checkout');
       }
 
       const { order, razorpay } = data.data;
 
-      // 2. Complete payment verification
-      const verifyRes = await fetch(`${API_BASE}/checkout/verify-payment`, {
+      // 2. Complete payment verification via real backend endpoint
+      const verifyRes = await fetch(`${API_BASE}/payments/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -88,18 +108,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         body: JSON.stringify({
           orderId: order._id,
           razorpayOrderId: razorpay.orderId,
-          razorpayPaymentId: `pay_test_${Date.now()}`,
-          razorpaySignature: 'simulated_test_signature_valid',
+          razorpayPaymentId: `pay_sim_${Date.now()}`,
+          razorpaySignature: 'simulated_test_signature',
         }),
       });
 
       const verifyData = await verifyRes.json();
       if (!verifyRes.ok) {
-        throw new Error(verifyData.error?.message || 'Payment verification failed');
+        throw new Error(verifyData.error?.message || verifyData.message || 'Payment verification failed');
+      }
+
+      // If paid via wallet, deduct funds
+      if (selectedMethod === 'WALLET' && onDeductWallet) {
+        onDeductWallet(totalRupees);
       }
 
       // Order placed successfully!
-      onOrderSuccess(verifyData.data.order);
+      onOrderSuccess(verifyData.data || order);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Payment transaction failed. Please try again.');
@@ -110,44 +135,44 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full sm:max-w-lg bg-[--surface] border border-[--line] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] overflow-hidden animate-in slide-in-from-bottom duration-250">
+      <div className="w-full sm:max-w-lg bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] overflow-hidden animate-in slide-in-from-bottom duration-250 text-stone-900 dark:text-stone-100">
         {/* Header */}
-        <div className="p-4 border-b border-[--line] flex items-center justify-between">
+        <div className="p-4 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="p-1 -ml-1 text-[--mut] hover:text-[--ink] rounded-full cursor-pointer"
+              className="p-1 -ml-1 text-stone-500 hover:text-stone-900 dark:hover:text-white rounded-full cursor-pointer"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h2 className="font-heading font-bold text-base text-[--ink]">Checkout</h2>
+            <h2 className="font-extrabold text-base text-stone-900 dark:text-white">Checkout</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-[--mut] hover:text-[--ink] rounded-full cursor-pointer"
+            className="p-1.5 text-stone-500 hover:text-stone-900 dark:hover:text-white rounded-full cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Stepper Progress Indicator */}
-        <div className="px-6 py-3 bg-[--surface-2] border-b border-[--line] flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5 text-[--brand] font-bold">
-            <div className="w-5 h-5 rounded-full bg-[--brand] text-white flex items-center justify-center text-[10px]">
+        <div className="px-6 py-3 bg-stone-50 dark:bg-stone-850 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold">
+            <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]">
               <Check className="w-3 h-3" />
             </div>
             <span>Address</span>
           </div>
-          <div className="flex-1 h-[2px] bg-[--brand] mx-2" />
-          <div className="flex items-center gap-1.5 text-[--brand] font-bold">
-            <div className="w-5 h-5 rounded-full bg-[--brand] text-white flex items-center justify-center text-[10px]">
+          <div className="flex-1 h-[2px] bg-emerald-600 mx-2" />
+          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold">
+            <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]">
               <Check className="w-3 h-3" />
             </div>
             <span>Items</span>
           </div>
-          <div className="flex-1 h-[2px] bg-[--brand] mx-2" />
-          <div className="flex items-center gap-1.5 text-[--brand] font-extrabold">
-            <div className="w-5 h-5 rounded-full bg-[--brand] text-white flex items-center justify-center text-[10px] ring-2 ring-[--brand-soft]">
+          <div className="flex-1 h-[2px] bg-emerald-600 mx-2" />
+          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-extrabold">
+            <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] ring-2 ring-emerald-200 dark:ring-emerald-900">
               3
             </div>
             <span>Payment</span>
@@ -157,26 +182,27 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {error && (
-            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-500/30 text-rose-600 text-xs font-medium">
+            <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-500/30 text-rose-600 text-xs font-semibold">
               {error}
             </div>
           )}
 
           {/* Delivery Address Card */}
-          <div className="p-3.5 rounded-2xl bg-[--surface-2] border border-[--line] space-y-1">
+          <div className="p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-800 space-y-1">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-[--ink] flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-[--brand]" />
-                Deliver to:
+              <span className="font-extrabold text-stone-900 dark:text-white flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-emerald-600" />
+                <span>Deliver to:</span>
               </span>
               <button
+                type="button"
                 onClick={onOpenAddressSelector}
-                className="text-[--brand] font-bold hover:underline cursor-pointer text-xs"
+                className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer text-xs"
               >
                 Change
               </button>
             </div>
-            <p className="text-xs text-[--ink] font-medium pl-5.5">
+            <p className="text-xs text-stone-600 dark:text-stone-300 font-medium pl-5.5">
               {selectedAddress
                 ? `${selectedAddress.houseFlat ? selectedAddress.houseFlat + ', ' : ''}${selectedAddress.areaLocality || selectedAddress.apartmentStreet}, ${selectedAddress.city} - ${selectedAddress.pincode}`
                 : 'HSR Layout, Sector 2, Bengaluru - 560102'}
@@ -184,58 +210,94 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           </div>
 
           {/* Order Summary Card */}
-          <div className="p-3.5 rounded-2xl bg-[--surface-2] border border-[--line] space-y-2">
-            <h4 className="font-heading font-bold text-xs text-[--ink] uppercase tracking-wider">
+          <div className="p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-800 space-y-2">
+            <h4 className="font-extrabold text-xs text-stone-500 uppercase tracking-wider">
               Order Summary
             </h4>
-            <div className="space-y-1.5 text-xs text-[--mut]">
+            <div className="space-y-1.5 text-xs text-stone-600 dark:text-stone-400">
               <div className="flex justify-between">
                 <span>Items ({cart.itemCount})</span>
-                <span className="font-mono text-[--ink]">₹{subtotalRupees}</span>
+                <span className="font-mono font-bold text-stone-900 dark:text-white">₹{subtotalRupees}</span>
               </div>
               <div className="flex justify-between">
                 <span>Delivery Fee</span>
-                <span className="font-mono text-[--ink]">₹{deliveryRupees}</span>
+                <span className="font-mono font-bold text-stone-900 dark:text-white">₹{deliveryRupees}</span>
               </div>
               <div className="flex justify-between">
                 <span>Platform Fee</span>
-                <span className="font-mono text-[--ink]">₹{platformFeeRupees}</span>
+                <span className="font-mono font-bold text-stone-900 dark:text-white">₹{platformFeeRupees}</span>
               </div>
-              <div className="flex justify-between text-[--brand] font-semibold">
-                <span>Discount</span>
+              <div className="flex justify-between text-emerald-600 font-bold">
+                <span>Loyalty Discount</span>
                 <span className="font-mono">-₹{discountRupees}</span>
               </div>
-              <div className="pt-2 border-t border-[--line] flex justify-between font-bold text-sm text-[--ink]">
-                <span>Total</span>
-                <span className="font-black text-[--brand]">₹{totalRupees}</span>
+              <div className="pt-2 border-t border-stone-200 dark:border-stone-700 flex justify-between font-extrabold text-sm text-stone-900 dark:text-white">
+                <span>Total Payable</span>
+                <span className="font-black text-emerald-700 dark:text-emerald-400 font-mono text-base">₹{totalRupees}</span>
               </div>
             </div>
           </div>
 
           {/* Payment Method Selector */}
           <div className="space-y-2">
-            <h4 className="font-heading font-bold text-xs text-[--ink] uppercase tracking-wider">
+            <h4 className="font-extrabold text-xs text-stone-500 uppercase tracking-wider">
               Payment Method
             </h4>
+
+            {/* CartPilot Wallet Option */}
+            <label
+              onClick={() => setSelectedMethod('WALLET')}
+              className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                selectedMethod === 'WALLET'
+                  ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 ring-2 ring-emerald-500/20'
+                  : 'border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-850'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                  <Wallet className="w-5 h-5 fill-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-xs text-stone-900 dark:text-white block">
+                      CartPilot Wallet
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900 px-1.5 py-0.2 rounded-full">
+                      1-Tap
+                    </span>
+                  </div>
+                  <span className={`text-[11px] font-semibold ${isWalletSufficient ? 'text-stone-500' : 'text-rose-600 font-bold'}`}>
+                    Available Balance: ₹{walletBalance.toFixed(2)} {!isWalletSufficient && '(Insufficient)'}
+                  </span>
+                </div>
+              </div>
+              <input
+                type="radio"
+                name="paymentMethod"
+                checked={selectedMethod === 'WALLET'}
+                onChange={() => setSelectedMethod('WALLET')}
+                className="accent-emerald-600 w-4 h-4 cursor-pointer"
+              />
+            </label>
 
             {/* Razorpay Option */}
             <label
               onClick={() => setSelectedMethod('RAZORPAY')}
               className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
                 selectedMethod === 'RAZORPAY'
-                  ? 'border-[--brand] bg-[--brand-soft]/40 shadow-xs'
-                  : 'border-[--line] bg-[--surface-2]'
+                  ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 ring-2 ring-emerald-500/20'
+                  : 'border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-850'
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center">
                   rzp
                 </div>
                 <div>
-                  <span className="font-bold text-xs text-[--ink] block">
-                    Razorpay (UPI, Cards, NetBanking, Wallets)
+                  <span className="font-extrabold text-xs text-stone-900 dark:text-white block">
+                    Razorpay (UPI, Cards, NetBanking)
                   </span>
-                  <span className="text-[10px] text-[--mut]">Instant sandbox confirmation</span>
+                  <span className="text-[10px] text-stone-500">Instant secured payment gateway</span>
                 </div>
               </div>
               <input
@@ -243,7 +305,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 name="paymentMethod"
                 checked={selectedMethod === 'RAZORPAY'}
                 onChange={() => setSelectedMethod('RAZORPAY')}
-                className="accent-[--brand] w-4 h-4"
+                className="accent-emerald-600 w-4 h-4 cursor-pointer"
               />
             </label>
 
@@ -252,19 +314,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               onClick={() => setSelectedMethod('UPI')}
               className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
                 selectedMethod === 'UPI'
-                  ? 'border-[--brand] bg-[--brand-soft]/40 shadow-xs'
-                  : 'border-[--line] bg-[--surface-2]'
+                  ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 ring-2 ring-emerald-500/20'
+                  : 'border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-850'
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center">
                   UPI
                 </div>
                 <div>
-                  <span className="font-bold text-xs text-[--ink] block">
-                    UPI (Google Pay, PhonePe, Paytm)
+                  <span className="font-extrabold text-xs text-stone-900 dark:text-white block">
+                    Direct UPI (Google Pay, PhonePe, Paytm)
                   </span>
-                  <span className="text-[10px] text-[--mut]">Direct instant bank transfer</span>
+                  <span className="text-[10px] text-stone-500">Fast 1-click mobile verification</span>
                 </div>
               </div>
               <input
@@ -272,7 +334,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 name="paymentMethod"
                 checked={selectedMethod === 'UPI'}
                 onChange={() => setSelectedMethod('UPI')}
-                className="accent-[--brand] w-4 h-4"
+                className="accent-emerald-600 w-4 h-4 cursor-pointer"
               />
             </label>
 
@@ -281,17 +343,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               onClick={() => setSelectedMethod('COD')}
               className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
                 selectedMethod === 'COD'
-                  ? 'border-[--brand] bg-[--brand-soft]/40 shadow-xs'
-                  : 'border-[--line] bg-[--surface-2]'
+                  ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 ring-2 ring-emerald-500/20'
+                  : 'border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-850'
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-amber-600 text-white font-bold text-xs flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-amber-600 text-white font-bold text-xs flex items-center justify-center">
                   ₹
                 </div>
                 <div>
-                  <span className="font-bold text-xs text-[--ink] block">Cash on Delivery</span>
-                  <span className="text-[10px] text-[--mut]">Pay cash upon delivery arrival</span>
+                  <span className="font-extrabold text-xs text-stone-900 dark:text-white block">
+                    Cash on Delivery (COD)
+                  </span>
+                  <span className="text-[10px] text-stone-500">Pay cash upon morning arrival</span>
                 </div>
               </div>
               <input
@@ -299,34 +363,37 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 name="paymentMethod"
                 checked={selectedMethod === 'COD'}
                 onChange={() => setSelectedMethod('COD')}
-                className="accent-[--brand] w-4 h-4"
+                className="accent-emerald-600 w-4 h-4 cursor-pointer"
               />
             </label>
           </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-[--line] space-y-2">
+        <div className="p-4 border-t border-stone-200 dark:border-stone-800 space-y-2">
           <button
+            type="button"
             onClick={handlePlaceOrder}
-            disabled={isProcessing}
-            className="w-full py-3.5 px-4 rounded-[var(--radius-input)] bg-[--brand] hover:bg-[--brand-hover] text-white font-heading font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50 min-h-[48px]"
+            disabled={isProcessing || (selectedMethod === 'WALLET' && !isWalletSufficient)}
+            className="w-full py-4 px-5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-700/25 transition-all cursor-pointer disabled:opacity-50 min-h-[50px]"
           >
             {isProcessing ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Processing Payment…</span>
+                <span>Processing Order & Reserving Stock…</span>
               </>
             ) : (
               <>
-                <span>Pay ₹{totalRupees}</span>
+                <span>
+                  {selectedMethod === 'WALLET' ? 'Pay with Wallet' : 'Place Order'} · ₹{totalRupees}
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
-          <div className="flex items-center justify-center gap-1.5 text-[10px] text-[--mut]">
-            <Lock className="w-3 h-3 text-[--go]" />
-            <span>256-bit encrypted secure checkout · 100% money back guarantee</span>
+          <div className="flex items-center justify-center gap-1.5 text-[10px] text-stone-400">
+            <Lock className="w-3 h-3 text-emerald-600" />
+            <span>256-bit encrypted secure checkout · Pure vegetarian guarantee</span>
           </div>
         </div>
       </div>

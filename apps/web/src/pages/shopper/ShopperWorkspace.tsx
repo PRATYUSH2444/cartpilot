@@ -32,6 +32,11 @@ import { RulesSheet } from '../../components/shopper/RulesSheet';
 import { ProfileModal } from '../../components/shopper/ProfileModal';
 import { ContextPanel } from '../../components/shopper/ContextPanel';
 import { IntegrationsModal } from '../../components/IntegrationsModal';
+import { DesktopHeader } from '../../components/shopper/DesktopHeader';
+import { WishlistModal } from '../../components/shopper/WishlistModal';
+import { WalletModal } from '../../components/shopper/WalletModal';
+import { CouponsModal } from '../../components/shopper/CouponsModal';
+import { NotificationsModal } from '../../components/shopper/NotificationsModal';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface ServerChatMessage {
@@ -85,7 +90,22 @@ export const ShopperWorkspace: React.FC = () => {
   const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isUnserviceableModalOpen, setIsUnserviceableModalOpen] = useState(false);
-  const [walletBalance] = useState<number>(349.0);
+  const [walletBalance, setWalletBalance] = useState<number>(() => {
+    const saved = localStorage.getItem('cartpilot_wallet_balance');
+    return saved ? parseFloat(saved) : 349.0;
+  });
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('cartpilot_favorites');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [isWalletOpen, setIsWalletOpen] = useState(false);
+  const [isCouponsOpen, setIsCouponsOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isOrdersSheetOpen, setIsOrdersSheetOpen] = useState(false);
   const [isRulesSheetOpen, setIsRulesSheetOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -717,6 +737,34 @@ export const ShopperWorkspace: React.FC = () => {
     showBanner('success', `Added ${toAdd.length} items from #${pastOrder.orderNumber} to cart`);
   };
 
+  const handleToggleFavorite = (productId: string) => {
+    setFavorites((prev) => {
+      const next = prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId];
+      localStorage.setItem('cartpilot_favorites', JSON.stringify(next));
+      showBanner('success', next.includes(productId) ? 'Saved to Wishlist' : 'Removed from Wishlist');
+      return next;
+    });
+  };
+
+  const handleAddWalletFunds = (amount: number) => {
+    setWalletBalance((prev) => {
+      const next = prev + amount;
+      localStorage.setItem('cartpilot_wallet_balance', next.toString());
+      showBanner('success', `Added ₹${amount.toFixed(2)} to CartPilot Wallet`);
+      return next;
+    });
+  };
+
+  const handleDeductWalletFunds = (amount: number) => {
+    setWalletBalance((prev) => {
+      const next = Math.max(0, prev - amount);
+      localStorage.setItem('cartpilot_wallet_balance', next.toString());
+      return next;
+    });
+  };
+
   const handleSelectTab = (tab: TabKey, categoryId?: string) => {
     setActiveMobileTab(tab);
     if (categoryId) {
@@ -728,6 +776,29 @@ export const ShopperWorkspace: React.FC = () => {
 
   return (
     <div className="h-[100dvh] max-h-[100dvh] flex flex-col bg-[--bg] text-[--ink] overflow-hidden relative">
+      {/* ── Desktop Full-Width Top Header (Screen >= 1024px) ───────────────── */}
+      <DesktopHeader
+        activeTab={activeMobileTab}
+        onSelectTab={handleSelectTab}
+        cart={cart}
+        selectedAddress={selectedAddress}
+        onOpenAddressModal={() => setIsAddressModalOpen(true)}
+        onOpenSearchModal={() => setIsGlobalSearchOpen(true)}
+        onOpenWishlist={() => setIsWishlistOpen(true)}
+        onOpenWallet={() => setIsWalletOpen(true)}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
+        onOpenRules={() => setIsRulesSheetOpen(true)}
+        onOpenOrders={() => setIsOrdersSheetOpen(true)}
+        onOpenProfile={() => setActiveMobileTab('account')}
+        onLogout={() => logout()}
+        userInitial={userInitial}
+        userName={user?.name || 'Customer'}
+        walletBalance={walletBalance}
+        favoritesCount={favorites.length}
+        isDark={isDark}
+        onToggleTheme={() => setIsDark((d) => !d)}
+      />
+
       {/* ── Main Screen Viewport Switching ──────────────────────────────────── */}
       <div className="flex-1 flex min-h-0 overflow-hidden relative">
         {/* Active Tab Screen */}
@@ -754,6 +825,8 @@ export const ShopperWorkspace: React.FC = () => {
               }}
               userInitial={userInitial}
               walletBalance={walletBalance}
+              favorites={favorites}
+              onToggleFavorite={handleToggleFavorite}
               onTriggerAIPrompt={(prompt) => {
                 setActiveMobileTab('chat');
                 setComposerText(prompt);
@@ -775,6 +848,8 @@ export const ShopperWorkspace: React.FC = () => {
                 setIsProductSheetOpen(true);
               }}
               initialCategory={selectedBrowseCategory}
+              favorites={favorites}
+              onToggleFavorite={handleToggleFavorite}
             />
           )}
 
@@ -812,6 +887,7 @@ export const ShopperWorkspace: React.FC = () => {
               onProceedToCheckout={() => setIsCheckoutModalOpen(true)}
               onUpdateDeliveryNote={handleUpdateDeliveryNote}
               onExploreProducts={() => setActiveMobileTab('browse')}
+              onOpenCoupons={() => setIsCouponsOpen(true)}
               isLoading={isLoading}
             />
           )}
@@ -826,6 +902,9 @@ export const ShopperWorkspace: React.FC = () => {
               onOpenAddresses={() => setIsAddressModalOpen(true)}
               onOpenRules={() => setIsRulesSheetOpen(true)}
               onOpenProfileModal={() => setIsProfileModalOpen(true)}
+              onOpenWishlist={() => setIsWishlistOpen(true)}
+              onOpenWallet={() => setIsWalletOpen(true)}
+              onOpenCoupons={() => setIsCouponsOpen(true)}
               onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
               onLogout={() => logout()}
               isDark={isDark}
@@ -860,12 +939,14 @@ export const ShopperWorkspace: React.FC = () => {
         )}
       </div>
 
-      {/* ── Fixed Bottom 5-Destination Navigation Bar ──────────────────────── */}
-      <BottomTabBar
-        activeTab={activeMobileTab}
-        onSelectTab={handleSelectTab}
-        cart={cart}
-      />
+      {/* ── Fixed Bottom 5-Destination Navigation Bar (Visible only on mobile/tablet) ────── */}
+      <div className="block lg:hidden flex-shrink-0">
+        <BottomTabBar
+          activeTab={activeMobileTab}
+          onSelectTab={handleSelectTab}
+          cart={cart}
+        />
+      </div>
 
       {/* ── Slide-Over Conversation Drawer (Screen 9) ──────────────────────── */}
       <ConversationDrawer
@@ -898,6 +979,46 @@ export const ShopperWorkspace: React.FC = () => {
         onOpenAddressSelector={() => setIsAddressModalOpen(true)}
         onOrderSuccess={handleOrderSuccess}
         token={token}
+        walletBalance={walletBalance}
+        onDeductWallet={handleDeductWalletFunds}
+      />
+
+      {/* ── Wishlist & Favorites Modal ─────────────────────────────────────── */}
+      <WishlistModal
+        isOpen={isWishlistOpen}
+        onClose={() => setIsWishlistOpen(false)}
+        products={products}
+        favoriteIds={favorites}
+        onRemoveFavorite={handleToggleFavorite}
+        onAddToCart={handleAddToCart}
+        onSelectProduct={(p) => {
+          setSelectedProduct(p);
+          setIsProductSheetOpen(true);
+        }}
+      />
+
+      {/* ── CartPilot Wallet Modal ─────────────────────────────────────────── */}
+      <WalletModal
+        isOpen={isWalletOpen}
+        onClose={() => setIsWalletOpen(false)}
+        balance={walletBalance}
+        onAddFunds={handleAddWalletFunds}
+      />
+
+      {/* ── Available Coupons & Offers Modal ───────────────────────────────── */}
+      <CouponsModal
+        isOpen={isCouponsOpen}
+        onClose={() => setIsCouponsOpen(false)}
+        onApplyCoupon={(code) => {
+          setActiveMobileTab('cart');
+          showBanner('success', `Coupon '${code}' applied to your basket!`);
+        }}
+      />
+
+      {/* ── Notifications Center Modal ─────────────────────────────────────── */}
+      <NotificationsModal
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
       />
 
       {/* ── Live Tracking Modal (Screen 13) ─────────────────────────────────── */}
