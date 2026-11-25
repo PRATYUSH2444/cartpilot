@@ -4,6 +4,22 @@ import { env } from '../../config/env.config.js';
 
 export const healthRouter = Router();
 
+// Root Gateway Diagnostic Endpoint for Render / Platform Health Probes
+healthRouter.get('/', (_req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'CartPilot API Gateway',
+    version: '2.5.0',
+    health: '/api/v1/health',
+    ready: '/api/v1/ready',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+healthRouter.head('/', (_req, res) => {
+  res.status(200).end();
+});
+
 healthRouter.get('/health', getLiveness);
 healthRouter.get('/ready', getReadiness);
 healthRouter.get('/health/ai-models', async (_req, res) => {
