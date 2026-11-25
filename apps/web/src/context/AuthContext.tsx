@@ -213,6 +213,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         setAuthStatus('INITIALIZING');
         setIsLoading(true);
+
+        const hasSession =
+          typeof window !== 'undefined' && localStorage.getItem('cartpilot_has_session') === 'true';
+
+        if (!hasSession) {
+          if (isMounted) setAuthStatus('UNAUTHENTICATED');
+          return;
+        }
+
         const restored = await refreshSession();
         if (!restored && isMounted) {
           setAuthStatus('UNAUTHENTICATED');
