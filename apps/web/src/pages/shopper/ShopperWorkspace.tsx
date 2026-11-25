@@ -26,6 +26,7 @@ import { SplashScreen } from '../../components/shopper/SplashScreen';
 import { PhoneLoginModal } from '../../components/shopper/PhoneLoginModal';
 import { ProductSheet } from '../../components/shopper/ProductSheet';
 import { AddressModal } from '../../components/shopper/AddressModal';
+import { UnserviceableModal } from '../../components/shopper/UnserviceableModal';
 import { OrdersSheet } from '../../components/shopper/OrdersSheet';
 import { RulesSheet } from '../../components/shopper/RulesSheet';
 import { ProfileModal } from '../../components/shopper/ProfileModal';
@@ -83,6 +84,8 @@ export const ShopperWorkspace: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [isUnserviceableModalOpen, setIsUnserviceableModalOpen] = useState(false);
+  const [walletBalance] = useState<number>(349.0);
   const [isOrdersSheetOpen, setIsOrdersSheetOpen] = useState(false);
   const [isRulesSheetOpen, setIsRulesSheetOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -750,6 +753,7 @@ export const ShopperWorkspace: React.FC = () => {
                 setIsLiveTrackingOpen(true);
               }}
               userInitial={userInitial}
+              walletBalance={walletBalance}
             />
           )}
 
@@ -809,6 +813,8 @@ export const ShopperWorkspace: React.FC = () => {
             <AccountScreen
               user={user}
               orders={orders}
+              selectedAddress={selectedAddress}
+              walletBalance={walletBalance}
               onOpenOrders={() => setIsOrdersSheetOpen(true)}
               onOpenAddresses={() => setIsAddressModalOpen(true)}
               onOpenRules={() => setIsRulesSheetOpen(true)}
@@ -951,7 +957,19 @@ export const ShopperWorkspace: React.FC = () => {
         onClose={() => setIsAddressModalOpen(false)}
         token={token}
         selectedAddressId={selectedAddress?._id}
-        onSelectAddress={(addr) => setSelectedAddress(addr)}
+        onSelectAddress={(addr) => {
+          setSelectedAddress(addr);
+          if (addr.isServiceable === false) {
+            setIsUnserviceableModalOpen(true);
+          }
+        }}
+      />
+
+      {/* ── Unserviceable Location Notice Modal (Reference Screen 5) ────────── */}
+      <UnserviceableModal
+        isOpen={isUnserviceableModalOpen}
+        onClose={() => setIsUnserviceableModalOpen(false)}
+        locality={selectedAddress?.areaLocality || selectedAddress?.city}
       />
 
       {/* ── Orders & Delivery Tracking Sheet (Screen 8) ─────────────────────── */}

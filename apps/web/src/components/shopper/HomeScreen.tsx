@@ -1,21 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   MapPin,
   ChevronDown,
   Search,
   Mic,
-  Bell,
-  Sparkles,
   ArrowRight,
   Plus,
   Minus,
   Truck,
-  Star,
   Leaf,
-  Clock,
+  Wallet,
 } from 'lucide-react';
 import { Product, CartData, OrderData, UserAddress } from '../../types';
 import { TabKey } from './BottomTabBar';
+import { getDeliveryWindowInfo } from '../../utils/deliveryWindow';
 
 interface HomeScreenProps {
   products: Product[];
@@ -31,16 +29,16 @@ interface HomeScreenProps {
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onOpenTracking: (order: OrderData) => void;
   userInitial?: string;
+  walletBalance?: number;
 }
 
 const CATEGORY_ITEMS = [
-  { id: 'FRUITS_VEGETABLES', label: 'Fruits & Vegetables', emoji: '🍎', bg: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300' },
-  { id: 'DAIRY_BREAKFAST', label: 'Dairy & Breakfast', emoji: '🥛', bg: 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300' },
-  { id: 'ATTA_RICE_DAL', label: 'Atta, Rice & Dal', emoji: '🌾', bg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300' },
-  { id: 'SNACKS_MUNCHIES', label: 'Snacks & Munchies', emoji: '🍿', bg: 'bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-300' },
-  { id: 'COLD_DRINKS_JUICES', label: 'Cold Drinks', emoji: '🧃', bg: 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300' },
-  { id: 'BAKERY', label: 'Bakery', emoji: '🍞', bg: 'bg-yellow-50 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-300' },
-  { id: 'MASALA_DRY_FRUITS', label: 'Masala & Spices', emoji: '🌰', bg: 'bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300' },
+  { id: 'ALL', label: 'All', emoji: '🛍️' },
+  { id: 'FRUITS_VEGETABLES', label: 'Fruits', emoji: '🍇' },
+  { id: 'VEGETABLES', label: 'Vegetables', emoji: '🥦' },
+  { id: 'EXOTIC', label: 'Exotic', emoji: '🥑' },
+  { id: 'DAIRY_BREAKFAST', label: 'Dairy', emoji: '🥛' },
+  { id: 'ATTA_RICE_DAL', label: 'Grains', emoji: '🌾' },
 ];
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -57,14 +55,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onUpdateQuantity,
   onOpenTracking,
   userInitial = 'U',
+  walletBalance = 349.0,
 }) => {
-  // Find active order (not yet delivered or cancelled)
-  const activeOrder = orders.find(
-    (o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED' && o.status !== 'FAILED'
-  ) || (orders.length > 0 ? orders[0] : null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
 
-  // Best sellers: take top products
-  const bestSellers = products.slice(0, 8);
+  // Delivery cutoff & window calculation
+  const deliveryWindow = getDeliveryWindowInfo();
+
+  // Find active order (not delivered or cancelled)
+  const activeOrder =
+    orders.find(
+      (o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED' && o.status !== 'FAILED'
+    ) || (orders.length > 0 ? orders[0] : null);
 
   const getCartQuantity = (productId: string): number => {
     if (!cart || !cart.items) return 0;
@@ -72,207 +74,259 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     return item ? item.quantity : 0;
   };
 
-  const addressLabel = selectedAddress
-    ? `${selectedAddress.addressType}: ${selectedAddress.areaLocality || selectedAddress.city}`
-    : 'Home: HSR Layout, Bengaluru';
+  // Filter products by selected category
+  const filteredProducts =
+    selectedCategory === 'ALL'
+      ? products
+      : products.filter((p) => {
+          if (selectedCategory === 'FRUITS_VEGETABLES') {
+            return (
+              p.category === 'FRUITS_VEGETABLES' &&
+              (p.name.toLowerCase().includes('apple') ||
+                p.name.toLowerCase().includes('banana') ||
+                p.name.toLowerCase().includes('fruit') ||
+                p.name.toLowerCase().includes('melon') ||
+                p.name.toLowerCase().includes('mango') ||
+                p.name.toLowerCase().includes('orange'))
+            );
+          }
+          if (selectedCategory === 'VEGETABLES') {
+            return (
+              p.category === 'FRUITS_VEGETABLES' &&
+              !p.name.toLowerCase().includes('apple') &&
+              !p.name.toLowerCase().includes('banana') &&
+              !p.name.toLowerCase().includes('melon') &&
+              !p.name.toLowerCase().includes('mango') &&
+              !p.name.toLowerCase().includes('orange')
+            );
+          }
+          if (selectedCategory === 'EXOTIC') {
+            return (
+              p.aliases?.some((a) => a.toLowerCase().includes('exotic')) ||
+              p.name.toLowerCase().includes('avocado') ||
+              p.name.toLowerCase().includes('mushroom') ||
+              p.name.toLowerCase().includes('broccoli')
+            );
+          }
+          return p.category === selectedCategory;
+        });
+
+  const displayAddressLabel = selectedAddress
+    ? selectedAddress.areaLocality || selectedAddress.apartmentStreet || selectedAddress.city
+    : 'La residentia';
 
   return (
-    <div className="flex-1 overflow-y-auto pb-8 bg-[--bg]">
-      {/* ── Top Header Bar ─────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-30 bg-[--bg]/95 backdrop-blur-md px-4 pt-3 pb-2 border-b border-[--line]/60">
-        <div className="flex items-center justify-between gap-3 mb-2.5">
-          {/* Location Selector Pill */}
-          <button
-            onClick={onOpenAddressModal}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[--surface] border border-[--line] hover:border-[--brand]/40 transition-colors cursor-pointer text-left max-w-[70%]"
-            title="Select Delivery Location"
-          >
-            <div className="w-5 h-5 rounded-full bg-[--brand-soft] flex items-center justify-center text-[--brand] flex-shrink-0">
-              <MapPin className="w-3 h-3 text-[--brand]" />
+    <div className="flex-1 overflow-y-auto pb-10 bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100">
+      {/* ── Top Brand Header & Navigation (Reference: SBZee Top Header) ── */}
+      <div className="sticky top-0 z-30 bg-emerald-800 text-white shadow-md">
+        <div className="max-w-[760px] mx-auto px-4 pt-3 pb-3 space-y-3">
+          {/* Row 1: Logo & Brand + Wallet & Profile */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-white text-emerald-800 flex items-center justify-center shadow">
+                <Leaf className="w-5 h-5 fill-emerald-700 text-emerald-700" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 leading-none">
+                  <span className="font-extrabold text-lg tracking-tight text-white">CartPilot</span>
+                  <span className="text-[9px] font-bold uppercase bg-emerald-900/80 text-emerald-300 px-1.5 py-0.5 rounded-full border border-emerald-400/20">
+                    100% Veg
+                  </span>
+                </div>
+                <span className="text-[10px] text-emerald-200 font-medium">Fresh Pick Fayda Quick</span>
+              </div>
             </div>
-            <div className="truncate">
-              <span className="text-xs font-bold text-[--ink] flex items-center gap-1">
-                <span className="truncate">{addressLabel}</span>
-                <ChevronDown className="w-3 h-3 text-[--mut] flex-shrink-0" />
+
+            <div className="flex items-center gap-2">
+              {/* Wallet Balance Pill */}
+              <button
+                type="button"
+                onClick={() => onSelectTab('account')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-700/80 hover:bg-emerald-600/90 text-white border border-emerald-500/40 text-xs font-bold shadow-xs cursor-pointer transition-colors"
+                title="View Wallet Ledger"
+              >
+                <Wallet className="w-3.5 h-3.5 text-emerald-300" />
+                <span>₹ {walletBalance.toFixed(1)}</span>
+              </button>
+
+              {/* Profile Avatar Circle */}
+              <button
+                type="button"
+                onClick={onOpenProfile}
+                className="w-8 h-8 rounded-full bg-emerald-600 text-white border-2 border-white/60 flex items-center justify-center font-bold text-xs shadow-xs cursor-pointer hover:bg-emerald-500 transition-colors"
+                title="Account & Settings"
+              >
+                {userInitial}
+              </button>
+            </div>
+          </div>
+
+          {/* Row 2: Location Pill (Left) & Delivery Window Badge (Right) */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            {/* Location Selector */}
+            <button
+              type="button"
+              onClick={onOpenAddressModal}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 text-xs font-semibold cursor-pointer transition-colors max-w-[60%]"
+            >
+              <MapPin className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+              <span className="truncate">{displayAddressLabel}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-emerald-300 flex-shrink-0" />
+            </button>
+
+            {/* Slotted Delivery Window Badge (Yellow-gold matching screenshot 4 & 5) */}
+            <div className="flex flex-col items-end px-2.5 py-1 rounded-xl bg-amber-100 dark:bg-amber-950/70 text-stone-900 dark:text-amber-100 border border-amber-300 dark:border-amber-700/50 shadow-xs">
+              <span className="text-[10px] text-stone-700 dark:text-amber-200/90 font-medium leading-none">
+                {deliveryWindow.title}
+              </span>
+              <span className="text-xs font-black tracking-tight text-stone-950 dark:text-amber-300 leading-tight">
+                {deliveryWindow.slot}
               </span>
             </div>
-          </button>
-
-          {/* Action Icons: Notification & Profile */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={() => onSelectTab('account')}
-              className="w-9 h-9 rounded-full bg-[--surface] border border-[--line] text-[--mut] hover:text-[--ink] flex items-center justify-center transition-colors relative cursor-pointer"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" />
-            </button>
-            <button
-              onClick={onOpenProfile}
-              className="w-9 h-9 rounded-full bg-[--brand] text-white flex items-center justify-center font-heading font-bold text-sm shadow-xs cursor-pointer hover:opacity-95 transition-opacity"
-              title="My Account"
-            >
-              {userInitial}
-            </button>
           </div>
-        </div>
 
-        {/* Global Search Bar Trigger */}
-        <div
-          onClick={onOpenSearchModal}
-          className="flex items-center justify-between px-3.5 py-2.5 rounded-[var(--radius-input)] bg-[--surface] border border-[--line] shadow-xs cursor-pointer hover:border-[--brand]/40 transition-all"
-        >
-          <div className="flex items-center gap-2.5 text-[--mut]">
-            <Search className="w-4 h-4 text-[--brand]" />
-            <span className="text-xs font-medium">Search for anything or ask AI…</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[--brand-soft] text-[--brand]">
-              AI Search
-            </span>
-            <Mic className="w-4 h-4 text-[--mut]" />
+          {/* Row 3: Search Bar */}
+          <div
+            onClick={onOpenSearchModal}
+            className="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-white text-stone-800 shadow-md cursor-pointer hover:bg-stone-50 transition-all border border-emerald-400/30"
+          >
+            <div className="flex items-center gap-2.5 text-stone-400 text-xs font-medium">
+              <Search className="w-4 h-4 text-emerald-700" />
+              <span>Search for Fruits, Vegetables</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                AI Search
+              </span>
+              <div className="h-3.5 w-px bg-stone-300" />
+              <Mic className="w-4 h-4 text-stone-500" />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-[760px] mx-auto px-4 pt-4 space-y-5">
-        {/* ── Promotional Hero Banner ───────────────────────────────────────── */}
-        <div className="relative overflow-hidden rounded-[var(--radius-card)] bg-gradient-to-br from-[#08643D] to-[#0A7B4B] text-white p-5 shadow-card">
-          <div className="relative z-10 max-w-[65%] space-y-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-xs text-white">
-              <Clock className="w-3 h-3" /> 20-Minute Delivery
-            </span>
-            <h2 className="font-heading font-bold text-xl sm:text-2xl leading-tight text-white">
-              Fresh groceries delivered in 20 minutes
-            </h2>
-            <p className="text-white/80 text-xs line-clamp-2">
-              100% Certified Pure Vegetarian · Farm Fresh · Direct from Local Organic Hubs
-            </p>
-            <div className="pt-2">
+      <div className="max-w-[760px] mx-auto px-4 pt-4 space-y-4">
+        {/* ── Category Quick Filter (Reference: All / Fruits / Vegetables / Exotic) ── */}
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar scroll-smooth">
+          {CATEGORY_ITEMS.map((cat) => {
+            const isSelected = selectedCategory === cat.id;
+            return (
               <button
-                onClick={() => onSelectTab('browse')}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-[--brand] font-heading font-bold text-xs shadow-md hover:bg-white/95 transition-all cursor-pointer"
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-2xl font-bold text-xs transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-emerald-800 text-white shadow-sm shadow-emerald-800/30 ring-1 ring-emerald-600'
+                    : 'bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-800 hover:bg-stone-100 dark:hover:bg-stone-800'
+                }`}
               >
-                <span>Shop Now</span>
+                <span className="text-sm select-none">{cat.emoji}</span>
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Hero Promotional Banner (Reference: "Order Till Midnight / Get next day DELIVERY") ── */}
+        <div className="relative overflow-hidden rounded-3xl bg-[#f7f4ea] dark:bg-stone-900 border border-emerald-500/15 p-5 shadow-sm text-stone-900 dark:text-stone-100">
+          {/* Subtle green curve background */}
+          <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-emerald-500/10 rounded-l-full pointer-events-none" />
+
+          <div className="relative z-10 max-w-[60%] space-y-2">
+            <h2 className="font-extrabold text-2xl sm:text-3xl tracking-tight leading-none text-emerald-900 dark:text-emerald-300">
+              {deliveryWindow.cutoffHeadline}
+            </h2>
+            <p className="text-xs sm:text-sm font-bold text-stone-700 dark:text-stone-300">
+              {deliveryWindow.cutoffSubline.split('DELIVERY')[0]}
+              <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                DELIVERY
+              </span>
+            </p>
+            <p className="text-[11px] text-stone-500 dark:text-stone-400 italic">
+              {deliveryWindow.remainingText}
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => onSelectTab('browse')}
+                className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+              >
+                <span>Order now</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
-          {/* Decorative Basket Illustration */}
-          <div className="absolute -right-4 -bottom-4 w-36 h-36 sm:w-44 sm:h-44 opacity-90 pointer-events-none select-none flex items-center justify-center">
-            <span className="text-7xl sm:text-8xl drop-shadow-lg">🥗</span>
+          {/* Right Fresh Produce Illustration */}
+          <div className="absolute -right-2 -bottom-2 w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center pointer-events-none select-none">
+            <span className="text-7xl sm:text-8xl drop-shadow-md">🧺</span>
+            <span className="absolute bottom-2 right-2 text-3xl">🥦</span>
+            <span className="absolute top-4 right-10 text-3xl">🍎</span>
           </div>
         </div>
 
-        {/* ── Popular Categories Horizontal Scroll ──────────────────────────── */}
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between">
-            <h3 className="font-heading font-bold text-sm text-[--ink]">Popular Categories</h3>
-            <button
-              onClick={() => onSelectTab('browse')}
-              className="text-xs font-semibold text-[--brand] hover:underline cursor-pointer"
-            >
-              See all
-            </button>
+        {/* ── Limited Time Bonus Offer Card (Reference: Add ₹999 & Get ₹100 Bonus) ── */}
+        <div className="rounded-3xl bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40 p-4 shadow-xs relative overflow-hidden">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700">
+              Limited Time Offer
+            </span>
+            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-0.5">
+              <span>Offers</span>
+              <ChevronDown className="w-3 h-3" />
+            </span>
           </div>
 
-          <div className="flex gap-2.5 overflow-x-auto pb-1.5 no-scrollbar scroll-smooth">
-            {CATEGORY_ITEMS.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => onSelectTab('browse', cat.id)}
-                className="flex-shrink-0 flex flex-col items-center gap-1.5 p-2.5 rounded-2xl bg-[--surface] border border-[--line] hover:border-[--brand]/40 transition-all cursor-pointer min-w-[82px] group"
-              >
-                <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-transform group-hover:scale-110 ${cat.bg}`}
-                >
-                  {cat.emoji}
-                </div>
-                <span className="text-[11px] font-semibold text-[--ink] text-center line-clamp-1 max-w-[80px]">
-                  {cat.label}
-                </span>
-              </button>
-            ))}
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h4 className="font-extrabold text-sm sm:text-base text-stone-900 dark:text-white">
+                Add ₹999 & Get ₹100 Bonus
+              </h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                Bonus will be added to your CartPilot wallet instantly
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-2xl flex-shrink-0 shadow-inner">
+              👛
+            </div>
           </div>
         </div>
 
-        {/* ── Active Order Live Tracking Floating Card ──────────────────────── */}
+        {/* ── Active Order Live Tracking Floating Card ── */}
         {activeOrder && (
-          <div className="rounded-[var(--radius-card)] bg-[--surface] border border-[--line] p-4 shadow-card space-y-3">
+          <div className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[--go] animate-ping" />
-                <span className="text-xs font-bold text-[--ink]">Your active order</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <span className="text-xs font-bold text-stone-900 dark:text-white">
+                  Active order #{activeOrder.orderNumber}
+                </span>
               </div>
-              <span className="text-[11px] font-mono font-bold text-[--brand] bg-[--brand-soft] px-2 py-0.5 rounded-full">
-                {activeOrder.status === 'OUT_FOR_DELIVERY' ? 'Arriving in 12 min' : activeOrder.status}
+              <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full">
+                {activeOrder.status === 'OUT_FOR_DELIVERY' ? 'Out for Delivery' : activeOrder.status}
               </span>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-[--brand-soft] flex items-center justify-center text-[--brand] flex-shrink-0">
-                <Truck className="w-6 h-6 text-[--brand]" />
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 flex-shrink-0">
+                <Truck className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[--ink] truncate">
-                    Order #{activeOrder.orderNumber}
-                  </span>
-                  <span className="font-mono font-semibold text-[--mut]">
-                    {activeOrder.items?.length || 0} items · ₹
-                    {((activeOrder.pricingSnapshot?.totalPaise || 0) / 100).toFixed(0)}
-                  </span>
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span>{activeOrder.items?.length || 0} items</span>
+                  <span>₹{((activeOrder.pricingSnapshot?.totalPaise || 0) / 100).toFixed(0)}</span>
                 </div>
-                <p className="text-[11px] text-[--mut] truncate mt-0.5">
-                  {activeOrder.status === 'OUT_FOR_DELIVERY'
-                    ? 'Rider Arjun is on the way to your doorstep'
-                    : 'Store is packing your pure vegetarian groceries'}
+                <p className="text-[11px] text-stone-500 truncate mt-0.5">
+                  Scheduled for {deliveryWindow.title.toLowerCase()} {deliveryWindow.slot}
                 </p>
               </div>
             </div>
 
-            {/* Visual Stepper Progress Bar */}
-            <div className="space-y-1">
-              <div className="w-full bg-[--line] h-1.5 rounded-full overflow-hidden">
-                <div
-                  className="bg-[--brand] h-full rounded-full transition-all duration-500"
-                  style={{
-                    width:
-                      activeOrder.status === 'OUT_FOR_DELIVERY'
-                        ? '75%'
-                        : activeOrder.status === 'PACKING'
-                        ? '45%'
-                        : activeOrder.status === 'DELIVERED'
-                        ? '100%'
-                        : '25%',
-                  }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] font-medium text-[--mut]">
-                <span className="text-[--brand] font-bold">Confirmed</span>
-                <span className={activeOrder.status !== 'CONFIRMED' ? 'text-[--brand] font-bold' : ''}>
-                  Packed
-                </span>
-                <span
-                  className={
-                    activeOrder.status === 'OUT_FOR_DELIVERY' || activeOrder.status === 'DELIVERED'
-                      ? 'text-[--brand] font-bold'
-                      : ''
-                  }
-                >
-                  On the way
-                </span>
-                <span className={activeOrder.status === 'DELIVERED' ? 'text-[--brand] font-bold' : ''}>
-                  Delivered
-                </span>
-              </div>
-            </div>
-
             <button
+              type="button"
               onClick={() => onOpenTracking(activeOrder)}
-              className="w-full py-2 px-3 rounded-full bg-[--surface-2] hover:bg-[--brand-soft] hover:text-[--brand] text-[--ink] font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer min-h-[40px]"
+              className="w-full py-2 px-3 rounded-2xl bg-stone-100 dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-stone-800 dark:text-stone-200 hover:text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <span>Track Order Live</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -280,144 +334,122 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         )}
 
-        {/* ── Best Sellers 2-Column Product Grid ───────────────────────────── */}
-        <div className="space-y-3">
+        {/* ── All Products Grid (Reference: "All Products" section with clean cards) ── */}
+        <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-heading font-bold text-base text-[--ink]">Best Sellers</h3>
-              <p className="text-[11px] text-[--mut]">Certified pure vegetarian everyday essentials</p>
+              <h3 className="font-extrabold text-lg text-stone-900 dark:text-white tracking-tight">
+                All Products
+              </h3>
+              <p className="text-xs text-stone-500 dark:text-stone-400">
+                100% Certified Vegetarian · Farm Fresh Guarantee
+              </p>
             </div>
             <button
+              type="button"
               onClick={() => onSelectTab('browse')}
-              className="text-xs font-semibold text-[--brand] hover:underline cursor-pointer"
+              className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
             >
-              See all
+              See all ({products.length})
             </button>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {bestSellers.map((prod) => {
+            {filteredProducts.map((prod) => {
               const qty = getCartQuantity(prod._id);
-              const priceRupees = (prod.pricePaise / 100).toFixed(0);
-              const origPrice = Math.round(Number(priceRupees) * 1.15);
+              const price = (prod.pricePaise / 100).toFixed(0);
 
               return (
                 <div
                   key={prod._id}
-                  onClick={() => onSelectProduct(prod)}
-                  className="rounded-[var(--radius-card)] bg-[--surface] border border-[--line] hover:border-[--brand]/40 p-3 flex flex-col justify-between shadow-card transition-all cursor-pointer group"
+                  className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between p-3 group"
                 >
-                  <div className="space-y-2">
-                    {/* Image Container with Badges */}
-                    <div className="relative aspect-square rounded-xl bg-[--surface-2] overflow-hidden flex items-center justify-center">
+                  <div
+                    onClick={() => onSelectProduct(prod)}
+                    className="cursor-pointer"
+                  >
+                    {/* Product Image Box */}
+                    <div className="relative w-full aspect-square rounded-2xl bg-stone-50 dark:bg-stone-800/80 mb-2.5 overflow-hidden flex items-center justify-center">
                       {prod.imageUrl ? (
                         <img
                           src={prod.imageUrl}
                           alt={prod.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
                         />
                       ) : (
-                        <span className="text-4xl">🥦</span>
+                        <span className="text-4xl select-none">🥗</span>
                       )}
 
-                      {/* Pure Veg Badge */}
-                      <div
-                        className="absolute top-2 left-2 w-4 h-4 rounded-xs border border-emerald-600 bg-white flex items-center justify-center shadow-xs"
-                        title="100% Pure Vegetarian"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                      {/* Vegetarian Icon */}
+                      <div className="absolute top-2 left-2 w-4 h-4 rounded border border-emerald-600 bg-white flex items-center justify-center shadow-xs">
+                        <div className="w-2 h-2 rounded-full bg-emerald-600" />
                       </div>
 
-                      {/* Discount Pill */}
-                      <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-rose-500 text-white font-mono font-bold text-[9px] shadow-xs">
-                        15% OFF
-                      </span>
-                    </div>
-
-                    {/* Details */}
-                    <div>
-                      <h4 className="font-heading font-semibold text-xs text-[--ink] line-clamp-1 group-hover:text-[--brand] transition-colors">
-                        {prod.name}
-                      </h4>
-                      <p className="text-[10px] text-[--mut] mt-0.5">
-                        {prod.packageSize} {prod.packageUnit}
-                      </p>
-                      <div className="flex items-center gap-1 mt-1 text-[10px] text-amber-500 font-semibold">
-                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                        <span>4.7</span>
-                        <span className="text-[--mut] font-normal">(1.2k)</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Price & Add Action */}
-                  <div className="mt-3 pt-2 border-t border-[--line]/60 flex items-center justify-between gap-1">
-                    <div>
-                      <span className="font-heading font-bold text-sm text-[--ink]">
-                        ₹{priceRupees}
-                      </span>
-                      <span className="text-[10px] text-[--mut] line-through ml-1">
-                        ₹{origPrice}
-                      </span>
-                    </div>
-
-                    {/* Quantity Stepper or Add Button */}
-                    <div onClick={(e) => e.stopPropagation()}>
-                      {qty === 0 ? (
-                        <button
-                          onClick={() => onAddToCart(prod._id, 1)}
-                          className="px-3 py-1.5 rounded-full bg-[--brand-soft] hover:bg-[--brand] text-[--brand] hover:text-white font-heading font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>Add</span>
-                        </button>
-                      ) : (
-                        <div className="flex items-center gap-1.5 bg-[--brand] text-white px-2 py-1 rounded-full text-xs font-bold shadow-xs">
-                          <button
-                            onClick={() => onUpdateQuantity(prod._id, qty - 1)}
-                            className="p-0.5 hover:opacity-80 cursor-pointer"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <span className="font-mono px-1 min-w-[14px] text-center">{qty}</span>
-                          <button
-                            onClick={() => onUpdateQuantity(prod._id, qty + 1)}
-                            className="p-0.5 hover:opacity-80 cursor-pointer"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
+                      {/* Weight pill */}
+                      {prod.packageSize && prod.packageUnit && (
+                        <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[10px] font-semibold">
+                          {prod.packageSize} {prod.packageUnit}
                         </div>
                       )}
                     </div>
+
+                    {/* Product Title & Brand */}
+                    <div className="space-y-0.5">
+                      <p className="text-[11px] text-stone-400 uppercase font-semibold tracking-wider">
+                        {prod.category.replace(/_/g, ' ')}
+                      </p>
+                      <h4 className="font-bold text-xs text-stone-900 dark:text-stone-100 line-clamp-2 leading-tight">
+                        {prod.name}
+                      </h4>
+                    </div>
+                  </div>
+
+                  {/* Pricing & Add to Cart Action */}
+                  <div className="mt-3 pt-2 border-t border-stone-100 dark:border-stone-800/60 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-black text-sm text-stone-900 dark:text-white">
+                          ₹{price}
+                        </span>
+                      </div>
+                    </div>
+
+                    {qty === 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => onAddToCart(prod._id, 1)}
+                        className="py-1.5 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-600 hover:text-white text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-extrabold text-xs transition-colors cursor-pointer"
+                      >
+                        ADD
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5 bg-emerald-600 text-white rounded-xl px-1.5 py-0.5 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => onUpdateQuantity(prod._id, qty - 1)}
+                          className="w-5 h-5 flex items-center justify-center rounded hover:bg-emerald-700 transition-colors cursor-pointer"
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="font-bold text-xs min-w-[12px] text-center">
+                          {qty}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onUpdateQuantity(prod._id, qty + 1)}
+                          className="w-5 h-5 flex items-center justify-center rounded hover:bg-emerald-700 transition-colors cursor-pointer"
+                          aria-label="Increase quantity"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
             })}
-          </div>
-        </div>
-
-        {/* ── AI Shopping Assistant Banner Card ─────────────────────────────── */}
-        <div className="rounded-[var(--radius-card)] bg-[--brand-soft] border border-[--brand]/20 p-5 shadow-card flex items-center justify-between gap-4">
-          <div className="space-y-1.5">
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[--brand] uppercase tracking-wider">
-              <Sparkles className="w-3 h-3" /> Agentic Shopping
-            </span>
-            <h3 className="font-heading font-bold text-base text-[--ink]">
-              Let CartPilot AI plan your meals &amp; budget
-            </h3>
-            <p className="text-xs text-[--mut]">
-              Ask for recipe ingredients, weekly budgets, or high-protein vegetarian meal plans.
-            </p>
-            <button
-              onClick={() => onSelectTab('chat')}
-              className="inline-flex items-center gap-1.5 px-4 py-2 mt-1 rounded-full bg-[--brand] text-white font-heading font-bold text-xs shadow-xs hover:opacity-90 transition-opacity cursor-pointer"
-            >
-              <span>Chat with AI</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-          <div className="w-14 h-14 rounded-2xl bg-[--brand] text-white flex items-center justify-center flex-shrink-0 shadow-md">
-            <Leaf className="w-7 h-7" />
           </div>
         </div>
       </div>
