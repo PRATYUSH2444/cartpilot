@@ -754,6 +754,13 @@ export const ShopperWorkspace: React.FC = () => {
               }}
               userInitial={userInitial}
               walletBalance={walletBalance}
+              onTriggerAIPrompt={(prompt) => {
+                setActiveMobileTab('chat');
+                setComposerText(prompt);
+                setTimeout(() => {
+                  handleSendMessage(prompt);
+                }, 150);
+              }}
             />
           )}
 
