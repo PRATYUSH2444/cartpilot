@@ -23,6 +23,7 @@ import { CheckoutModal } from '../../components/shopper/CheckoutModal';
 import { LiveTrackingModal } from '../../components/shopper/LiveTrackingModal';
 import { GlobalSearchModal } from '../../components/shopper/GlobalSearchModal';
 import { SplashScreen } from '../../components/shopper/SplashScreen';
+import { PhoneLoginModal } from '../../components/shopper/PhoneLoginModal';
 import { ProductSheet } from '../../components/shopper/ProductSheet';
 import { AddressModal } from '../../components/shopper/AddressModal';
 import { OrdersSheet } from '../../components/shopper/OrdersSheet';
@@ -78,6 +79,7 @@ export const ShopperWorkspace: React.FC = () => {
   const [trackedOrder, setTrackedOrder] = useState<OrderData | null>(null);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const [isSplashScreenOpen, setIsSplashScreenOpen] = useState(false);
+  const [isPhoneLoginOpen, setIsPhoneLoginOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -987,8 +989,17 @@ export const ShopperWorkspace: React.FC = () => {
       <SplashScreen
         isOpen={isSplashScreenOpen}
         onGetStarted={() => setIsSplashScreenOpen(false)}
-        onSignIn={() => setIsSplashScreenOpen(false)}
+        onSignIn={() => {
+          setIsSplashScreenOpen(false);
+          setIsPhoneLoginOpen(true);
+        }}
         onClose={() => setIsSplashScreenOpen(false)}
+      />
+
+      {/* ── Phone Login Modal ──────────────────────────────────────────────── */}
+      <PhoneLoginModal
+        isOpen={isPhoneLoginOpen}
+        onClose={() => setIsPhoneLoginOpen(false)}
       />
 
       {/* ── Integrations & Real AI Engine Modal ────────────────────────────── */}

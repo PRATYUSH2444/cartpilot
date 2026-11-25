@@ -2,22 +2,37 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { OtpVerificationModel, OtpPurpose } from './otp.model.js';
 import { UserModel } from '../users/user.model.js';
-import { BadRequestError } from '../../common/errors/app-error.js';
+import { BadRequestError, ForbiddenError } from '../../common/errors/app-error.js';
 import { logger } from '../../common/logging/logger.js';
 import { env } from '../../config/env.config.js';
+import type { AuthResult, ClientContext } from './auth.service.js';
 
 export class OtpService {
   /**
-   * Generates and dispatches a 6-digit OTP code to the provided phone number.
+   * Normalizes an Indian or international mobile number to standard E.164 (+91XXXXXXXXXX) format.
+   */
+  public static normalizePhone(phone: string): string {
+    const clean = phone.trim().replace(/[\s\-\(\)]/g, '');
+    if (/^\d{10}$/.test(clean)) {
+      return `+91${clean}`;
+    }
+    if (/^\+91\d{10}$/.test(clean)) {
+      return clean;
+    }
+    if (/^\+?[1-9]\d{7,14}$/.test(clean)) {
+      return clean.startsWith('+') ? clean : `+${clean}`;
+    }
+    throw new BadRequestError('Please enter a valid 10-digit mobile number');
+  }
+
+  /**
+   * Generates and dispatches a 4-digit (for login) or 6-digit OTP code to the provided phone number.
    */
   public static async sendOtp(
     phone: string,
-    purpose: OtpPurpose = 'PHONE_VERIFICATION'
-  ): Promise<{ success: boolean; message: string; simulated?: boolean; expiresAt: Date }> {
-    const cleanPhone = phone.trim().replace(/\s+/g, '');
-    if (!/^\+?[1-9]\d{7,14}$/.test(cleanPhone)) {
-      throw new BadRequestError('Phone number must be a valid E.164 formatted number (e.g. +919876543210)');
-    }
+    purpose: OtpPurpose = 'PHONE_LOGIN'
+  ): Promise<{ success: boolean; message: string; simulated?: boolean; simulatedCode?: string; expiresAt: Date }> {
+    const cleanPhone = this.normalizePhone(phone);
 
     // Rate-limit check: Prevent spamming OTP within 60 seconds
     const existing = await OtpVerificationModel.findOne({
@@ -30,8 +45,12 @@ export class OtpService {
       throw new BadRequestError('Please wait 60 seconds before requesting a new OTP');
     }
 
-    // Generate 6-digit cryptographic numeric code
-    const rawOtp = crypto.randomInt(100000, 999999).toString();
+    // Generate 4-digit code for phone login (matches reference UI), 6-digit for 2FA
+    const rawOtp =
+      purpose === 'PHONE_LOGIN'
+        ? crypto.randomInt(1000, 9999).toString()
+        : crypto.randomInt(100000, 999999).toString();
+
     const hashedOtp = await bcrypt.hash(rawOtp, 10);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes TTL
 
@@ -53,7 +72,7 @@ export class OtpService {
       try {
         const auth = Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString('base64');
         const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`;
-        
+
         const params = new URLSearchParams();
         params.append('To', cleanPhone);
         params.append('From', env.TWILIO_PHONE_NUMBER);
@@ -62,7 +81,7 @@ export class OtpService {
         const twilioRes = await fetch(twilioUrl, {
           method: 'POST',
           headers: {
-            'Authorization': `Basic ${auth}`,
+            Authorization: `Basic ${auth}`,
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: params.toString(),
@@ -91,8 +110,9 @@ export class OtpService {
       success: true,
       message: dispatchedViaCarrier
         ? `Verification code dispatched via SMS to ${cleanPhone}`
-        : `OTP generated for ${cleanPhone} (Carrier unconfigured; check server log or use development code: ${rawOtp})`,
+        : `OTP dispatched to ${cleanPhone}. (Code: ${rawOtp})`,
       simulated: !dispatchedViaCarrier,
+      simulatedCode: !dispatchedViaCarrier ? rawOtp : undefined,
       expiresAt,
     };
   }
@@ -106,7 +126,7 @@ export class OtpService {
     purpose: OtpPurpose = 'PHONE_VERIFICATION',
     userId?: string
   ): Promise<{ verified: boolean; message: string }> {
-    const cleanPhone = phone.trim().replace(/\s+/g, '');
+    const cleanPhone = this.normalizePhone(phone);
     const record = await OtpVerificationModel.findOne({
       phone: cleanPhone,
       purpose,
@@ -142,6 +162,92 @@ export class OtpService {
     return {
       verified: true,
       message: 'Phone number verified successfully!',
+    };
+  }
+
+  /**
+   * Verifies a login OTP code, finds or creates the customer account, and issues authentic JWT session tokens.
+   */
+  public static async verifyLoginOtp(
+    phone: string,
+    code: string,
+    name?: string,
+    context: ClientContext = {}
+  ): Promise<AuthResult> {
+    const cleanPhone = this.normalizePhone(phone);
+    const record = await OtpVerificationModel.findOne({
+      phone: cleanPhone,
+      purpose: 'PHONE_LOGIN',
+      isVerified: false,
+    });
+
+    if (!record) {
+      throw new BadRequestError('Invalid or expired OTP. Please request a new verification code.');
+    }
+
+    if (record.attempts >= 3) {
+      await OtpVerificationModel.findByIdAndDelete(record._id);
+      throw new BadRequestError('Too many failed attempts. This OTP has been invalidated. Please request a new code.');
+    }
+
+    const matches = await bcrypt.compare(code.trim(), record.hashedOtp);
+    if (!matches) {
+      record.attempts += 1;
+      await record.save();
+      throw new BadRequestError(`Incorrect OTP code. ${3 - record.attempts} attempts remaining.`);
+    }
+
+    record.isVerified = true;
+    await record.save();
+
+    // Find existing customer or register new customer
+    let user = await UserModel.findOne({ phone: cleanPhone });
+    if (!user) {
+      const emailPrefix = cleanPhone.replace(/\+/g, '');
+      const generatedEmail = `${emailPrefix}@cartpilot.local`;
+      const salt = await bcrypt.genSalt(10);
+      const randomSecret = crypto.randomBytes(16).toString('hex');
+      const passwordHash = await bcrypt.hash(randomSecret, salt);
+
+      user = await UserModel.create({
+        name: name?.trim() || `Customer ${cleanPhone.slice(-4)}`,
+        email: generatedEmail,
+        phone: cleanPhone,
+        role: 'CUSTOMER',
+        isPhoneVerified: true,
+        isActive: true,
+        passwordHash,
+        tokenVersion: 0,
+      });
+
+      logger.info({ userId: user._id, phone: cleanPhone }, '✨ New customer account registered via phone OTP');
+    } else {
+      if (!user.isPhoneVerified) {
+        user.isPhoneVerified = true;
+        await user.save();
+      }
+      if (user.isSuspended) {
+        throw new ForbiddenError(`Your account has been suspended: ${user.suspensionReason || 'Contact support'}`);
+      }
+      if (user.lockoutUntil && user.lockoutUntil > new Date()) {
+        throw new ForbiddenError('Account is temporarily locked. Please try again later.');
+      }
+    }
+
+    const { AuthService } = await import('./auth.service.js');
+    const { accessToken, refreshToken } = await AuthService.createSessionTokens(user, context);
+
+    return {
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        phone: user.phone,
+        mustChangePassword: false,
+      },
+      accessToken,
+      refreshToken,
     };
   }
 }

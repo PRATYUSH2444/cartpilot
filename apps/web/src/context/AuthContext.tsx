@@ -17,6 +17,7 @@ export interface UserProfile {
   email: string;
   name: string;
   role: UserRole;
+  phone?: string;
   merchantId?: string;
   isStaff?: boolean;
   staffPermissions?: string[];
@@ -35,6 +36,21 @@ export interface AuthContextType {
     email: string,
     password: string
   ) => Promise<{ success: boolean; role?: UserRole; error?: string; mustChangePassword?: boolean }>;
+  sendPhoneOtp: (
+    phone: string,
+    purpose?: string
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+    message?: string;
+    simulatedCode?: string;
+    expiresInSeconds?: number;
+  }>;
+  loginWithPhoneOtp: (
+    phone: string,
+    code: string,
+    name?: string
+  ) => Promise<{ success: boolean; role?: UserRole; error?: string }>;
   register: (
     name: string,
     email: string,
@@ -95,6 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: data.data.user.email,
             name: data.data.user.name,
             role: data.data.user.role,
+            phone: data.data.user.phone,
             merchantId: data.data.user.merchantId,
             isStaff: data.data.user.isStaff,
             staffPermissions: data.data.user.staffPermissions,
@@ -284,6 +301,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: data.data.user.email,
           name: data.data.user.name,
           role: data.data.user.role,
+          phone: data.data.user.phone,
           merchantId: data.data.user.merchantId,
           isStaff: data.data.user.isStaff,
           staffPermissions: data.data.user.staffPermissions,
@@ -313,6 +331,93 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       } else {
         return { success: false, error: data.error?.message || 'Invalid email or password' };
+      }
+    } catch {
+      return {
+        success: false,
+        error: 'Cannot reach backend server. Please verify connection.',
+      };
+    }
+  };
+
+  const sendPhoneOtp = async (phone: string, purpose: string = 'PHONE_LOGIN') => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/phone/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ phone, purpose }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return {
+          success: true,
+          message: data.data?.message || 'OTP sent successfully',
+          simulatedCode: data.data?.simulatedCode,
+          expiresInSeconds: data.data?.expiresInSeconds || 600,
+        };
+      } else {
+        return {
+          success: false,
+          error: data.error?.message || data.message || 'Failed to send OTP. Please check the mobile number.',
+        };
+      }
+    } catch {
+      return {
+        success: false,
+        error: 'Cannot reach backend server. Please verify connection.',
+      };
+    }
+  };
+
+  const loginWithPhoneOtp = async (phone: string, code: string, name?: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/phone/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ phone, code, name }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const accessToken = data.data.accessToken;
+        const profile: UserProfile = {
+          id: data.data.user.id || data.data.user.userId,
+          email: data.data.user.email,
+          name: data.data.user.name,
+          role: data.data.user.role,
+          phone: data.data.user.phone,
+          merchantId: data.data.user.merchantId,
+          isStaff: data.data.user.isStaff,
+          staffPermissions: data.data.user.staffPermissions,
+          mustChangePassword: data.data.user.mustChangePassword,
+        };
+
+        latestTokenRef.current = accessToken;
+        setToken(accessToken);
+        setUser(profile);
+        setAuthStatus('AUTHENTICATED');
+        setIsSessionExpired(false);
+
+        try {
+          localStorage.setItem('cartpilot_has_session', 'true');
+          localStorage.setItem('cartpilot_user_role', profile.role);
+          authChannelRef.current?.postMessage({
+            type: 'AUTH_LOGIN',
+            role: profile.role,
+            user: profile,
+          });
+        } catch {}
+
+        return {
+          success: true,
+          role: profile.role,
+        };
+      } else {
+        return {
+          success: false,
+          error: data.error?.message || data.message || 'Invalid or expired OTP code.',
+        };
       }
     } catch {
       return {
@@ -457,6 +562,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isSessionExpired,
         dismissSessionExpired,
         login,
+        sendPhoneOtp,
+        loginWithPhoneOtp,
         register,
         logout,
         logoutAll,

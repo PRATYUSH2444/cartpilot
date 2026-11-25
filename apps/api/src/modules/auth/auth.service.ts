@@ -49,6 +49,7 @@ export interface AuthUserDTO {
   email: string;
   name: string;
   role: UserRole;
+  phone?: string;
   merchantId?: string;
   isStaff?: boolean;
   staffPermissions?: MerchantPermission[];

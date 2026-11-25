@@ -16,6 +16,7 @@ import {
   resetPassword,
   sendPhoneOtp,
   verifyPhoneOtp,
+  loginWithPhoneOtp,
 } from './auth.controller.js';
 import { validate } from '../../common/middleware/validate.js';
 import { authenticate, authenticateOptional, requireRole } from '../../common/middleware/auth.js';
@@ -29,6 +30,8 @@ import {
   changePasswordSchema,
   forceChangePasswordSchema,
   createAdminSchema,
+  phoneOtpSendSchema,
+  phoneOtpLoginSchema,
 } from './auth.schema.js';
 
 export const authRouter = Router();
@@ -40,9 +43,10 @@ authRouter.post('/refresh', validate(refreshSchema), refresh);
 authRouter.post('/forgot-password', authRateLimiter, validate(forgotPasswordSchema), forgotPassword);
 authRouter.post('/reset-password', authRateLimiter, validate(resetPasswordSchema), resetPassword);
 
-// Phone OTP Verification Flow
-authRouter.post('/phone/send-otp', authRateLimiter, sendPhoneOtp);
+// Phone OTP Verification & Authentication Flow
+authRouter.post('/phone/send-otp', authRateLimiter, validate(phoneOtpSendSchema), sendPhoneOtp);
 authRouter.post('/phone/verify-otp', authRateLimiter, authenticateOptional, verifyPhoneOtp);
+authRouter.post('/phone/login', authRateLimiter, validate(phoneOtpLoginSchema), loginWithPhoneOtp);
 
 // Authenticated Session & Account Management (logout accepts optional auth to cleanly clear expired sessions)
 authRouter.post('/logout', authenticateOptional, logout);

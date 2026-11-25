@@ -21,6 +21,19 @@ export const refreshSchema = z.object({
   refreshToken: z.string().optional(),
 });
 
+export const phoneOtpSendSchema = z.object({
+  phone: z.string().min(10, 'Valid 10-digit mobile number is required').trim(),
+  purpose: z
+    .enum(['PHONE_VERIFICATION', 'LOGIN_2FA', 'PASSWORD_RESET', 'PHONE_LOGIN'])
+    .default('PHONE_LOGIN'),
+});
+
+export const phoneOtpLoginSchema = z.object({
+  phone: z.string().min(10, 'Valid 10-digit mobile number is required').trim(),
+  code: z.string().min(4, 'Valid verification code is required').max(6).trim(),
+  name: z.string().optional(),
+});
+
 export const forgotPasswordSchema = z.object({
   email: z.string().email('Valid email address is required').toLowerCase().trim(),
 });

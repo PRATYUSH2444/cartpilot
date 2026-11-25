@@ -365,6 +365,30 @@ export async function verifyPhoneOtp(
   }
 }
 
+export async function loginWithPhoneOtp(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { phone, code, name } = req.body;
+    const context = getClientContext(req);
+    const { OtpService } = await import('./otp.service.js');
+    const result = await OtpService.verifyLoginOtp(phone, code, name, context);
+    setRefreshCookie(res, result.refreshToken, result.user.role);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user: result.user,
+        accessToken: result.accessToken,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function getPermissions(
   req: AuthenticatedRequest,
   res: Response,
