@@ -4,7 +4,6 @@ import { OtpVerificationModel, OtpPurpose } from './otp.model.js';
 import { UserModel } from '../users/user.model.js';
 import { BadRequestError, ForbiddenError } from '../../common/errors/app-error.js';
 import { logger } from '../../common/logging/logger.js';
-import { env } from '../../config/env.config.js';
 import type { AuthResult, ClientContext } from './auth.service.js';
 
 export class OtpService {
@@ -66,37 +65,15 @@ export class OtpService {
       expiresAt,
     });
 
-    // Attempt real SMS carrier delivery via Twilio if configured
+    // Attempt real SMS carrier delivery via Twilio Programmable Messaging
     let dispatchedViaCarrier = false;
-    if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_PHONE_NUMBER) {
-      try {
-        const auth = Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString('base64');
-        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`;
-
-        const params = new URLSearchParams();
-        params.append('To', cleanPhone);
-        params.append('From', env.TWILIO_PHONE_NUMBER);
-        params.append('Body', `Your CartPilot verification code is: ${rawOtp}. Valid for 5 minutes.`);
-
-        const twilioRes = await fetch(twilioUrl, {
-          method: 'POST',
-          headers: {
-            Authorization: `Basic ${auth}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: params.toString(),
-        });
-
-        if (twilioRes.ok) {
-          dispatchedViaCarrier = true;
-          logger.info({ phone: cleanPhone }, '✅ Real SMS OTP dispatched via Twilio carrier gateway');
-        } else {
-          const errText = await twilioRes.text();
-          logger.warn({ errText, phone: cleanPhone }, 'Twilio SMS dispatch failed');
-        }
-      } catch (err) {
-        logger.error({ err, phone: cleanPhone }, 'Error communicating with Twilio SMS gateway');
-      }
+    const { TwilioSmsService } = await import('../sms/twilio-sms.service.js');
+    const smsResult = await TwilioSmsService.sendSms({
+      to: cleanPhone,
+      body: `Your CartPilot verification code is: ${rawOtp}. Valid for 5 minutes.`,
+    });
+    if (smsResult.success && smsResult.carrier === 'TWILIO') {
+      dispatchedViaCarrier = true;
     }
 
     if (!dispatchedViaCarrier) {

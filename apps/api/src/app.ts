@@ -67,8 +67,15 @@ export function createApp(): Express {
     }
   );
 
-  // Standard JSON Body Parser for all other endpoints
-  app.use(express.json({ limit: '1mb' }));
+  // Standard JSON Body Parser with rawBody capture for Svix signature verification
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req: Request & { rawBody?: string }, _res: Response, buf: Buffer) => {
+        req.rawBody = buf.toString('utf8');
+      },
+    })
+  );
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
   // Root Diagnostic Aliases

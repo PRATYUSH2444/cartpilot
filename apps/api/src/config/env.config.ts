@@ -37,12 +37,14 @@ const envSchema = z
     TWILIO_ACCOUNT_SID: z.string().optional(),
     TWILIO_AUTH_TOKEN: z.string().optional(),
     TWILIO_PHONE_NUMBER: z.string().optional(),
+    TWILIO_MESSAGING_SERVICE_SID: z.string().optional(),
 
     GOOGLE_MAPS_API_KEY: z.string().optional(),
 
     CLERK_PUBLISHABLE_KEY: z.string().optional(),
     CLERK_SECRET_KEY: z.string().optional(),
     CLERK_WEBHOOK_SECRET: z.string().optional(),
+    CLERK_SMS_WEBHOOK_SECRET: z.string().optional(),
     ADMIN_CLERK_USER_ID: z.string().optional(),
 
     RESERVATION_SWEEPER_INTERVAL_MS: z.coerce.number().default(60000),

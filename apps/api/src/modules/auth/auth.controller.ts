@@ -453,7 +453,7 @@ export async function clerkWebhook(
   next: NextFunction
 ): Promise<void> {
   try {
-    const rawPayload = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    const rawPayload = (req as any).rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
     const headers = {
       'svix-id': (req.headers['svix-id'] as string) || '',
       'svix-timestamp': (req.headers['svix-timestamp'] as string) || '',
@@ -463,6 +463,28 @@ export async function clerkWebhook(
     await AuthService.handleClerkWebhook(rawPayload, headers);
 
     res.status(200).json({ success: true, message: 'Webhook processed' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function clerkSmsWebhook(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const rawPayload = (req as any).rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+    const headers = {
+      'svix-id': (req.headers['svix-id'] as string) || '',
+      'svix-timestamp': (req.headers['svix-timestamp'] as string) || '',
+      'svix-signature': (req.headers['svix-signature'] as string) || '',
+    };
+
+    const { TwilioSmsService } = await import('../sms/twilio-sms.service.js');
+    const result = await TwilioSmsService.handleClerkSmsWebhook(rawPayload, headers);
+
+    res.status(200).json({ success: true, ...result });
   } catch (error) {
     next(error);
   }

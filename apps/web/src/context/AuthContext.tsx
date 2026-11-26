@@ -15,18 +15,19 @@ interface ClerkAuthBridgeProps {
 }
 
 const ClerkBridge: React.FC<ClerkAuthBridgeProps> = ({ onClerkAuth }) => {
-  const { isSignedIn, getToken } = useClerkAuth();
+  const { isLoaded, isSignedIn, getToken } = useClerkAuth();
   const { user: clerkUser } = useClerkUser();
   const { signOut } = useClerk();
 
   useEffect(() => {
+    if (!isLoaded) return;
     onClerkAuth({
       isSignedIn: Boolean(isSignedIn),
       getToken,
       clerkUser,
       signOut,
     });
-  }, [isSignedIn, clerkUser, getToken, signOut, onClerkAuth]);
+  }, [isLoaded, isSignedIn, clerkUser, getToken, signOut, onClerkAuth]);
 
   return null;
 };
@@ -183,6 +184,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('Clerk user sync error:', err);
       }
     } else if (hasClerk && !isSignedIn) {
+      // Do NOT wipe private Master Admin sessions!
+      const storedRole = localStorage.getItem('cartpilot_user_role') || sessionStorage.getItem('cartpilot_user_role');
+      if (storedRole === 'ADMIN' || sessionStorage.getItem('cartpilot_admin_token')) {
+        return;
+      }
       setUser(null);
       setToken(null);
       latestTokenRef.current = null;
@@ -342,9 +348,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
     const initAuth = async () => {
+      // 1. Check for private Master Admin session first
+      if (typeof window !== 'undefined') {
+        const adminToken = sessionStorage.getItem('cartpilot_admin_token');
+        const adminUserStr = sessionStorage.getItem('cartpilot_admin_user');
+        if (adminToken && adminUserStr) {
+          try {
+            const adminUser = JSON.parse(adminUserStr);
+            if (adminUser.role === 'ADMIN') {
+              latestTokenRef.current = adminToken;
+              setToken(adminToken);
+              setUser(adminUser);
+              setAuthStatus('AUTHENTICATED');
+              setIsLoading(false);
+              return;
+            }
+          } catch {}
+        }
+      }
+
       if (hasClerk) {
-        // When Clerk is active, Clerk handles its own initialization and restoration.
-        // Never call the cross-origin failing /auth/refresh cookie endpoint.
+        // When Clerk is active, Clerk handles shopper and merchant restoration via ClerkBridge.
         return;
       }
 
@@ -691,6 +715,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         localStorage.removeItem('cartpilot_has_session');
         localStorage.removeItem('cartpilot_user_role');
+        sessionStorage.removeItem('cartpilot_admin_token');
+        sessionStorage.removeItem('cartpilot_admin_user');
         sessionStorage.removeItem('cartpilot_redirect');
         authChannelRef.current?.postMessage({ type: 'AUTH_LOGOUT' });
       } catch {}
@@ -717,6 +743,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         localStorage.removeItem('cartpilot_has_session');
         localStorage.removeItem('cartpilot_user_role');
+        sessionStorage.removeItem('cartpilot_admin_token');
+        sessionStorage.removeItem('cartpilot_admin_user');
         sessionStorage.removeItem('cartpilot_redirect');
         authChannelRef.current?.postMessage({ type: 'AUTH_LOGOUT' });
       } catch {}
@@ -745,6 +773,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       localStorage.setItem('cartpilot_has_session', 'true');
       localStorage.setItem('cartpilot_user_role', userProfile.role);
+      if (userProfile.role === 'ADMIN') {
+        sessionStorage.setItem('cartpilot_admin_token', accessToken);
+        sessionStorage.setItem('cartpilot_admin_user', JSON.stringify(userProfile));
+      }
     } catch {}
   };
 

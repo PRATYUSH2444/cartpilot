@@ -936,6 +936,10 @@ export class AuthService {
     expiresInSeconds: number;
     user: { id: string; email: string; name: string; role: 'ADMIN' };
   }> {
+    if (!input || !input.email || !input.password) {
+      throw new BadRequestError('Email and password are required');
+    }
+
     const normalizedEmail = input.email.toLowerCase().trim();
     let user = await UserModel.findOne({ email: normalizedEmail });
 
@@ -1310,6 +1314,15 @@ export class AuthService {
     const eventType = evt.type;
     const data = evt.data;
 
+    await auditService.recordEvent({
+      eventType: 'CLERK_WEBHOOK_RECEIVED',
+      actorId: data?.id || 'CLERK_SYSTEM',
+      actorRole: 'SYSTEM',
+      resourceId: data?.id || 'WEBHOOK',
+      resourceType: 'USER',
+      payload: { eventType, eventId: data?.id },
+    });
+
     if (eventType === 'user.created' || eventType === 'user.updated') {
       const clerkUserId = data.id;
       const primaryEmailId = data.primary_email_address_id;
@@ -1339,6 +1352,37 @@ export class AuthService {
           { isActive: false, isSuspended: true, suspensionReason: 'User deleted in Clerk' }
         );
       }
+    } else if (eventType === 'session.created') {
+      const clerkUserId = data.user_id;
+      if (clerkUserId) {
+        await UserModel.findOneAndUpdate(
+          { clerkUserId },
+          { lastLoginAt: new Date(), $inc: { tokenVersion: 0 } }
+        );
+        await auditService.recordEvent({
+          eventType: 'AUTH_LOGIN_SUCCESS',
+          actorId: clerkUserId,
+          actorRole: 'CUSTOMER',
+          resourceId: data.id || clerkUserId,
+          resourceType: 'SESSION',
+          payload: { clerkSessionId: data.id, clerkUserId },
+        });
+      }
+    } else if (eventType === 'session.ended' || eventType === 'session.revoked') {
+      const clerkUserId = data.user_id;
+      if (clerkUserId) {
+        await auditService.recordEvent({
+          eventType: 'AUTH_SESSION_REVOKED',
+          actorId: clerkUserId,
+          actorRole: 'CUSTOMER',
+          resourceId: data.id || clerkUserId,
+          resourceType: 'SESSION',
+          payload: { clerkSessionId: data.id, clerkUserId, status: data.status },
+        });
+      }
+    } else if (eventType === 'sms.created') {
+      const { TwilioSmsService } = await import('../sms/twilio-sms.service.js');
+      await TwilioSmsService.handleClerkSmsWebhook(payload, headers);
     }
   }
 
