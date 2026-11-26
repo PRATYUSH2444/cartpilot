@@ -27,7 +27,6 @@ import {
   Send,
   Copy,
   Check,
-  ExternalLink,
   ChevronDown,
   Loader2,
   KeyRound,
@@ -86,8 +85,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   const [supportSubmitted, setSupportSubmitted] = useState(false);
   const [emailCopied, setEmailCopied] = useState(false);
 
-  const adminEmail = (import.meta.env.VITE_ADMIN_SUPPORT_EMAIL as string) || 'prakash.pratyush2444@gmail.com';
-  const googleFormUrl = (import.meta.env.VITE_SUPPORT_GOOGLE_FORM_URL as string) || '';
+  const adminEmail = (import.meta.env.VITE_ADMIN_SUPPORT_EMAIL as string) || 'prakash.extra20@gmail.com';
 
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [selectedRating, setSelectedRating] = useState(5);
@@ -788,20 +786,6 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 <span>Send Mail to Admin</span>
               </button>
             </form>
-
-            {/* Google Form Link */}
-            <div className="pt-2 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs">
-              <span className="text-stone-500 dark:text-stone-400">Prefer a Google Form?</span>
-              <a
-                href={googleFormUrl || `mailto:${adminEmail}?subject=Google Form Request - CartPilot`}
-                target={googleFormUrl ? '_blank' : '_self'}
-                rel="noreferrer"
-                className="font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>{googleFormUrl ? 'Open Google Form' : 'Request Form Link'}</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
           </div>
         </div>
       )}
