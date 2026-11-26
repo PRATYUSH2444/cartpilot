@@ -229,9 +229,7 @@ export const AdminWorkspace: React.FC = () => {
     if (!token) return;
     setIsLoadingIntegrations(true);
     try {
-      const res = await fetch(`${API_BASE}/system/integrations`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authFetch(`${API_BASE}/system/integrations`);
       if (res.ok) {
         const data = await res.json();
         setIntegrationsList(data.data?.integrations || []);
@@ -253,11 +251,10 @@ export const AdminWorkspace: React.FC = () => {
     setIsTestingKey(true);
     setTestResult(null);
     try {
-      const res = await fetch(`${API_BASE}/system/integrations/test`, {
+      const res = await authFetch(`${API_BASE}/system/integrations/test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           provider: selectedProvider,
@@ -288,11 +285,10 @@ export const AdminWorkspace: React.FC = () => {
     if (!token || !apiKeyInput.trim()) return;
     setIsSavingKey(true);
     try {
-      const res = await fetch(`${API_BASE}/system/integrations/config`, {
+      const res = await authFetch(`${API_BASE}/system/integrations/config`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           provider: selectedProvider,
@@ -326,9 +322,7 @@ export const AdminWorkspace: React.FC = () => {
     setIsVerifyingChain(true);
 
     try {
-      const res = await fetch(`${API_BASE}/audit/verify`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authFetch(`${API_BASE}/audit/verify`);
 
       if (res.ok) {
         const data = await res.json();
@@ -350,9 +344,8 @@ export const AdminWorkspace: React.FC = () => {
   const handleDecision = async (approvalId: string, decision: 'approve' | 'reject') => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/approvals/${approvalId}/${decision}`, {
+      const res = await authFetch(`${API_BASE}/approvals/${approvalId}/${decision}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {
@@ -382,11 +375,10 @@ export const AdminWorkspace: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/merchants/admin/${merchantId}/status/${action}`, {
+      const res = await authFetch(`${API_BASE}/merchants/admin/${merchantId}/status/${action}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ reason }),
       });
@@ -409,11 +401,10 @@ export const AdminWorkspace: React.FC = () => {
     setIsCreatingAdmin(true);
 
     try {
-      const res = await fetch(`${API_BASE}/auth/admin/create-admin`, {
+      const res = await authFetch(`${API_BASE}/auth/admin/create-admin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           name: adminName,

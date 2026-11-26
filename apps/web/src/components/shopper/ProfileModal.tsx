@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { UserProfile, UserGender, INotificationPreferences } from '../../types';
 import { API_BASE } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onOpenRules,
   onLogout,
 }) => {
+  const { authFetch } = useAuth();
   const [activeTab, setActiveTab] = useState<'PROFILE' | 'SECURITY' | 'PREFERENCES'>('PROFILE');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -79,9 +81,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       setIsLoading(true);
       setStatusMessage(null);
       try {
-        const res = await fetch(`${API_BASE}/users/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await authFetch(`${API_BASE}/users/profile`);
         const data = await res.json();
         if (res.ok && data.success) {
           const u: UserProfile = data.data;
@@ -113,11 +113,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     setIsSendingOtp(true);
     setOtpNotice(null);
     try {
-      const res = await fetch(`${API_BASE}/auth/phone/send-otp`, {
+      const res = await authFetch(`${API_BASE}/auth/phone/send-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ phone: phone.trim() }),
       });
@@ -140,11 +139,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     setIsVerifyingOtp(true);
     setOtpNotice(null);
     try {
-      const res = await fetch(`${API_BASE}/auth/phone/verify-otp`, {
+      const res = await authFetch(`${API_BASE}/auth/phone/verify-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ phone: phone.trim(), code: otpCode.trim() }),
       });
@@ -172,11 +170,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     setStatusMessage(null);
 
     try {
-      const res = await fetch(`${API_BASE}/users/profile`, {
+      const res = await authFetch(`${API_BASE}/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           name: name.trim(),
@@ -220,11 +217,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     setStatusMessage(null);
 
     try {
-      const res = await fetch(`${API_BASE}/users/change-password`, {
+      const res = await authFetch(`${API_BASE}/users/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           currentPassword,

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { OrderData, ProofVerificationResult } from '../../types';
 import { API_BASE } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface OrdersSheetProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
   onReorder,
   isSlideOver = false,
 }) => {
+  const { authFetch } = useAuth();
   const [verifyingOrderId, setVerifyingOrderId] = useState<string | null>(null);
   const [proofResults, setProofResults] = useState<Record<string, ProofVerificationResult>>({});
 
@@ -43,12 +45,10 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
   const handleVerifyProof = async (orderId: string) => {
     setVerifyingOrderId(orderId);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/orders/${orderId}/proof/verify`, {
+      const res = await authFetch(`${API_BASE}/orders/${orderId}/proof/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
       if (res.ok) {

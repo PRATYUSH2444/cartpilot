@@ -244,9 +244,7 @@ export const ShopperWorkspace: React.FC = () => {
         }
 
         // Fetch Chat sessions
-        const sessionRes = await fetch(`${API_BASE}/chat/sessions`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const sessionRes = await authFetch(`${API_BASE}/chat/sessions`);
 
         let session = null;
         if (sessionRes.ok) {
@@ -263,9 +261,9 @@ export const ShopperWorkspace: React.FC = () => {
         }
 
         if (!session) {
-          const createRes = await fetch(`${API_BASE}/chat/sessions`, {
+          const createRes = await authFetch(`${API_BASE}/chat/sessions`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title: 'Weekly Grocery Shopping' }),
           });
           if (createRes.ok) {
@@ -278,9 +276,7 @@ export const ShopperWorkspace: React.FC = () => {
         if (session) {
           setActiveChatSessionId(session._id);
           localStorage.setItem('cartpilot_active_session_id', session._id);
-          const detailRes = await fetch(`${API_BASE}/chat/sessions/${session._id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const detailRes = await authFetch(`${API_BASE}/chat/sessions/${session._id}`);
           if (detailRes.ok) {
             const dData = await detailRes.json();
             if (dData.data?.messages?.length > 0) {
@@ -311,11 +307,9 @@ export const ShopperWorkspace: React.FC = () => {
   // Load session messages on switch
   const loadSessionMessages = useCallback(
     async (sessionId: string) => {
-      if (!token || !sessionId) return;
+      if (!sessionId) return;
       try {
-        const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await authFetch(`${API_BASE}/chat/sessions/${sessionId}`);
         if (res.ok) {
           const dData = await res.json();
           if (dData.data?.messages) {
@@ -339,7 +333,7 @@ export const ShopperWorkspace: React.FC = () => {
         console.warn('Failed to load session messages:', err);
       }
     },
-    [token]
+    [authFetch]
   );
 
   const handleSwitchSession = async (sessionId: string) => {
@@ -349,11 +343,10 @@ export const ShopperWorkspace: React.FC = () => {
   };
 
   const handleNewChat = async () => {
-    if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/chat/sessions`, {
+      const res = await authFetch(`${API_BASE}/chat/sessions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: `Shopping Session #${chatSessions.length + 1}` }),
       });
       if (res.ok) {
@@ -371,14 +364,13 @@ export const ShopperWorkspace: React.FC = () => {
   };
 
   const handleRenameSession = async (sessionId: string, currentTitle: string) => {
-    if (!token) return;
     const newTitle = window.prompt('Enter new session title:', currentTitle);
     if (!newTitle || !newTitle.trim() || newTitle.trim() === currentTitle) return;
 
     try {
-      const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
+      const res = await authFetch(`${API_BASE}/chat/sessions/${sessionId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: newTitle.trim() }),
       });
       if (res.ok) {
@@ -393,15 +385,13 @@ export const ShopperWorkspace: React.FC = () => {
   };
 
   const handleDeleteSession = async (sessionId: string) => {
-    if (!token) return;
     if (!window.confirm('Delete this conversation? All messages will be permanently removed.')) {
       return;
     }
 
     try {
-      const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
+      const res = await authFetch(`${API_BASE}/chat/sessions/${sessionId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const remaining = chatSessions.filter((s) => s._id !== sessionId);
@@ -422,21 +412,20 @@ export const ShopperWorkspace: React.FC = () => {
 
   // Cart operations
   const handleAddToCart = async (productId: string, quantity: number) => {
-    if (!token) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/cart/items`, {
+      const res = await authFetch(`${API_BASE}/cart/items`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId, quantity }),
       });
       if (res.ok) {
         const data = await res.json();
         setCart(data.data);
-        await evaluatePolicy(token);
+        await evaluatePolicy();
         showBanner('success', 'Added to cart');
       } else {
-        const errData = await res.json();
+        const errData = await res.json().catch(() => ({}));
         showBanner('error', errData.error?.message || 'Failed to add item');
       }
     } catch {
@@ -447,22 +436,21 @@ export const ShopperWorkspace: React.FC = () => {
   };
 
   const handleUpdateQuantity = async (productId: string, quantity: number) => {
-    if (!token) return;
     setIsLoading(true);
     try {
       if (quantity <= 0) {
         await handleRemoveItem(productId);
         return;
       }
-      const res = await fetch(`${API_BASE}/cart/items/${productId}`, {
+      const res = await authFetch(`${API_BASE}/cart/items/${productId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity }),
       });
       if (res.ok) {
         const data = await res.json();
         setCart(data.data);
-        await evaluatePolicy(token);
+        await evaluatePolicy();
       }
     } catch {
       showBanner('error', 'Network error updating quantity');
@@ -472,17 +460,15 @@ export const ShopperWorkspace: React.FC = () => {
   };
 
   const handleRemoveItem = async (productId: string) => {
-    if (!token) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/cart/items/${productId}`, {
+      const res = await authFetch(`${API_BASE}/cart/items/${productId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
         setCart(data.data);
-        await evaluatePolicy(token);
+        await evaluatePolicy();
         showBanner('success', 'Item removed');
       }
     } catch {
@@ -493,17 +479,15 @@ export const ShopperWorkspace: React.FC = () => {
   };
 
   const handleClearCart = async () => {
-    if (!token) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/cart`, {
+      const res = await authFetch(`${API_BASE}/cart`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
         setCart(data.data);
-        await evaluatePolicy(token);
+        await evaluatePolicy();
         showBanner('success', 'Cart cleared');
       }
     } catch {
@@ -514,24 +498,22 @@ export const ShopperWorkspace: React.FC = () => {
   };
 
   const handleAddProposedItems = async (items: Array<{ productId: string; quantity: number }>) => {
-    if (!token || items.length === 0) return;
+    if (items.length === 0) return;
     setIsLoading(true);
     try {
       for (const item of items) {
         if (!item.productId) continue;
-        await fetch(`${API_BASE}/cart/items`, {
+        await authFetch(`${API_BASE}/cart/items`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(item),
         });
       }
-      const cartRes = await fetch(`${API_BASE}/cart`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const cartRes = await authFetch(`${API_BASE}/cart`);
       if (cartRes.ok) {
         const cData = await cartRes.json();
         setCart(cData.data);
-        await evaluatePolicy(token);
+        await evaluatePolicy();
       }
       showBanner('success', `Added ${items.length} proposed ingredients to cart!`);
     } catch {
@@ -542,14 +524,13 @@ export const ShopperWorkspace: React.FC = () => {
   };
 
   const handleUpdateDeliveryNote = async (deliveryNote: string) => {
-    if (!token) return;
     if (cart) {
       setCart({ ...cart, deliveryNote });
     }
     try {
-      await fetch(`${API_BASE}/cart/delivery-note`, {
+      await authFetch(`${API_BASE}/cart/delivery-note`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ deliveryNote }),
       });
     } catch (e) {
@@ -588,9 +569,9 @@ export const ShopperWorkspace: React.FC = () => {
     try {
       let sessionId = sessionIdOverride || activeChatSessionId;
       if (!sessionId) {
-        const createRes = await fetch(`${API_BASE}/chat/sessions`, {
+        const createRes = await authFetch(`${API_BASE}/chat/sessions`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: trimmed.slice(0, 30) }),
           signal: abortController.signal,
         });
@@ -602,9 +583,9 @@ export const ShopperWorkspace: React.FC = () => {
       }
 
       if (sessionId) {
-        const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}/messages`, {
+        const res = await authFetch(`${API_BASE}/chat/sessions/${sessionId}/messages`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ content: trimmed }),
           signal: abortController.signal,
         });
@@ -626,13 +607,11 @@ export const ShopperWorkspace: React.FC = () => {
           ]);
 
           if (agentMessage.cardType === 'cart' || agentMessage.cardType === 'items') {
-            const cartRes = await fetch(`${API_BASE}/cart`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+            const cartRes = await authFetch(`${API_BASE}/cart`);
             if (cartRes.ok) {
               const cData = await cartRes.json();
               setCart(cData.data);
-              await evaluatePolicy(token);
+              await evaluatePolicy();
             }
           }
         } else {
@@ -681,16 +660,15 @@ export const ShopperWorkspace: React.FC = () => {
 
   // Spending Mandates
   const handleSelectPreset = async (presetKey: string) => {
-    if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/mandates/preset/${presetKey}`, {
+      const res = await authFetch(`${API_BASE}/mandates/preset/${presetKey}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
       });
       if (res.ok) {
         const data = await res.json();
         setMandate(data.data.mandate);
-        await evaluatePolicy(token);
+        await evaluatePolicy();
         showBanner('success', `Activated "${data.data.preset.name}" spending mandate preset`);
       }
     } catch {
@@ -703,11 +681,10 @@ export const ShopperWorkspace: React.FC = () => {
     perOrderPaise: number,
     dailyPaise: number
   ) => {
-    if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/mandates/custom`, {
+      const res = await authFetch(`${API_BASE}/mandates/custom`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           autoApproveUpToPaise: autoApprovePaise,
           perOrderCapPaise: perOrderPaise,
@@ -717,7 +694,7 @@ export const ShopperWorkspace: React.FC = () => {
       if (res.ok) {
         const data = await res.json();
         setMandate(data.data);
-        await evaluatePolicy(token);
+        await evaluatePolicy();
         showBanner('success', 'Custom spending mandate updated');
       }
     } catch {
@@ -731,12 +708,10 @@ export const ShopperWorkspace: React.FC = () => {
     setIsLiveTrackingOpen(true);
     showBanner('success', `Order #${order.orderNumber} placed successfully!`);
     // Refresh cart
-    if (token) {
-      fetch(`${API_BASE}/cart`, { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => r.json())
-        .then((d) => setCart(d.data))
-        .catch(() => {});
-    }
+    authFetch(`${API_BASE}/cart`)
+      .then((r) => r.json())
+      .then((d) => setCart(d.data))
+      .catch(() => {});
   };
 
   const handleReorder = async (pastOrder: OrderData) => {
@@ -901,9 +876,9 @@ export const ShopperWorkspace: React.FC = () => {
       if (token) {
         setIsLoading(true);
         const title = trimmed.length > 30 ? `${trimmed.slice(0, 27)}...` : trimmed;
-        const createRes = await fetch(`${API_BASE}/chat/sessions`, {
+        const createRes = await authFetch(`${API_BASE}/chat/sessions`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title }),
         });
 
@@ -1185,7 +1160,7 @@ export const ShopperWorkspace: React.FC = () => {
         order={trackedOrder}
         onRefresh={() => {
           if (!token) return;
-          fetch(`${API_BASE}/orders`, { headers: { Authorization: `Bearer ${token}` } })
+          authFetch(`${API_BASE}/orders`)
             .then((r) => r.json())
             .then((d) => {
               const ords = d.data || [];

@@ -28,7 +28,7 @@ interface SessionItem {
 }
 
 export const AccountSecurityPage: React.FC = () => {
-  const { user, token, logoutAll } = useAuth();
+  const { user, token, logoutAll, authFetch } = useAuth();
   const navigate = useNavigate();
 
   const [sessions, setSessions] = useState<SessionItem[]>([]);
@@ -49,10 +49,7 @@ export const AccountSecurityPage: React.FC = () => {
     setIsLoadingSessions(true);
     setSessionError(null);
     try {
-      const res = await fetch(`${API_BASE}/auth/sessions`, {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: 'include',
-      });
+      const res = await authFetch(`${API_BASE}/auth/sessions`);
       const data = await res.json();
       if (res.ok && data.success) {
         setSessions(data.data);
@@ -73,10 +70,8 @@ export const AccountSecurityPage: React.FC = () => {
   const handleRevokeSession = async (sessionId: string) => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/auth/sessions/${sessionId}`, {
+      const res = await authFetch(`${API_BASE}/auth/sessions/${sessionId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: 'include',
       });
       if (res.ok) {
         setSessions((prev) => prev.filter((s) => s.id !== sessionId));
@@ -117,13 +112,11 @@ export const AccountSecurityPage: React.FC = () => {
         ? { newPassword }
         : { currentPassword, newPassword };
 
-      const res = await fetch(endpoint, {
+      const res = await authFetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
-        credentials: 'include',
         body: JSON.stringify(body),
       });
 

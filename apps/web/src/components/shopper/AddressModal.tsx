@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { UserAddress, ServiceabilityInfo, AddressType } from '../../types';
 import { API_BASE } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface AddressModalProps {
   isOpen: boolean;
@@ -64,6 +65,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
   selectedAddressId,
   onSelectAddress,
 }) => {
+  const { authFetch } = useAuth();
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [viewState, setViewState] = useState<'LIST' | 'FORM'>('LIST');
@@ -82,11 +84,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/addresses`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await authFetch(`${API_BASE}/addresses`);
       const data = await res.json();
       if (res.ok && data.success) {
         setAddresses(data.data);
@@ -183,9 +181,8 @@ export const AddressModal: React.FC<AddressModalProps> = ({
     if (!window.confirm('Are you sure you want to delete this address?')) return;
 
     try {
-      const res = await fetch(`${API_BASE}/addresses/${addressId}`, {
+      const res = await authFetch(`${API_BASE}/addresses/${addressId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         fetchAddresses();
@@ -201,9 +198,8 @@ export const AddressModal: React.FC<AddressModalProps> = ({
   const handleSetDefault = async (address: UserAddress) => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/addresses/${address._id}/default`, {
+      const res = await authFetch(`${API_BASE}/addresses/${address._id}/default`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         if (onSelectAddress) {
@@ -254,11 +250,10 @@ export const AddressModal: React.FC<AddressModalProps> = ({
         : `${API_BASE}/addresses`;
       const method = formData.id ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });

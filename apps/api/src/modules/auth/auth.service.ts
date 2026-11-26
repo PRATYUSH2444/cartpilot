@@ -115,7 +115,7 @@ export class AuthService {
     };
 
     return jwt.sign(payload, env.JWT_ACCESS_SECRET, {
-      expiresIn: '15m',
+      expiresIn: (env.JWT_ACCESS_EXPIRES_IN || '30d') as any,
     });
   }
 
@@ -188,7 +188,7 @@ export class AuthService {
       merchantId,
     };
 
-    const accessToken = jwt.sign(payload, env.JWT_ACCESS_SECRET, { expiresIn: '15m' });
+    const accessToken = jwt.sign(payload, env.JWT_ACCESS_SECRET, { expiresIn: (env.JWT_ACCESS_EXPIRES_IN || '30d') as any });
     const refreshToken = jwt.sign(
       { userId: userIdStr, familyId: crypto.randomUUID(), sessionId: new mongoose.Types.ObjectId().toString(), tokenVersion: user.tokenVersion },
       env.JWT_REFRESH_SECRET,
@@ -455,7 +455,7 @@ export class AuthService {
                 staffPermissions,
               },
               env.JWT_ACCESS_SECRET,
-              { expiresIn: '15m' }
+              { expiresIn: (env.JWT_ACCESS_EXPIRES_IN || '30d') as any }
             );
 
             const { expiresInStr } = this.getRefreshExpiry(user.role);

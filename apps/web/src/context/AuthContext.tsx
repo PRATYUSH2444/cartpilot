@@ -48,6 +48,7 @@ export interface UserProfile {
   name: string;
   role: UserRole;
   phone?: string;
+  clerkUserId?: string;
   merchantId?: string;
   isStaff?: boolean;
   staffPermissions?: string[];
@@ -125,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const authChannelRef = useRef<BroadcastChannel | null>(null);
   const clerkGetTokenRef = useRef<(() => Promise<string | null>) | null>(null);
   const clerkSignOutRef = useRef<(() => Promise<void>) | null>(null);
+  const clerkUserIdRef = useRef<string | null>(null);
 
   const handleClerkAuth = useCallback(async ({ isSignedIn, getToken, clerkUser, signOut }: any) => {
     clerkGetTokenRef.current = getToken;
@@ -139,6 +141,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const email = clerkUser.primaryEmailAddress?.emailAddress;
         const phone = clerkUser.primaryPhoneNumber?.phoneNumber;
         const name = clerkUser.fullName || clerkUser.firstName || 'Shopper';
+
+        clerkUserIdRef.current = clerkUser.id;
+        try {
+          localStorage.setItem('cartpilot_clerk_user_id', clerkUser.id);
+          if (email) localStorage.setItem('cartpilot_user_email', email);
+        } catch {}
 
         const res = await fetch(`${API_BASE}/auth/sync`, {
           method: 'POST',
@@ -161,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const d = await res.json();
           const profile: UserProfile = {
             id: d.data.user.id,
+            clerkUserId: clerkUser.id,
             email: d.data.user.email,
             name: d.data.user.name,
             role: d.data.user.role,
@@ -236,6 +245,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             const freshClerkToken = await clerkGetTokenRef.current();
             if (freshClerkToken) {
+              const clerkId = clerkUserIdRef.current || (typeof window !== 'undefined' ? localStorage.getItem('cartpilot_clerk_user_id') : null) || user?.clerkUserId || user?.id;
+              const userEmail = user?.email || (typeof window !== 'undefined' ? localStorage.getItem('cartpilot_user_email') : null) || '';
               const res = await fetch(`${API_BASE}/auth/sync`, {
                 method: 'POST',
                 headers: {
@@ -244,8 +255,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 },
                 credentials: 'include',
                 body: JSON.stringify({
-                  clerkUserId: user?.id,
-                  email: user?.email,
+                  clerkUserId: clerkId,
+                  email: userEmail,
                   name: user?.name,
                 }),
               });
@@ -369,12 +380,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [refreshSession]);
 
-  // Proactive automated token refresh timer: refreshes before access token expires (15m expiry)
+  // Proactive automated token refresh timer: refreshes before access token expires
   useEffect(() => {
     if (!token) return;
-    const authProvider = typeof window !== 'undefined' ? localStorage.getItem('cartpilot_auth_provider') : null;
-    // Clerk SDK manages its own token refreshing automatically; do NOT run the custom timer for Clerk!
-    if (authProvider === 'clerk') return;
 
     try {
       const parts = token.split('.');
@@ -391,8 +399,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (decoded.exp) {
           const expMs = decoded.exp * 1000;
           const now = Date.now();
-          // Proactively refresh 60 seconds before expiration (min 15 seconds)
-          const delay = Math.max(expMs - now - 60000, 15000);
+          const timeUntilExp = expMs - now;
+
+          // If already expired or expiring within 60s, refresh immediately
+          if (timeUntilExp <= 60000) {
+            refreshSession();
+            return;
+          }
+
+          // Cap timer at 24 hours (86,400,000 ms) to avoid 32-bit signed int overflow in setTimeout (max ~24.8 days)
+          const MAX_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+          const delay = Math.min(Math.max(timeUntilExp - 60000, 30000), MAX_TIMEOUT_MS);
           const timer = setTimeout(() => {
             refreshSession();
           }, delay);
@@ -400,10 +417,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch {
-      // Fallback: 10 minutes
+      // Fallback: 15 minutes
       const timer = setTimeout(() => {
         refreshSession();
-      }, 10 * 60 * 1000);
+      }, 15 * 60 * 1000);
       return () => clearTimeout(timer);
     }
   }, [token, refreshSession]);

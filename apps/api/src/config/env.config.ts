@@ -17,8 +17,8 @@ const envSchema = z
 
     JWT_ACCESS_SECRET: z.string().min(16).default(INSECURE_DEV_JWT_ACCESS),
     JWT_REFRESH_SECRET: z.string().min(16).default(INSECURE_DEV_JWT_REFRESH),
-    JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
-    JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+    JWT_ACCESS_EXPIRES_IN: z.string().default('30d'),
+    JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
 
     RAZORPAY_KEY_ID: z.string().default('rzp_test_placeholder'),
     RAZORPAY_KEY_SECRET: z.string().default('rzp_test_secret_placeholder'),

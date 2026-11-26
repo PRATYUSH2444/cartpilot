@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { API_BASE } from '../config/api';
+import { useAuth } from '../context/AuthContext';
 import { ModalPortal } from './common/ModalPortal';
 import { useScrollLock } from '../hooks/useScrollLock';
 
@@ -37,7 +38,8 @@ interface IntegrationsModalProps {
   token?: string | null;
 }
 
-export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, onClose, token }) => {
+export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, onClose }) => {
+  const { authFetch } = useAuth();
   useScrollLock(isOpen, { onEscape: onClose });
   const [integrations, setIntegrations] = useState<IntegrationStatus[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,21 +58,11 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, on
     latencyMs?: number;
   } | null>(null);
 
-  const getAuthHeaders = (): Record<string, string> => {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return headers;
-  };
-
   const fetchIntegrations = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/system/integrations`, {
-        headers: getAuthHeaders(),
-      });
+      const res = await authFetch(`${API_BASE}/system/integrations`);
       const data = await res.json();
       if (data.success && data.data?.integrations) {
         setIntegrations(data.data.integrations);
@@ -102,9 +94,9 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, on
     setSavingKey(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/system/integrations/config`, {
+      const res = await authFetch(`${API_BASE}/system/integrations/config`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider: selectedProvider,
           apiKey: apiKeyInput.trim(),
@@ -138,9 +130,9 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, on
     setError(null);
 
     try {
-      const res = await fetch(`${API_BASE}/system/integrations/test`, {
+      const res = await authFetch(`${API_BASE}/system/integrations/test`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider: selectedProvider,
           apiKey: apiKeyInput.trim(),

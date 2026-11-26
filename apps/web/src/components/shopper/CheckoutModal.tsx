@@ -41,7 +41,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   walletBalance = 349.0,
   onDeductWallet,
 }) => {
-  const { user, sendEmailVerification, verifyEmail: verifyEmailAction } = useAuth();
+  const { user, sendEmailVerification, verifyEmail: verifyEmailAction, authFetch } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<'RAZORPAY' | 'WALLET' | 'UPI' | 'COD'>('RAZORPAY');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,11 +140,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     try {
       // 1. Initiate checkout on the real API
-      const res = await fetch(`${API_BASE}/checkout/initiate`, {
+      const res = await authFetch(`${API_BASE}/checkout/initiate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           deliveryNote: cart.deliveryNote || 'Standard Morning Delivery',
@@ -168,11 +167,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       const { order, razorpay } = data.data;
 
       // 2. Complete payment verification via real backend endpoint
-      const verifyRes = await fetch(`${API_BASE}/payments/verify`, {
+      const verifyRes = await authFetch(`${API_BASE}/payments/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           orderId: order._id,

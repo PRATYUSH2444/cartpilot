@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { OrderData, ProofVerificationResult } from '../../types';
 import { API_BASE } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface OrderCardProps {
   order: OrderData;
@@ -28,6 +29,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   onAdvanceFulfillment,
   isLoading = false,
 }) => {
+  const { authFetch } = useAuth();
   // Defensive fallbacks for all order fields to prevent runtime errors
   const orderId = order?._id || (order as any)?.orderId || '';
   const orderNumber = order?.orderNumber || (orderId ? `ORD-${orderId.slice(-6).toUpperCase()}` : 'ORD-PENDING');
@@ -90,12 +92,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     setIsVerifying(true);
     setVerifyError(null);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/orders/${orderId}/proof/verify`, {
+      const res = await authFetch(`${API_BASE}/orders/${orderId}/proof/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
       if (res.ok) {
