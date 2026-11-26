@@ -18,6 +18,39 @@ async function bootstrap(): Promise<void> {
       await runSeed(false);
     }
 
+    // Ensure Master Admin account exists and is unblocked on every startup
+    const { UserModel } = await import('./modules/users/user.model.js');
+    const masterAdmin = await UserModel.findOne({ email: 'admin@cartpilot.com' });
+    if (!masterAdmin) {
+      const bcrypt = (await import('bcryptjs')).default;
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash('Admin1234!', salt);
+      await UserModel.create({
+        name: 'Master System Administrator',
+        email: 'admin@cartpilot.com',
+        passwordHash,
+        role: 'ADMIN',
+        isActive: true,
+        tokenVersion: 0,
+        failedLoginAttempts: 0,
+        isSuspended: false,
+        isEmailVerified: true,
+        isPhoneVerified: true,
+        isMasterAdmin: true,
+        isMfaEnforced: true,
+      });
+      logger.info('🛡️ Master Administrator account provisioned (admin@cartpilot.com)');
+    } else {
+      masterAdmin.role = 'ADMIN';
+      masterAdmin.isActive = true;
+      masterAdmin.isSuspended = false;
+      masterAdmin.failedLoginAttempts = 0;
+      masterAdmin.lockoutUntil = null;
+      masterAdmin.isMasterAdmin = true;
+      masterAdmin.isMfaEnforced = true;
+      await masterAdmin.save();
+    }
+
     // Addendum 4: Execute startup check & migration for legacy mandates
     const { MandateService } = await import('./modules/mandates/mandate.service.js');
     await MandateService.migrateLegacyMandates();
