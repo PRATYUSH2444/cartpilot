@@ -279,31 +279,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* ── Main Fluid Page Container (Capped at 1400px per UX_CONTRACT) ── */}
       <div className="page-container pt-4 lg:pt-6 space-y-5 lg:space-y-7">
-        {/* ── SOP Delivery Promise Banner (Ultra-Thin Solid Aesthetic Strip) ── */}
-        <div className="rounded-xl sm:rounded-2xl bg-stone-900 dark:bg-stone-900 text-white px-3.5 py-2 sm:px-4 sm:py-2.5 border border-stone-800 shadow-2xs flex items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-stone-800 text-emerald-400 flex items-center justify-center flex-shrink-0">
-              <Truck className="w-4 h-4" />
+        {/* ── Daily Delivery Schedule Strip (Humble, Factual & Aesthetic) ── */}
+        <div className="rounded-2xl bg-stone-900 dark:bg-stone-900 text-white p-3.5 sm:p-4 border border-stone-800 shadow-2xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-stone-800 text-emerald-400 flex items-center justify-center flex-shrink-0">
+              <Truck className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-heading font-bold text-xs sm:text-sm text-stone-100 truncate">
-                  Order till Midnight • Delivery 6 AM – 10 AM
-                </span>
-                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md bg-stone-800 text-emerald-400 text-[10px] font-semibold border border-stone-700/60 flex-shrink-0">
-                  Tomorrow Morning
-                </span>
-              </div>
+            <div className="min-w-0 space-y-0.5">
+              <h3 className="font-heading font-bold text-xs sm:text-sm text-stone-100 leading-snug">
+                Morning Deliveries: 6 AM – 10 AM
+              </h3>
+              <p className="text-[11px] sm:text-xs text-stone-400 leading-tight">
+                Orders placed by midnight arrive tomorrow morning
+              </p>
             </div>
           </div>
 
           <button
             type="button"
             onClick={() => onSelectTab('browse')}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white hover:bg-stone-100 active:scale-95 text-stone-900 font-bold text-[11px] sm:text-xs shadow-2xs transition-all cursor-pointer flex-shrink-0"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white hover:bg-stone-100 active:scale-95 text-stone-900 font-bold text-xs shadow-2xs transition-all cursor-pointer flex-shrink-0"
           >
-            <span>Shop Fresh</span>
-            <ArrowRight className="w-3 h-3" />
+            <span>Shop</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
