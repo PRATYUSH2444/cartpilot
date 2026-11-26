@@ -347,7 +347,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, on
                   </div>
                   <div>
                     <div className="text-xs font-bold">Google Gemini</div>
-                    <div className="text-[10px] text-slate-400">gemini-1.5-flash / native tools</div>
+                    <div className="text-[10px] text-slate-400">gemini-3.5-flash-lite / native tools</div>
                   </div>
                 </button>
 

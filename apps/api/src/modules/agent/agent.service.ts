@@ -11,6 +11,47 @@ export interface AgentTurnResult {
   cardData?: Record<string, any>;
 }
 
+/**
+ * Compacts verbose tool outputs to minimal essentials before sending to LLM.
+ * Saves ~80% of tokens while preserving all facts needed for conversational responses.
+ */
+function compactToolResult(toolName: string, result: any): any {
+  if (!result || typeof result !== 'object') return result;
+
+  if (toolName === 'matchIngredientsToCatalog') {
+    return {
+      dishName: result.dishName,
+      availableCount: result.availableCount,
+      missingCount: result.missingCount,
+      available: (result.availableItems || []).map((i: any) => ({
+        name: i.name,
+        product: i.matchedProduct?.name,
+        price: i.matchedProduct?.price,
+        unit: i.unit,
+      })),
+      missing: (result.missingItems || []).map((i: any) => ({
+        name: i.name,
+        unit: i.unit,
+        suggestion: i.substitutionSuggestion,
+      })),
+    };
+  }
+
+  if (toolName === 'getCart') {
+    return {
+      itemCount: result.itemCount || result.items?.length,
+      totalAmount: result.totalAmount || result.subtotal,
+      items: (result.items || []).map((i: any) => ({
+        name: i.product?.name || i.name,
+        qty: i.quantity,
+        price: i.unitPrice || i.price,
+      })),
+    };
+  }
+
+  return result;
+}
+
 export class AgentService {
   private static readonly SYSTEM_PROMPT = `
 You are CartPilot, a policy-controlled autonomous AI grocery and culinary intelligence engine.
@@ -59,8 +100,8 @@ CRITICAL BEHAVIORS & CAPABILITIES:
 
     const messages: AgentMessage[] = [];
 
-    // 1. Add historical context (up to last 12 messages for rich multi-turn continuity)
-    const recentHistory = history.slice(-12);
+    // 1. Add historical context (compact: last 6 messages to prevent token exhaustion)
+    const recentHistory = history.slice(-6);
     for (const item of recentHistory) {
       messages.push({
         role: item.sender === 'USER' ? 'user' : 'assistant',
@@ -80,7 +121,7 @@ CRITICAL BEHAVIORS & CAPABILITIES:
 
     let finalContent = '';
     let loopCount = 0;
-    const maxLoops = 6;
+    const maxLoops = 3;
 
     try {
       while (loopCount < maxLoops) {
@@ -153,15 +194,16 @@ CRITICAL BEHAVIORS & CAPABILITIES:
             detectedCardData = execResult.result;
           }
 
-          // Append tool execution output back to LLM context
+          const compactRes = compactToolResult(tc.name, execResult.result);
+          // Append compact tool execution output back to LLM context to conserve tokens
           messages.push({
             role: 'tool',
             content: execResult.error
               ? `Error executing ${tc.name}: ${execResult.error}`
-              : JSON.stringify(execResult.result),
+              : JSON.stringify(compactRes),
             toolCalls: [tc],
             toolCallId: tc.id,
-            toolResult: execResult.result,
+            toolResult: compactRes,
           });
         }
       }

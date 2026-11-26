@@ -1151,7 +1151,7 @@ export const AdminWorkspace: React.FC = () => {
                       </div>
                       <div>
                         <div className="text-xs font-bold text-ink">Google Gemini</div>
-                        <div className="text-[11px] text-mut">gemini-2.5-flash / Native Function Calling</div>
+                        <div className="text-[11px] text-mut">gemini-3.5-flash-lite / Native Function Calling</div>
                       </div>
                     </button>
 

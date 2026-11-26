@@ -15,7 +15,7 @@ export class GeminiProvider implements LLMProvider {
 
   constructor(apiKey?: string, model?: string) {
     this.apiKey = apiKey || env.GEMINI_API_KEY || '';
-    this.model = model || env.GEMINI_MODEL || 'gemini-flash-lite-latest';
+    this.model = model || env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
   }
 
   public async generateResponse(
@@ -130,17 +130,22 @@ export class GeminiProvider implements LLMProvider {
         },
         contents,
         tools: functionDeclarations.length > 0 ? [{ functionDeclarations }] : undefined,
+        generationConfig: {
+          maxOutputTokens: 1024,
+          temperature: 0.2,
+          topP: 0.8,
+        },
       };
 
+      // Minimal-token lightweight models with multi-tier fallback (No heavy pro models)
       const candidateModels = [
-        'gemini-flash-lite-latest',
-        'gemini-3.1-pro-preview',
-        'gemini-3-flash-preview',
-        'gemini-3.1-flash-lite-preview',
         this.model,
+        'gemini-3.5-flash-lite',
+        'gemini-flash-lite-latest',
+        'gemini-3.1-flash-lite-preview',
+        'gemini-3-flash-preview',
         'gemini-3.5-flash',
-        'gemini-3.7-flash',
-        'gemini-3.8-flash',
+        'gemini-2.5-flash',
       ].filter((m, idx, arr) => Boolean(m) && arr.indexOf(m) === idx);
 
       let response: Response | null = null;

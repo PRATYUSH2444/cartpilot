@@ -26,7 +26,7 @@ const envSchema = z
 
     AI_PROVIDER: z.enum(['gemini', 'openai', 'mock']).default('gemini'),
     GEMINI_API_KEY: z.string().optional(),
-    GEMINI_MODEL: z.string().default('gemini-flash-lite-latest'),
+    GEMINI_MODEL: z.string().default('gemini-3.5-flash-lite'),
     OPENAI_API_KEY: z.string().optional(),
     OPENAI_MODEL: z.string().default('gpt-4o-mini'),
     AI_TIMEOUT_MS: z.coerce.number().default(20000),
