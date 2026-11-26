@@ -1323,16 +1323,17 @@ export class AuthService {
       payload: { eventType, eventId: data?.id },
     });
 
-    if (eventType === 'user.created' || eventType === 'user.updated') {
-      const clerkUserId = data.id;
-      const primaryEmailId = data.primary_email_address_id;
-      const emailObj = data.email_addresses?.find((e: any) => e.id === primaryEmailId) || data.email_addresses?.[0];
-      const email = emailObj?.email_address;
-      const isEmailVerified = emailObj?.verification?.status === 'verified';
-      const name = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.username || 'User';
-      const phoneObj = data.phone_numbers?.[0];
+    if (eventType === 'user.created' || eventType === 'user.updated' || eventType === 'user.merged') {
+      const clerkUserId = data.id || data.user?.id;
+      const primaryEmailId = data.primary_email_address_id || data.user?.primary_email_address_id;
+      const emailsList = data.email_addresses || data.user?.email_addresses;
+      const emailObj = emailsList?.find((e: any) => e.id === primaryEmailId) || emailsList?.[0];
+      const name = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.username || data.user?.username || 'Shopper';
+      const phoneObj = data.phone_numbers?.[0] || data.user?.phone_numbers?.[0];
       const phone = phoneObj?.phone_number;
+      const isEmailVerified = emailObj?.verification?.status === 'verified';
       const isPhoneVerified = phoneObj?.verification?.status === 'verified';
+      const email = emailObj?.email_address || (phone ? `${phone.replace(/\D/g, '')}@phone.cartpilot.com` : undefined);
 
       if (email && clerkUserId) {
         await this.syncClerkUser({
@@ -1368,7 +1369,7 @@ export class AuthService {
           payload: { clerkSessionId: data.id, clerkUserId },
         });
       }
-    } else if (eventType === 'session.ended' || eventType === 'session.revoked') {
+    } else if (eventType === 'session.ended' || eventType === 'session.revoked' || eventType === 'session.removed') {
       const clerkUserId = data.user_id;
       if (clerkUserId) {
         await auditService.recordEvent({
