@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { SignUpButton } from '@clerk/clerk-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -26,8 +26,14 @@ export const RegisterPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { register } = useAuth();
+  const { register, isAuthenticated, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Immediate synchronous guard: never render register page if already authenticated
+  if (!authLoading && isAuthenticated && user) {
+    const target = user.role === 'MERCHANT' ? '/merchant' : user.role === 'ADMIN' ? '/admin' : '/shopper';
+    return <Navigate to={target} replace />;
+  }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -798,6 +798,82 @@ export const ShopperWorkspace: React.FC = () => {
     });
   };
 
+  // ── Smart In-App Back Navigation & History Trap ──────────────────────────────
+  // Prevents the browser's back gesture/button from leaking into Google OAuth or Login.
+  // 1. Closes any open modal/sheet first.
+  // 2. Returns to the 'home' tab if on a sub-tab (browse, chat, cart, account).
+  // 3. Anchors on 'home' so user stays safely inside CartPilot until explicit logout.
+  useEffect(() => {
+    window.history.replaceState({ cartpilotApp: true, tab: 'home' }, '', window.location.pathname);
+    window.history.pushState({ cartpilotApp: true, tab: activeMobileTab, guard: true }, '', window.location.pathname);
+
+    const handlePopState = () => {
+      // 1. If any modal is open, close the modal first
+      if (
+        isProductSheetOpen ||
+        isCheckoutModalOpen ||
+        isLiveTrackingOpen ||
+        isGlobalSearchOpen ||
+        isAddressModalOpen ||
+        isWishlistOpen ||
+        isWalletOpen ||
+        isCouponsOpen ||
+        isNotificationsOpen ||
+        isOrdersSheetOpen ||
+        isRulesSheetOpen ||
+        isProfileModalOpen ||
+        isIntegrationsModalOpen ||
+        isConversationDrawerOpen
+      ) {
+        setIsProductSheetOpen(false);
+        setIsCheckoutModalOpen(false);
+        setIsLiveTrackingOpen(false);
+        setIsGlobalSearchOpen(false);
+        setIsAddressModalOpen(false);
+        setIsWishlistOpen(false);
+        setIsWalletOpen(false);
+        setIsCouponsOpen(false);
+        setIsNotificationsOpen(false);
+        setIsOrdersSheetOpen(false);
+        setIsRulesSheetOpen(false);
+        setIsProfileModalOpen(false);
+        setIsIntegrationsModalOpen(false);
+        setIsConversationDrawerOpen(false);
+        window.history.pushState({ cartpilotApp: true, tab: activeMobileTab, guard: true }, '', window.location.pathname);
+        return;
+      }
+
+      // 2. If on sub-tab, navigate back to 'home'
+      if (activeMobileTab !== 'home') {
+        setActiveMobileTab('home');
+        window.history.pushState({ cartpilotApp: true, tab: 'home', guard: true }, '', window.location.pathname);
+        return;
+      }
+
+      // 3. Already on 'home' with no open overlays: re-anchor guard state so user never leaves to OAuth/Login
+      window.history.pushState({ cartpilotApp: true, tab: 'home', guard: true }, '', window.location.pathname);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [
+    activeMobileTab,
+    isProductSheetOpen,
+    isCheckoutModalOpen,
+    isLiveTrackingOpen,
+    isGlobalSearchOpen,
+    isAddressModalOpen,
+    isWishlistOpen,
+    isWalletOpen,
+    isCouponsOpen,
+    isNotificationsOpen,
+    isOrdersSheetOpen,
+    isRulesSheetOpen,
+    isProfileModalOpen,
+    isIntegrationsModalOpen,
+    isConversationDrawerOpen,
+  ]);
+
   const handleSelectTab = (tab: TabKey, categoryId?: string) => {
     setActiveMobileTab(tab);
     if (categoryId) {

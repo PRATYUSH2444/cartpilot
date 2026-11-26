@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { SignInButton } from '@clerk/clerk-react';
 import { useAuth, UserRole } from '../../context/AuthContext';
 import {
@@ -79,6 +79,12 @@ export const LoginPage: React.FC = () => {
       navigate('/shopper', { replace: true });
     }
   };
+
+  // Immediate synchronous guard: never render login page if already authenticated
+  if (!authLoading && isAuthenticated && user) {
+    const target = user.role === 'MERCHANT' ? '/merchant' : user.role === 'ADMIN' ? '/admin' : '/shopper';
+    return <Navigate to={target} replace />;
+  }
 
   // If already authenticated and not loading, redirect immediately
   useEffect(() => {

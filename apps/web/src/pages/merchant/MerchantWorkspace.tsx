@@ -130,6 +130,60 @@ export const MerchantWorkspace: React.FC = () => {
     }
   };
 
+  // ── Smart In-App Back Navigation & History Trap (Merchant) ─────────────────
+  // Prevents browser back button from leaking into Google OAuth or Login.
+  useEffect(() => {
+    window.history.replaceState({ cartpilotMerchant: true }, '', window.location.pathname);
+    window.history.pushState({ cartpilotMerchant: true, guard: true }, '', window.location.pathname);
+
+    const handlePopState = () => {
+      // 1. Close open merchant modals
+      if (
+        isCommandPaletteOpen ||
+        isNotificationsOpen ||
+        isAddProductOpen ||
+        isCreateOrderOpen ||
+        productToEdit ||
+        isIntegrationsOpen ||
+        isMobileSidebarOpen
+      ) {
+        setIsCommandPaletteOpen(false);
+        setIsNotificationsOpen(false);
+        setIsAddProductOpen(false);
+        setIsCreateOrderOpen(false);
+        setProductToEdit(null);
+        setIsIntegrationsOpen(false);
+        setIsMobileSidebarOpen(false);
+        window.history.pushState({ cartpilotMerchant: true, guard: true }, '', window.location.pathname);
+        return;
+      }
+
+      // 2. Return to 'home' if on another tab
+      if (activeTab !== 'home' && activeTab !== 'overview') {
+        setActiveTab('home');
+        navigate('/merchant');
+        window.history.pushState({ cartpilotMerchant: true, guard: true }, '', '/merchant');
+        return;
+      }
+
+      // 3. Anchor on merchant home
+      window.history.pushState({ cartpilotMerchant: true, guard: true }, '', window.location.pathname);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [
+    activeTab,
+    isCommandPaletteOpen,
+    isNotificationsOpen,
+    isAddProductOpen,
+    isCreateOrderOpen,
+    productToEdit,
+    isIntegrationsOpen,
+    isMobileSidebarOpen,
+    navigate,
+  ]);
+
   // Global Ctrl+K / Cmd+K listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

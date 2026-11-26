@@ -55,7 +55,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
       location.pathname.startsWith('/admin') ||
       Boolean(allowedRoles && allowedRoles.includes('ADMIN') && !allowedRoles.includes('CUSTOMER'));
     const redirectUrl = isTargetingAdmin ? '/admin/login' : '/login';
-    return <Navigate to={redirectUrl} state={{ from: location }} replace={false} />;
+    return <Navigate to={redirectUrl} state={{ from: location }} replace />;
   }
 
   // Role validation & authorization hierarchy:
