@@ -195,7 +195,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto pb-20 bg-[#f8faf9] dark:bg-stone-950 text-stone-900 dark:text-stone-100 font-sans">
+    <div className="flex-1 overflow-y-auto overscroll-contain pb-20 bg-[#f8faf9] dark:bg-stone-950 text-stone-900 dark:text-stone-100 font-sans">
       {/* ── Top Header Banner ─────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md py-4 border-b border-stone-200/80 dark:border-stone-800 shadow-xs">
         <div className="page-container flex items-center justify-between">

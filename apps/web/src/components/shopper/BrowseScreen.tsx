@@ -110,7 +110,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
   }, [products, selectedCategory, selectedSubcategory, searchQuery]);
 
   return (
-    <div className="flex-1 overflow-y-auto pb-8 bg-[--bg]">
+    <div className="flex-1 overflow-y-auto overscroll-contain pb-8 bg-[--bg]">
       {/* ── Top Search & Filter Bar ────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-[--bg]/95 backdrop-blur-md border-b border-[--line]/60">
         <div className="page-container pt-3 pb-2 space-y-2.5">

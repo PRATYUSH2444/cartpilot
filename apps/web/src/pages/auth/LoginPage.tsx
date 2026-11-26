@@ -301,7 +301,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-center items-center px-4 py-8 sm:py-12 bg-gradient-to-br from-[#EBF7F0] via-[#F4FBF7] to-[#DFEDE4] dark:from-stone-950 dark:via-stone-900 dark:to-emerald-950/40 font-sans text-slate-900 dark:text-white relative overflow-hidden selection:bg-[#0a5c36] selection:text-white">
+    <div className="h-full w-full overflow-y-auto overscroll-contain flex flex-col justify-center items-center px-4 py-8 sm:py-12 bg-gradient-to-br from-[#EBF7F0] via-[#F4FBF7] to-[#DFEDE4] dark:from-stone-950 dark:via-stone-900 dark:to-emerald-950/40 font-sans text-slate-900 dark:text-white relative selection:bg-[#0a5c36] selection:text-white">
       {/* Dynamic Ambient Fluid Wave Background / Neomorphic Auroras */}
       <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-emerald-300/25 dark:bg-emerald-600/10 blur-[120px] pointer-events-none animate-pulse" />
       <div className="absolute -bottom-32 -right-32 w-[520px] h-[520px] rounded-full bg-teal-300/25 dark:bg-teal-600/10 blur-[130px] pointer-events-none animate-pulse" />

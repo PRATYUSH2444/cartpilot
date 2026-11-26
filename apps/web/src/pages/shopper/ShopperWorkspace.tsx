@@ -891,7 +891,7 @@ export const ShopperWorkspace: React.FC = () => {
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'P';
 
   return (
-    <div className="h-[100dvh] max-h-[100dvh] flex flex-col bg-[--bg] text-[--ink] overflow-hidden relative">
+    <div className="fixed inset-0 w-full h-full flex flex-col bg-[--bg] text-[--ink] overflow-hidden select-none">
       {/* ── Desktop Full-Width Top Header (Screen >= 1024px) ───────────────── */}
       <DesktopHeader
         activeTab={activeMobileTab}
@@ -1060,7 +1060,7 @@ export const ShopperWorkspace: React.FC = () => {
       </div>
 
       {/* ── Fixed Bottom 5-Destination Navigation Bar (Visible only on mobile/tablet) ────── */}
-      <div className="block lg:hidden flex-shrink-0">
+      <div className="block lg:hidden flex-shrink-0 z-40 bg-white/95 dark:bg-stone-900/95 border-t border-stone-200/80 dark:border-stone-800 safe-area-inset-bottom shadow-lg">
         <BottomTabBar
           activeTab={activeMobileTab}
           onSelectTab={handleSelectTab}

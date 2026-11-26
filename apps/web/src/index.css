@@ -52,14 +52,36 @@
   --ai-border: #4C1D95;
 }
 
+/* ── Fixed Mobile Viewport Lock (Prevents document bounce & bottom white gaps) ── */
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  position: fixed;
+  inset: 0;
+}
+
 body {
   background-color: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
   min-width: 320px;
+}
+
+/* Safe Area Insets Utilities (iOS Gesture Bar & Android Nav Bar) */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-inset-top {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* ── Universal Fluid Page Container (Capped at 1400px per UX_CONTRACT) ── */

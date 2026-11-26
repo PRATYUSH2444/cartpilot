@@ -19,7 +19,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
 
   return (
     <nav
-      className="w-full flex-shrink-0 z-40 bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl border-t border-stone-200/80 dark:border-stone-800 safe-area-inset-bottom shadow-lg"
+      className="w-full flex-shrink-0 bg-transparent"
       aria-label="Bottom Navigation"
     >
       <div className="max-w-md mx-auto flex items-center justify-around px-2 py-1.5">
