@@ -18,15 +18,16 @@ import {
   Edit2,
   Wallet,
   Shield,
-  Cpu,
   Sun,
   Moon,
   Smartphone,
   CheckCircle2,
   X,
-  MessageCircle,
-  Phone,
   Mail,
+  Send,
+  Copy,
+  Check,
+  ExternalLink,
   ChevronDown,
   Loader2,
   KeyRound,
@@ -70,7 +71,6 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   onOpenWishlist,
   onOpenWallet,
   onOpenCoupons,
-  onOpenIntegrations,
   onLogout,
   isDark,
   onToggleTheme,
@@ -81,6 +81,14 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   } | null>(null);
 
   const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false);
+  const [supportCategory, setSupportCategory] = useState('Order & Delivery');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportSubmitted, setSupportSubmitted] = useState(false);
+  const [emailCopied, setEmailCopied] = useState(false);
+
+  const adminEmail = (import.meta.env.VITE_ADMIN_SUPPORT_EMAIL as string) || 'prakash.pratyush2444@gmail.com';
+  const googleFormUrl = (import.meta.env.VITE_SUPPORT_GOOGLE_FORM_URL as string) || '';
+
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [selectedRating, setSelectedRating] = useState(5);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
@@ -197,9 +205,6 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
             <h1 className="font-extrabold text-xl sm:text-2xl text-stone-900 dark:text-white leading-none">
               Account & Settings
             </h1>
-            <span className="text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-3 py-1 rounded-full border border-emerald-300 dark:border-emerald-700">
-              Verified Shopper
-            </span>
           </div>
 
           <button
@@ -354,29 +359,6 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               <ChevronRight className="w-5 h-5 text-stone-400 group-hover:text-purple-600 transition-colors flex-shrink-0" />
             </div>
 
-            {/* AI Engine & API Integrations Card */}
-            {onOpenIntegrations && (
-              <div
-                onClick={onOpenIntegrations}
-                className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-5 sm:p-6 shadow-xs flex items-center justify-between cursor-pointer hover:border-emerald-500/50 hover:shadow-md transition-all group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                    <Cpu className="w-6 h-6 text-emerald-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-extrabold text-base text-stone-900 dark:text-white group-hover:text-emerald-600 transition-colors">
-                      AI Engine & API Integrations
-                    </h3>
-                    <p className="text-sm text-stone-500 dark:text-stone-400">
-                      Gemini model routing, live agent keys & MCP sidecars
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-stone-400 group-hover:text-emerald-600 transition-colors flex-shrink-0" />
-              </div>
-            )}
-
             {/* Sign Out Card */}
             <button
               type="button"
@@ -475,21 +457,21 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 </div>
               </button>
 
-              {/* Help Center */}
+              {/* Help & Support */}
               <button
                 type="button"
                 onClick={() => setIsHelpCenterOpen(true)}
                 className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-6 shadow-xs flex items-center gap-4 hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group text-left"
               >
-                <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Headphones className="w-7 h-7 text-emerald-700" />
+                <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Headphones className="w-7 h-7 text-emerald-700 dark:text-emerald-400" />
                 </div>
                 <div>
                   <h3 className="font-extrabold text-base sm:text-lg text-stone-900 dark:text-white group-hover:text-emerald-700 transition-colors">
-                    24/7 Help Center
+                    Help & Support
                   </h3>
                   <p className="text-sm text-stone-500 dark:text-stone-400">
-                    Direct WhatsApp & toll-free customer helpline
+                    Direct email assistance & quick inquiry form
                   </p>
                 </div>
               </button>
@@ -648,69 +630,177 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
       {/* ── Help Center Modal ──────────────────────────────────────────────── */}
       {isHelpCenterOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg bg-white dark:bg-stone-900 rounded-3xl shadow-2xl border border-stone-200 dark:border-stone-800 p-7 space-y-5 animate-in zoom-in-95">
+          <div className="relative w-full max-w-lg bg-white dark:bg-stone-900 rounded-3xl shadow-2xl border border-stone-200 dark:border-stone-800 p-6 sm:p-7 space-y-5 animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
+            {/* Header */}
             <div className="flex items-center justify-between border-b border-stone-200 dark:border-stone-800 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
                   <Headphones className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="font-extrabold text-lg text-stone-900 dark:text-white">
-                    CartPilot Customer Support
+                    Help & Support
                   </h3>
-                  <p className="text-xs text-stone-400">Available 24x7 for all deliveries & queries</p>
+                  <p className="text-xs text-stone-400">Direct admin assistance & inquiry desk</p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setIsHelpCenterOpen(false)}
-                className="w-9 h-9 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 flex items-center justify-center cursor-pointer hover:text-stone-900"
+                onClick={() => {
+                  setIsHelpCenterOpen(false);
+                  setSupportSubmitted(false);
+                }}
+                className="w-9 h-9 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 hover:text-stone-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                title="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
-              Have questions regarding morning delivery timings, missing produce, or wallet credits? Our customer assistance desk is online 24/7.
-            </p>
-
-            <div className="space-y-3">
-              <a
-                href="mailto:support@cartpilot.in"
-                className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center gap-3.5 text-sm font-bold text-stone-800 dark:text-stone-200 hover:border-emerald-500 transition-colors"
-              >
-                <Mail className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                <div>
-                  <span>Email Support Desk</span>
-                  <p className="text-xs text-stone-400 font-normal">support@cartpilot.in (Response within 30 min)</p>
+            {/* Direct Admin Email Card */}
+            <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-4.5 h-4.5" />
                 </div>
-              </a>
-
-              <a
-                href="tel:1800123456"
-                className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center gap-3.5 text-sm font-bold text-stone-800 dark:text-stone-200 hover:border-emerald-500 transition-colors"
-              >
-                <Phone className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                <div>
-                  <span>Toll-Free Customer Line</span>
-                  <p className="text-xs text-stone-400 font-normal">1800-123-456 (24x7 Direct Calling)</p>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                    Direct Email Support
+                  </p>
+                  <p className="text-xs sm:text-sm font-semibold text-stone-900 dark:text-stone-100 truncate">
+                    {adminEmail}
+                  </p>
                 </div>
-              </a>
+              </div>
+
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(adminEmail);
+                    setEmailCopied(true);
+                    setTimeout(() => setEmailCopied(false), 2000);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs font-bold text-stone-700 dark:text-stone-200 hover:border-emerald-500 flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Copy admin email"
+                >
+                  {emailCopied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-emerald-600">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-stone-400" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+
+                <a
+                  href={`mailto:${adminEmail}?subject=Support Inquiry - CartPilot`}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Send Mail</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Quick Crisp Support Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!supportMessage.trim()) return;
+
+                const subject = encodeURIComponent(`[CartPilot Support: ${supportCategory}] from ${user?.name || 'Customer'}`);
+                const body = encodeURIComponent(
+                  `Hello CartPilot Support Team,\n\n` +
+                  `Category: ${supportCategory}\n` +
+                  `Customer Name: ${user?.name || 'Shopper'}\n` +
+                  `Email: ${user?.email || 'Not provided'}\n` +
+                  `Phone: ${user?.phone || displayPhone}\n\n` +
+                  `Inquiry / Question:\n${supportMessage.trim()}\n\n` +
+                  `---\nSent from CartPilot Shopper Portal`
+                );
+
+                window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`, '_blank');
+                setSupportSubmitted(true);
+              }}
+              className="space-y-3.5"
+            >
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-stone-700 dark:text-stone-300 flex items-center justify-between">
+                  <span>Inquiry Topic</span>
+                  <span className="text-[11px] font-normal text-stone-400">Select reason</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    '📦 Order & Delivery',
+                    '💳 Payment & Wallet',
+                    '🥬 Item Quality',
+                    '❓ General Question',
+                  ].map((topic) => (
+                    <button
+                      key={topic}
+                      type="button"
+                      onClick={() => setSupportCategory(topic)}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold text-left border transition-all cursor-pointer ${
+                        supportCategory === topic
+                          ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-2xs'
+                          : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-stone-300'
+                      }`}
+                    >
+                      {topic}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-stone-700 dark:text-stone-300">
+                  Your Message or Question
+                </label>
+                <textarea
+                  rows={3}
+                  value={supportMessage}
+                  onChange={(e) => setSupportMessage(e.target.value)}
+                  placeholder="Ask your question or describe your issue here..."
+                  className="w-full p-3 rounded-2xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs sm:text-sm text-stone-900 dark:text-white placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none transition-all"
+                  required
+                />
+              </div>
+
+              {supportSubmitted && (
+                <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center gap-2 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>
+                    Your inquiry has been formatted and opened in your email app addressed to <strong>{adminEmail}</strong>.
+                  </span>
+                </div>
+              )}
 
               <button
-                type="button"
-                onClick={() => {
-                  setIsHelpCenterOpen(false);
-                  window.open('https://wa.me/918409826244', '_blank');
-                }}
-                className="w-full p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 flex items-center gap-3.5 text-sm font-bold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 transition-colors cursor-pointer"
+                type="submit"
+                className="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
               >
-                <MessageCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                <div className="text-left">
-                  <span>Instant WhatsApp Support</span>
-                  <p className="text-xs text-emerald-600 font-normal">Average response time &lt; 2 minutes</p>
-                </div>
+                <Send className="w-4 h-4" />
+                <span>Send Mail to Admin</span>
               </button>
+            </form>
+
+            {/* Google Form Link */}
+            <div className="pt-2 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs">
+              <span className="text-stone-500 dark:text-stone-400">Prefer a Google Form?</span>
+              <a
+                href={googleFormUrl || `mailto:${adminEmail}?subject=Google Form Request - CartPilot`}
+                target={googleFormUrl ? '_blank' : '_self'}
+                rel="noreferrer"
+                className="font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>{googleFormUrl ? 'Open Google Form' : 'Request Form Link'}</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
           </div>
         </div>
