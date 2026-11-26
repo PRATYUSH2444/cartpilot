@@ -150,15 +150,18 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
 
         {/* ── Right: Priority-Collapsed Actions (Never overflows viewport) ── */}
         <div className="flex items-center gap-2 xl:gap-3 flex-shrink-0">
-          {/* Quick Nav Links (Visible on xl: 1280px+) */}
-          <nav className="hidden xl:flex items-center gap-1 font-bold text-xs lg:text-sm text-stone-600 dark:text-stone-300">
+          {/* Quick Nav Links Segmented Toggle (Desktop View) */}
+          <nav
+            aria-label="Store navigation"
+            className="hidden lg:flex items-center p-1 rounded-full bg-stone-100 dark:bg-stone-800/80 border border-stone-200/90 dark:border-stone-700/70 shadow-2xs select-none"
+          >
             <button
               type="button"
               onClick={() => onSelectTab('home')}
-              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
                 activeTab === 'home'
-                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-extrabold'
-                  : 'hover:text-emerald-700 hover:bg-stone-100 dark:hover:bg-stone-800'
+                  ? 'bg-[#0a5c36] text-white shadow-xs font-extrabold'
+                  : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-stone-200/50 dark:hover:bg-stone-700/40 font-semibold'
               }`}
             >
               Home
@@ -167,10 +170,10 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             <button
               type="button"
               onClick={() => onSelectTab('browse')}
-              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
                 activeTab === 'browse'
-                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-extrabold'
-                  : 'hover:text-emerald-700 hover:bg-stone-100 dark:hover:bg-stone-800'
+                  ? 'bg-[#0a5c36] text-white shadow-xs font-extrabold'
+                  : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-stone-200/50 dark:hover:bg-stone-700/40 font-semibold'
               }`}
             >
               Browse
