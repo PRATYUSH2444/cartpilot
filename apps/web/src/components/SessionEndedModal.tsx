@@ -12,7 +12,8 @@ export const SessionEndedModal: React.FC = () => {
 
   const handleReLogin = () => {
     dismissSessionExpired();
-    navigate('/login', { state: { from: location } });
+    const isAdmin = location.pathname.startsWith('/admin');
+    navigate(isAdmin ? '/admin/login' : '/login', { state: { from: location } });
   };
 
   return (

@@ -44,8 +44,9 @@ export const AccessDeniedPage: React.FC<AccessDeniedPageProps> = ({ userRole, al
   };
 
   const handleSignOut = async () => {
+    const isAdmin = userRole === 'ADMIN' || allowedRoles.includes('ADMIN');
     await logout();
-    navigate('/login', { replace: true });
+    navigate(isAdmin ? '/admin/login' : '/login', { replace: true });
   };
 
   return (

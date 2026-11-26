@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ShoppingBag,
   Sun,
@@ -22,6 +22,7 @@ interface HeaderProps {
   lampStatus?: LampStatus;
   mandateSummary?: string;
   onOpenMandate?: () => void;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -32,10 +33,26 @@ export const Header: React.FC<HeaderProps> = ({
   lampStatus,
   mandateSummary,
   onOpenMandate,
+  onLogout,
 }) => {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const itemCount = cart?.itemCount || 0;
   const formattedTotal = cart?.pricing?.formatted?.total || '₹0.00';
+
+  const handleSignOut = async () => {
+    if (onLogout) {
+      onLogout();
+      return;
+    }
+    const isAdmin = user?.role === 'ADMIN';
+    await logout();
+    if (isAdmin) {
+      navigate('/admin/login', { replace: true });
+    } else {
+      navigate('/login', { replace: true });
+    }
+  };
 
   const roleMeta = {
     CUSTOMER: {
@@ -161,8 +178,8 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Logout button */}
           <button
-            onClick={logout}
-            className="p-2 rounded-lg border border-rose-500/20 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 transition-all flex items-center gap-1.5 text-xs font-medium"
+            onClick={handleSignOut}
+            className="p-2 rounded-lg border border-rose-500/20 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer"
             title="Sign out of current workspace"
             aria-label="Sign out"
           >

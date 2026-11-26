@@ -49,9 +49,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     );
   }
 
-  // Not authenticated -> redirect to login
+  // Not authenticated -> redirect to appropriate role portal
   if (!isAuthenticated || !token || !user) {
-    return <Navigate to="/login" state={{ from: location }} replace={false} />;
+    const isTargetingAdmin =
+      location.pathname.startsWith('/admin') ||
+      Boolean(allowedRoles && allowedRoles.includes('ADMIN') && !allowedRoles.includes('CUSTOMER'));
+    const redirectUrl = isTargetingAdmin ? '/admin/login' : '/login';
+    return <Navigate to={redirectUrl} state={{ from: location }} replace={false} />;
   }
 
   // Role validation & authorization hierarchy:

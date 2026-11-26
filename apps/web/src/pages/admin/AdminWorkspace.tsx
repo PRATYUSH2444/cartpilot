@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '../../components/Header';
 import { LivingBackground } from '../../components/LivingBackground';
 import { useAuth } from '../../context/AuthContext';
@@ -68,10 +69,16 @@ interface AdminMerchantData {
 }
 
 export const AdminWorkspace: React.FC = () => {
-  const { token, authFetch } = useAuth();
+  const navigate = useNavigate();
+  const { token, authFetch, logout } = useAuth();
   const [isDark, setIsDark] = useState<boolean>(() => {
     return document.documentElement.classList.contains('dark') || true;
   });
+
+  const handleAdminLogout = async () => {
+    await logout();
+    navigate('/admin/login', { replace: true });
+  };
 
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [chainVerification, setChainVerification] = useState<ChainVerification | null>(null);
@@ -438,7 +445,7 @@ export const AdminWorkspace: React.FC = () => {
       <LivingBackground />
 
       {/* Admin Header */}
-      <Header isDark={isDark} onToggleTheme={toggleTheme} />
+      <Header isDark={isDark} onToggleTheme={toggleTheme} onLogout={handleAdminLogout} />
 
       {/* Flash Banner */}
       {banner && (
