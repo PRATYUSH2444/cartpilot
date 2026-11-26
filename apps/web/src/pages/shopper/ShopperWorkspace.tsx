@@ -558,7 +558,7 @@ export const ShopperWorkspace: React.FC = () => {
   };
 
   // Send Chat message
-  const handleSendMessage = async (text: string) => {
+  const handleSendMessage = async (text: string, sessionIdOverride?: string) => {
     const trimmed = text.trim();
     if (!trimmed || !token) return;
 
@@ -586,12 +586,12 @@ export const ShopperWorkspace: React.FC = () => {
     }, 20000); // 20-second timeout safeguard to prevent hanging
 
     try {
-      let sessionId = activeChatSessionId;
+      let sessionId = sessionIdOverride || activeChatSessionId;
       if (!sessionId) {
         const createRes = await fetch(`${API_BASE}/chat/sessions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ title: 'Weekly Grocery Shopping' }),
+          body: JSON.stringify({ title: trimmed.slice(0, 30) }),
           signal: abortController.signal,
         });
         if (createRes.ok) {
@@ -888,6 +888,49 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
+  const handleTriggerCookingPrompt = async (prompt: string) => {
+    const trimmed = prompt.trim();
+    if (!trimmed) return;
+
+    // Immediately switch to the AI Assistant tab and set composer
+    setActiveMobileTab('chat');
+    setComposerText(trimmed);
+
+    // Create a new fresh chat session for this cooking query
+    try {
+      if (token) {
+        setIsLoading(true);
+        const title = trimmed.length > 30 ? `${trimmed.slice(0, 27)}...` : trimmed;
+        const createRes = await fetch(`${API_BASE}/chat/sessions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ title }),
+        });
+
+        if (createRes.ok) {
+          const sData = await createRes.json();
+          const newSession = sData.data;
+          const newSessionId = newSession._id;
+
+          setActiveChatSessionId(newSessionId);
+          localStorage.setItem('cartpilot_active_session_id', newSessionId);
+          setChatSessions((prev) => [newSession, ...prev]);
+          setMessages([]);
+
+          await handleSendMessage(trimmed, newSessionId);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Fresh chat session init error, using fallback:', err);
+    }
+
+    // Fallback: send through existing session
+    setTimeout(() => {
+      handleSendMessage(trimmed);
+    }, 150);
+  };
+
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'P';
 
   return (
@@ -947,13 +990,7 @@ export const ShopperWorkspace: React.FC = () => {
               walletBalance={walletBalance}
               favorites={favorites}
               onToggleFavorite={handleToggleFavorite}
-              onTriggerAIPrompt={(prompt) => {
-                setActiveMobileTab('chat');
-                setComposerText(prompt);
-                setTimeout(() => {
-                  handleSendMessage(prompt);
-                }, 150);
-              }}
+              onTriggerAIPrompt={handleTriggerCookingPrompt}
             />
           )}
 

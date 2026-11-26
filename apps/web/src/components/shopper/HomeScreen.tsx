@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   MapPin,
   ChevronDown,
@@ -100,10 +100,11 @@ const CATEGORIES = [
   },
 ];
 
-const PROMPT_CHIPS = [
-  { label: 'Weekly pure-veg grocery list', tag: 'Plan' },
-  { label: 'Recipe for paneer pulao ingredients', tag: 'Cook' },
-  { label: 'Monthly staples under ₹1,500', tag: 'Budget' },
+const COOKING_SUGGESTIONS = [
+  { name: 'Matar Biryani', prompt: 'Recipe and grocery ingredients for Matar Biryani for 4' },
+  { name: 'Paneer Butter Masala', prompt: 'Recipe and grocery ingredients for Paneer Butter Masala for 4' },
+  { name: 'Rajma Chawal', prompt: 'Recipe and grocery ingredients for Rajma Chawal for 4' },
+  { name: 'Dal Tadka', prompt: 'Recipe and grocery ingredients for Dal Tadka for 4' },
 ];
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -129,6 +130,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenNotifications,
 }) => {
   const deliveryWindow = getDeliveryWindowInfo();
+  const [cookingInput, setCookingInput] = useState('');
 
   // Active uncompleted order for live-track pill
   const activeOrder =
@@ -142,7 +144,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     return item ? item.quantity : 0;
   };
 
-  const handleChipClick = (prompt: string) => {
+  const handleCookingSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const query = cookingInput.trim();
+    if (!query) return;
+    if (onTriggerAIPrompt) {
+      onTriggerAIPrompt(query);
+    } else {
+      onSelectTab('chat');
+    }
+  };
+
+  const handleRecipeChipClick = (prompt: string) => {
     if (onTriggerAIPrompt) {
       onTriggerAIPrompt(prompt);
     } else {
@@ -305,6 +318,61 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </button>
         </div>
 
+        {/* ── AI Cooking Assistant Hero Card ── */}
+        <div className="rounded-2xl sm:rounded-3xl bg-[#144f38] dark:bg-[#0e3b2a] border border-[#1b5e43] dark:border-[#134d37] p-4 sm:p-5 lg:p-6 shadow-xs text-white space-y-3.5">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-emerald-200 text-[11px] sm:text-xs font-semibold backdrop-blur-xs">
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-amber-300/40" />
+            <span>AI Cooking Assistant</span>
+          </div>
+
+          {/* Heading */}
+          <div className="space-y-1">
+            <h3 className="font-heading font-extrabold text-xl sm:text-2xl text-white tracking-tight leading-snug">
+              What are you cooking today?
+            </h3>
+          </div>
+
+          {/* Search / Input Box */}
+          <form onSubmit={handleCookingSubmit} className="relative flex items-center bg-white rounded-xl sm:rounded-2xl p-1.5 sm:p-2 shadow-2xs">
+            <input
+              type="text"
+              value={cookingInput}
+              onChange={(e) => setCookingInput(e.target.value)}
+              placeholder="Ask AI: Matar Biryani for 4..."
+              className="flex-1 bg-transparent px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 font-medium outline-none min-w-0"
+            />
+            <button
+              type="submit"
+              disabled={!cookingInput.trim()}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-40 disabled:hover:bg-amber-400 text-stone-900 flex items-center justify-center transition-all cursor-pointer flex-shrink-0 active:scale-95 shadow-2xs"
+              title="Send to AI Cooking Assistant"
+              aria-label="Send to AI Cooking Assistant"
+            >
+              <ArrowRight className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.5]" />
+            </button>
+          </form>
+
+          {/* 4 Recipe Suggestion Chips */}
+          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            {COOKING_SUGGESTIONS.map((item) => (
+              <button
+                key={item.name}
+                type="button"
+                onClick={() => handleRecipeChipClick(item.prompt)}
+                className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 text-white/95 text-xs sm:text-sm font-medium transition-all cursor-pointer"
+              >
+                {item.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Factual Subtext */}
+          <p className="text-[11px] sm:text-xs text-emerald-100/75 leading-relaxed pt-0.5">
+            AI turns any dish into a shopping list that fits your budget. Add it all in one tap.
+          </p>
+        </div>
+
         {/* ── Shop by Category (Smooth Horizontal Single-Row Scroll) ── */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -337,51 +405,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
 
-        {/* ── AI Assistant Interactive Card (Accurate Trust Model) ── */}
-        <div className="rounded-2xl bg-gradient-to-r from-purple-50/70 via-white to-purple-50/50 dark:from-purple-950/20 dark:via-stone-900 dark:to-purple-950/20 border border-purple-200/70 dark:border-purple-800/40 p-4 sm:p-5 shadow-2xs space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/60 flex items-center justify-center text-purple-700 dark:text-purple-300 shadow-2xs flex-shrink-0">
-                <Sparkles className="w-5 h-5 fill-purple-700/20" />
-              </div>
-              <div>
-                <h4 className="font-heading font-extrabold text-sm sm:text-base text-stone-900 dark:text-white leading-tight">
-                  AI Assistant
-                </h4>
-                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                  Plan recipes, match pantry items & shop within the spending limits you set
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => onSelectTab('chat')}
-              className="self-start sm:self-auto px-4 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer min-h-[38px]"
-            >
-              <span>Launch AI Assistant</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Suggestion Chips */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-0.5">
-            {PROMPT_CHIPS.map((chip, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleChipClick(chip.label)}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:border-purple-500 text-stone-700 dark:text-stone-200 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-              >
-                <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950 px-1.5 py-0.2 rounded">
-                  {chip.tag}
-                </span>
-                <span>{chip.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* ── 4 Feature Highlights Strip (Resolved Promises & WCAG AA Contrast) ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-4 shadow-2xs">
           <div className="flex items-start gap-2.5">
@@ -393,7 +416,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 Scheduled Delivery
               </p>
               <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
-                6:00 AM – 9:00 AM at your door
+                6:00 AM – 10:00 AM at your door
               </p>
             </div>
           </div>
