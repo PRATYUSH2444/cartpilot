@@ -286,8 +286,99 @@ export const LoginPage: React.FC = () => {
       <div className="absolute top-1/4 -left-20 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-20 w-80 h-80 rounded-full bg-acc/10 blur-3xl pointer-events-none" />
 
-      {/* Main Container Card */}
-      <div className="w-full max-w-md bg-card border border-brd rounded-3xl shadow-2xl overflow-hidden relative z-10 backdrop-blur-md">
+      {/* Main Container Card: Expands gracefully into a 2-column split on desktop */}
+      <div className="w-full max-w-md lg:max-w-5xl xl:max-w-6xl bg-card border border-brd rounded-3xl shadow-2xl overflow-hidden relative z-10 backdrop-blur-md lg:grid lg:grid-cols-12 min-h-[620px]">
+        {/* Left Column: Rich Branded Hero (Hidden on Mobile, Visible on Desktop lg:col-span-6) */}
+        <div className="hidden lg:flex lg:col-span-6 bg-gradient-to-br from-emerald-800 via-emerald-900 to-stone-950 text-white p-10 lg:p-12 flex-col justify-between relative overflow-hidden">
+          {/* Subtle glowing ambient orbs */}
+          <div className="absolute -top-16 -left-16 w-56 h-56 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-16 -right-16 w-56 h-56 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none" />
+
+          {/* Top Brand Logo */}
+          <div className="relative z-10 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white text-emerald-800 flex items-center justify-center shadow-lg">
+                <Leaf className="w-7 h-7 text-emerald-600 fill-emerald-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-2xl tracking-tight text-white">CartPilot</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-400/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/40">
+                    100% Veg
+                  </span>
+                </div>
+                <p className="text-emerald-200/90 text-xs font-medium">Fresh Pick · Fayda Quick</p>
+              </div>
+            </div>
+
+            <div className="pt-4 space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold text-emerald-200 border border-white/10">
+                <Truck className="w-3.5 h-3.5 text-emerald-300" />
+                <span>Midnight Cutoff · 6 AM – 9 AM Delivery</span>
+              </div>
+              <h2 className="text-3xl xl:text-4xl font-black leading-tight text-white tracking-tight">
+                Farm-Fresh Groceries & Agentic AI Meal Planning.
+              </h2>
+              <p className="text-emerald-100/80 text-sm leading-relaxed max-w-md">
+                Experience pure vegetarian morning delivery, autonomous cart generation with custom spending rules, and 1-click OTP access.
+              </p>
+            </div>
+          </div>
+
+          {/* Middle Feature Highlights List */}
+          <div className="relative z-10 py-5 space-y-3.5 border-y border-emerald-700/50 my-6">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 text-emerald-300">
+                <Leaf className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-white">100% Certified Vegetarian</h4>
+                <p className="text-xs text-emerald-200/75">Zero meat, fish, or poultry. Sourced strictly from verified organic farms.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 text-emerald-300">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-white">Autonomous Policy & Spending Mandates</h4>
+                <p className="text-xs text-emerald-200/75">Daily budget guardrails and autonomous approval flows for family carts.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 text-emerald-300">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-white">Instant Wallet Bonus</h4>
+                <p className="text-xs text-emerald-200/75">Get ₹100 instant bonus on adding ₹999 or more to your CartPilot wallet.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Social Proof */}
+          <div className="relative z-10 flex items-center justify-between text-xs text-emerald-200/80 pt-2">
+            <div>
+              <span className="font-bold text-white text-base">50,000+</span>
+              <span className="block text-[11px]">Happy Households</span>
+            </div>
+            <div className="h-6 w-px bg-white/20" />
+            <div>
+              <span className="font-bold text-white text-base">4.9 / 5.0</span>
+              <span className="block text-[11px]">Play Store Rating</span>
+            </div>
+            <div className="h-6 w-px bg-white/20" />
+            <div>
+              <span className="font-bold text-white text-base">100%</span>
+              <span className="block text-[11px]">Pure Vegetarian</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Forms & Controls */}
+        <div className="w-full lg:col-span-6 flex flex-col justify-center bg-card">
         {/* Top Header Mode Tabs */}
         <div className="grid grid-cols-2 border-b border-brd bg-paper/60 text-xs font-bold">
           <button
@@ -296,13 +387,13 @@ export const LoginPage: React.FC = () => {
               setAuthMode('PHONE');
               setErrorMessage(null);
             }}
-            className={`py-3 px-4 flex items-center justify-center gap-2 transition-colors cursor-pointer border-b-2 ${
+            className={`py-3.5 px-4 flex items-center justify-center gap-2 transition-colors cursor-pointer border-b-2 ${
               authMode === 'PHONE'
                 ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-stone-900'
                 : 'border-transparent text-mut hover:text-ink'
             }`}
           >
-            <Smartphone className="w-3.5 h-3.5" />
+            <Smartphone className="w-4 h-4" />
             <span>Mobile OTP (Shopper)</span>
           </button>
           <button
@@ -311,13 +402,13 @@ export const LoginPage: React.FC = () => {
               setAuthMode('EMAIL');
               setErrorMessage(null);
             }}
-            className={`py-3 px-4 flex items-center justify-center gap-2 transition-colors cursor-pointer border-b-2 ${
+            className={`py-3.5 px-4 flex items-center justify-center gap-2 transition-colors cursor-pointer border-b-2 ${
               authMode === 'EMAIL'
                 ? 'border-acc text-acc bg-white dark:bg-stone-900'
                 : 'border-transparent text-mut hover:text-ink'
             }`}
           >
-            <Lock className="w-3.5 h-3.5" />
+            <Lock className="w-4 h-4" />
             <span>Staff & Password</span>
           </button>
         </div>
@@ -327,8 +418,8 @@ export const LoginPage: React.FC = () => {
           <div>
             {phoneStep === 'NUMBER' ? (
               <div>
-                {/* Reference Banner: Fresh Produce Header */}
-                <div className="relative h-44 bg-gradient-to-b from-emerald-600 to-emerald-700 flex flex-col items-center justify-center text-center p-4 overflow-hidden">
+                {/* Reference Banner: Fresh Produce Header (Visible on Mobile/Tablet, Clean on Desktop) */}
+                <div className="block lg:hidden relative h-44 bg-gradient-to-b from-emerald-600 to-emerald-700 flex flex-col items-center justify-center text-center p-4 overflow-hidden">
                   <div className="absolute -top-4 -left-4 w-28 h-28 bg-emerald-500/30 rounded-full blur-xl pointer-events-none" />
                   <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-emerald-400/20 rounded-full blur-xl pointer-events-none" />
 
@@ -354,10 +445,10 @@ export const LoginPage: React.FC = () => {
                 </div>
 
                 {/* Form Body */}
-                <div className="p-7">
-                  <div className="text-center mb-5">
-                    <h2 className="font-bold text-lg text-ink">Welcome to CartPilot</h2>
-                    <p className="text-xs text-mut mt-1">
+                <div className="p-7 sm:p-9">
+                  <div className="text-center mb-6">
+                    <h2 className="font-extrabold text-xl sm:text-2xl text-ink">Welcome to CartPilot</h2>
+                    <p className="text-xs sm:text-sm text-mut mt-1">
                       Fresh Fruits & Veggies Delivered Every Morning
                     </p>
                   </div>
@@ -764,6 +855,7 @@ export const LoginPage: React.FC = () => {
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

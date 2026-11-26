@@ -61,11 +61,66 @@ export const RegisterPage: React.FC = () => {
       <div className="absolute top-1/4 -left-20 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-20 w-80 h-80 rounded-full bg-acc/10 blur-3xl pointer-events-none" />
 
-      {/* Main card */}
-      <div className="w-full max-w-md bg-card border border-brd rounded-2xl shadow-xl p-8 relative z-10 backdrop-blur-md">
+      {/* Main card: Responsive 2-column split on desktop */}
+      <div className="w-full max-w-md lg:max-w-5xl xl:max-w-6xl bg-card border border-brd rounded-3xl shadow-2xl overflow-hidden relative z-10 backdrop-blur-md lg:grid lg:grid-cols-12 min-h-[620px]">
+        {/* Left Column: Rich Branded Showcase (Desktop only) */}
+        <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-emerald-800 via-emerald-900 to-stone-950 text-white p-10 lg:p-12 flex-col justify-between relative overflow-hidden">
+          <div className="absolute -top-16 -left-16 w-56 h-56 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-16 -right-16 w-56 h-56 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white text-emerald-800 flex items-center justify-center shadow-lg">
+                <ShieldCheck className="w-7 h-7 text-emerald-600" />
+              </div>
+              <div>
+                <span className="font-extrabold text-2xl tracking-tight text-white block">CartPilot</span>
+                <span className="text-emerald-200/90 text-xs font-medium">Customer Registration</span>
+              </div>
+            </div>
+
+            <div className="pt-4 space-y-2">
+              <h2 className="text-3xl font-black leading-tight text-white tracking-tight">
+                Join the Pure Veg Grocery Revolution.
+              </h2>
+              <p className="text-emerald-100/80 text-sm leading-relaxed">
+                Enjoy automated morning deliveries, household budget guardrails, and fresh farm harvests delivered every morning.
+              </p>
+            </div>
+          </div>
+
+          <div className="relative z-10 py-5 space-y-3 border-y border-emerald-700/50 my-6">
+            <div className="flex items-center gap-3 text-xs text-emerald-100">
+              <CheckCircle2 className="w-4 h-4 text-emerald-300 flex-shrink-0" />
+              <span>100% Certified Vegetarian Selection</span>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-emerald-100">
+              <CheckCircle2 className="w-4 h-4 text-emerald-300 flex-shrink-0" />
+              <span>Order Till Midnight · 6 AM – 9 AM Delivery</span>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-emerald-100">
+              <CheckCircle2 className="w-4 h-4 text-emerald-300 flex-shrink-0" />
+              <span>₹100 Wallet Bonus on ₹999 Top-Up</span>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-emerald-100">
+              <CheckCircle2 className="w-4 h-4 text-emerald-300 flex-shrink-0" />
+              <span>Agentic AI Recipe & Meal Planning</span>
+            </div>
+          </div>
+
+          <div className="relative z-10 text-xs text-emerald-200/70">
+            <span>Already registered? </span>
+            <Link to="/login" className="text-white font-bold underline hover:text-emerald-300">
+              Sign In to your account →
+            </Link>
+          </div>
+        </div>
+
+        {/* Right Column: Registration Form */}
+        <div className="w-full lg:col-span-7 p-6 sm:p-10 flex flex-col justify-center">
         {/* Brand identity */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-acc flex items-center justify-center text-white mb-3 shadow-lg shadow-acc/20">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-acc flex items-center justify-center text-white mb-3 shadow-lg shadow-acc/20 lg:hidden">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div className="flex items-center gap-2">
@@ -211,6 +266,7 @@ export const RegisterPage: React.FC = () => {
               Apply as a Merchant →
             </Link>
           </div>
+        </div>
         </div>
       </div>
     </div>

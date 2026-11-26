@@ -813,6 +813,10 @@ export const ShopperWorkspace: React.FC = () => {
               onOpenAddressModal={() => setIsAddressModalOpen(true)}
               onOpenSearchModal={() => setIsGlobalSearchOpen(true)}
               onOpenProfile={() => setActiveMobileTab('account')}
+              onOpenWallet={() => setIsWalletOpen(true)}
+              onOpenCoupons={() => setIsCouponsOpen(true)}
+              onOpenWishlist={() => setIsWishlistOpen(true)}
+              onOpenNotifications={() => setIsNotificationsOpen(true)}
               onSelectProduct={(p) => {
                 setSelectedProduct(p);
                 setIsProductSheetOpen(true);

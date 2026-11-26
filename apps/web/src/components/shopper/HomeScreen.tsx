@@ -18,6 +18,7 @@ import {
   Calendar,
   Percent,
   LayoutGrid,
+  Tag,
 } from 'lucide-react';
 import { Product, CartData, OrderData, UserAddress } from '../../types';
 import { TabKey } from './BottomTabBar';
@@ -41,6 +42,10 @@ interface HomeScreenProps {
   onToggleFavorite?: (productId: string) => void;
   userInitial?: string;
   walletBalance?: number;
+  onOpenWallet?: () => void;
+  onOpenCoupons?: () => void;
+  onOpenWishlist?: () => void;
+  onOpenNotifications?: () => void;
 }
 
 const CATEGORIES = [
@@ -105,6 +110,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   favorites = [],
   onToggleFavorite,
   userInitial = 'U',
+  walletBalance = 349,
+  onOpenWallet,
+  onOpenCoupons,
+  onOpenWishlist,
+  onOpenNotifications,
 }) => {
   // Dynamic delivery window calculation
   const deliveryWindow = getDeliveryWindowInfo();
@@ -142,7 +152,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* ── Mobile Top Sticky App Bar (Visible on mobile/tablet, hidden on desktop >= 1024px) ── */}
       <div className="block lg:hidden sticky top-0 z-30 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-b border-stone-200/60 dark:border-stone-800/60 shadow-xs">
         <div className="max-w-xl mx-auto px-4 pt-3 pb-3 space-y-2.5">
-          {/* Header Row: Logo + Bell & Profile */}
+          {/* Header Row: Logo + Wallet Pill + Bell & Profile */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-600/30">
@@ -158,22 +168,54 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
+              {/* Wallet Pill Button matching Sbzee reference */}
+              {onOpenWallet && (
+                <button
+                  type="button"
+                  onClick={onOpenWallet}
+                  className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-300 font-extrabold text-xs flex items-center gap-1 shadow-2xs hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer"
+                  title="CartPilot Wallet"
+                  aria-label="CartPilot Wallet"
+                >
+                  <span className="text-[10px]">👛</span>
+                  <span>₹{walletBalance.toFixed(1)}</span>
+                </button>
+              )}
+
+              {/* Wishlist Quick Access Button */}
+              {onOpenWishlist && (
+                <button
+                  type="button"
+                  onClick={onOpenWishlist}
+                  className="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:text-rose-500 flex items-center justify-center transition-colors relative cursor-pointer"
+                  title="Saved Wishlist Items"
+                  aria-label="Wishlist"
+                >
+                  <Heart className={`w-4 h-4 ${favorites.length > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
+                  {favorites.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-stone-800">
+                      {favorites.length}
+                    </span>
+                  )}
+                </button>
+              )}
+
               <button
                 type="button"
-                onClick={() => onSelectTab('account')}
-                className="w-9 h-9 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:text-stone-900 flex items-center justify-center transition-colors relative cursor-pointer"
+                onClick={onOpenNotifications || (() => onSelectTab('account'))}
+                className="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:text-stone-900 flex items-center justify-center transition-colors relative cursor-pointer"
                 title="Notifications"
                 aria-label="Notifications"
               >
                 <Bell className="w-4 h-4" />
-                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-stone-800" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-stone-800" />
               </button>
 
               <button
                 type="button"
                 onClick={onOpenProfile}
-                className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 border-2 border-emerald-300 dark:border-emerald-600 flex items-center justify-center font-bold text-xs shadow-xs cursor-pointer hover:scale-105 transition-transform"
+                className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 border-2 border-emerald-300 dark:border-emerald-600 flex items-center justify-center font-bold text-xs shadow-xs cursor-pointer hover:scale-105 transition-transform"
                 title="Account"
                 aria-label="Account"
               >
@@ -231,17 +273,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       </div>
 
-      {/* ── Main Responsive Content Area (Expands from mobile max-w-xl to desktop max-w-7xl) ── */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 lg:pt-6 space-y-6">
+      {/* ── Main Responsive Content Area (Expands gracefully across widescreen desktop max-w-[1560px]) ── */}
+      <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-10 pt-4 lg:pt-6 space-y-6 lg:space-y-8">
         {/* ── Hero Promotional Banner ── */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#175c37] via-[#1d6e42] to-[#258550] text-white p-6 sm:p-8 lg:p-10 shadow-md">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#175c37] via-[#1d6e42] to-[#258550] text-white p-6 sm:p-8 lg:p-12 shadow-md">
           {/* Subtle Ambient Leaf Lighting */}
-          <div className="absolute top-0 right-0 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 max-w-md sm:max-w-xl space-y-3 sm:space-y-4">
+          <div className="relative z-10 max-w-md sm:max-w-xl lg:max-w-2xl space-y-3 sm:space-y-4">
             {/* Top Cutoff Pill Tag */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-semibold text-white tracking-wide">
-              <Clock className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-xs sm:text-sm font-semibold text-white tracking-wide">
+              <Clock className="w-4 h-4 text-emerald-200" />
               <span>{deliveryWindow.cutoffHeadline}</span>
             </div>
 
@@ -250,18 +292,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <h2 className="font-extrabold text-2xl sm:text-4xl lg:text-5xl leading-tight tracking-tight text-white">
                 Get it Tomorrow
               </h2>
-              <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
                 <span className="font-extrabold text-2xl sm:text-4xl lg:text-5xl leading-tight text-white">
                   Morning
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#fbf4d8] text-stone-900 font-black text-xs sm:text-sm shadow-xs">
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#fbf4d8] text-stone-900 font-black text-xs sm:text-sm shadow-xs">
                   <Calendar className="w-3.5 h-3.5 text-amber-600" />
                   <span>{deliveryWindow.slot}</span>
                 </span>
               </div>
             </div>
 
-            <p className="text-white/85 text-xs sm:text-sm leading-relaxed max-w-lg">
+            <p className="text-white/90 text-xs sm:text-base leading-relaxed max-w-xl">
               Fresh groceries, fruits & everyday essentials delivered to your doorstep with agentic AI meal planning.
             </p>
 
@@ -270,7 +312,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <button
                 type="button"
                 onClick={() => onSelectTab('browse')}
-                className="inline-flex items-center gap-2 px-6 py-2.5 sm:py-3 rounded-full bg-white text-emerald-950 font-black text-xs sm:text-sm shadow-md hover:bg-stone-50 active:scale-[0.98] transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-white text-emerald-950 font-black text-xs sm:text-sm shadow-md hover:bg-stone-50 active:scale-[0.98] transition-all cursor-pointer"
               >
                 <span>Shop Now</span>
                 <ArrowRight className="w-4 h-4" />
@@ -285,8 +327,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
 
           {/* Right Kraft Grocery Bag Illustration */}
-          <div className="absolute right-2 sm:right-6 lg:right-12 -bottom-2 sm:-bottom-4 w-48 h-52 sm:w-64 sm:h-68 lg:w-80 lg:h-80 flex items-center justify-center pointer-events-none select-none">
-            <div className="relative w-40 sm:w-56 lg:w-64 h-44 sm:h-60 lg:h-68 bg-[#d8ab76] rounded-t-2xl rounded-b-md shadow-2xl flex flex-col items-center justify-end p-3 border-t-4 border-[#b88c58]">
+          <div className="absolute right-2 sm:right-8 lg:right-16 -bottom-2 sm:-bottom-4 w-48 h-52 sm:w-64 sm:h-68 lg:w-88 lg:h-88 flex items-center justify-center pointer-events-none select-none">
+            <div className="relative w-40 sm:w-56 lg:w-72 h-44 sm:h-60 lg:h-72 bg-[#d8ab76] rounded-t-2xl rounded-b-md shadow-2xl flex flex-col items-center justify-end p-3 border-t-4 border-[#b88c58]">
               {/* CartPilot Leaf Emblem on Bag */}
               <div className="flex items-center gap-1.5 mb-4 bg-[#b88c58]/35 px-3 py-1 rounded-lg">
                 <Leaf className="w-4 h-4 text-emerald-950 fill-emerald-950" />
@@ -301,6 +343,43 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <div className="absolute -top-9 sm:-top-12 right-4 sm:right-8 text-4xl sm:text-6xl">🍌</div>
               <div className="absolute -top-6 sm:-top-8 right-1 sm:right-2 text-3xl sm:text-5xl">🥛</div>
               <div className="absolute -top-4 sm:-top-6 left-8 sm:left-12 text-3xl sm:text-5xl">🍅</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Offers & Wallet Bonus Banner (Sbzee Reference Feature) ── */}
+        <div
+          onClick={onOpenWallet || onOpenCoupons}
+          className="rounded-3xl bg-gradient-to-r from-emerald-50 via-white to-amber-50/40 dark:from-emerald-950/30 dark:via-stone-900 dark:to-amber-950/20 border-2 border-emerald-500/25 p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-emerald-500/40 transition-all cursor-pointer relative overflow-hidden group"
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1.5 z-10">
+              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-extrabold text-[11px] border border-emerald-300/60 dark:border-emerald-800">
+                <Tag className="w-3 h-3 text-emerald-600" />
+                <span>Limited Time Offer</span>
+              </div>
+              <h4 className="font-extrabold text-base sm:text-xl text-stone-900 dark:text-white leading-tight">
+                Add ₹999 & Get ₹100 Bonus
+              </h4>
+              <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400">
+                Bonus will be instantly added to your CartPilot wallet balance
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3.5 flex-shrink-0 z-10">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-emerald-600/10 dark:bg-emerald-500/20 flex items-center justify-center text-3xl sm:text-4xl shadow-inner group-hover:scale-105 transition-transform select-none">
+                👛
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onOpenWallet) onOpenWallet();
+                }}
+                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm shadow-sm cursor-pointer transition-colors"
+              >
+                Add
+              </button>
             </div>
           </div>
         </div>
@@ -509,7 +588,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5 lg:gap-6">
             {bestSellers.map((prod) => {
               const qty = getCartQuantity(prod._id);
               const price = Math.round(prod.pricePaise / 100);
@@ -520,7 +599,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <div
                   key={prod._id}
                   onClick={() => onSelectProduct(prod)}
-                  className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3 sm:p-4 shadow-2xs hover:shadow-lg hover:border-emerald-500/40 transition-all flex flex-col justify-between cursor-pointer group"
+                  className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3.5 sm:p-5 shadow-2xs hover:shadow-xl hover:border-emerald-500/40 transition-all flex flex-col justify-between cursor-pointer group"
                 >
                   <div>
                     {/* Top Right Wishlist Heart */}
@@ -531,7 +610,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                           e.stopPropagation();
                           if (onToggleFavorite) onToggleFavorite(prod._id);
                         }}
-                        className="p-1 rounded-full text-stone-300 hover:text-rose-500 transition-colors"
+                        className="p-1.5 rounded-full text-stone-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                         aria-label="Wishlist"
                         title={isFav ? 'Remove from wishlist' : 'Add to wishlist'}
                       >
@@ -544,7 +623,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     </div>
 
                     {/* Product Photo */}
-                    <div className="relative w-full aspect-square rounded-2xl bg-stone-50 dark:bg-stone-800/80 mb-3 overflow-hidden flex items-center justify-center p-2">
+                    <div className="relative w-full aspect-square rounded-2xl bg-stone-50 dark:bg-stone-800/80 mb-3 overflow-hidden flex items-center justify-center p-3">
                       {prod.imageUrl ? (
                         <img
                           src={prod.imageUrl}
@@ -563,8 +642,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     </div>
 
                     {/* Title & Unit */}
-                    <div className="space-y-0.5">
-                      <h4 className="font-extrabold text-xs sm:text-sm text-stone-900 dark:text-stone-100 line-clamp-2 leading-snug group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                    <div className="space-y-1">
+                      <h4 className="font-extrabold text-xs sm:text-sm lg:text-base text-stone-900 dark:text-stone-100 line-clamp-2 leading-snug group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
                         {prod.name}
                       </h4>
                       <p className="text-[11px] sm:text-xs text-stone-400 font-medium">
@@ -576,9 +655,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </div>
 
                   {/* Price & Add to Cart Square Button */}
-                  <div className="mt-3 pt-2.5 border-t border-stone-100 dark:border-stone-800/60 flex items-center justify-between">
+                  <div className="mt-3.5 pt-3 border-t border-stone-100 dark:border-stone-800/60 flex items-center justify-between">
                     <div className="flex items-baseline gap-1.5">
-                      <span className="font-black text-sm sm:text-base text-stone-900 dark:text-white">
+                      <span className="font-black text-sm sm:text-base lg:text-lg text-stone-900 dark:text-white">
                         ₹{price}
                       </span>
                       <span className="text-[10px] sm:text-xs text-stone-400 line-through">
@@ -593,7 +672,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                           e.stopPropagation();
                           onAddToCart(prod._id, 1);
                         }}
-                        className="w-8 h-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold flex items-center justify-center shadow-xs cursor-pointer active:scale-90 transition-all"
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold flex items-center justify-center shadow-xs cursor-pointer active:scale-90 transition-all"
                         aria-label="Add to cart"
                       >
                         <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -601,7 +680,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     ) : (
                       <div
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1.5 bg-emerald-600 text-white rounded-xl px-1.5 py-1 shadow-xs"
+                        className="flex items-center gap-1.5 bg-emerald-600 text-white rounded-xl px-2 py-1 shadow-xs"
                       >
                         <button
                           type="button"
@@ -611,7 +690,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="font-extrabold text-xs min-w-[14px] text-center">
+                        <span className="font-extrabold text-xs sm:text-sm min-w-[16px] text-center">
                           {qty}
                         </span>
                         <button
