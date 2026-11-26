@@ -290,7 +290,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 <span>Account Status</span>
                 <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  Active · 100% Veg Assurance
+                  Active · Farm Fresh Assurance
                 </span>
               </div>
             </div>

@@ -187,9 +187,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <span className="font-heading font-extrabold text-lg text-stone-900 dark:text-white tracking-tight truncate">
                 CartPilot
               </span>
-              <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-1.5 py-0.2 rounded-full border border-emerald-300/60 dark:border-emerald-700 flex-shrink-0">
-                100% Veg
-              </span>
             </div>
 
             <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -405,10 +402,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
 
-        {/* ── 4 Feature Highlights Strip (Resolved Promises & WCAG AA Contrast) ── */}
+        {/* ── 4 Feature Highlights Strip ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-4 shadow-2xs">
           <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400 flex-shrink-0">
               <Truck className="w-4 h-4" />
             </div>
             <div>
@@ -422,43 +419,43 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
 
           <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400 flex-shrink-0">
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
               <p className="font-heading font-extrabold text-xs sm:text-sm text-stone-900 dark:text-white leading-tight">
-                100% Pure Veg
+                Spend Guard
               </p>
               <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
-                Strictly vegetarian certified
+                Shop within your daily budget
               </p>
             </div>
           </div>
 
           <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 flex-shrink-0">
-              <Leaf className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="font-heading font-extrabold text-xs sm:text-sm text-stone-900 dark:text-white leading-tight">
-                Spend Guardrails
-              </p>
-              <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
-                Autonomous budget policies
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400 flex-shrink-0">
               <BadgePercent className="w-4 h-4" />
             </div>
             <div>
               <p className="font-heading font-extrabold text-xs sm:text-sm text-stone-900 dark:text-white leading-tight">
-                Best Daily Prices
+                Daily Deals
               </p>
               <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
-                Transparent verified farm rates
+                Save more on everyday staples
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400 flex-shrink-0">
+              <Leaf className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-heading font-extrabold text-xs sm:text-sm text-stone-900 dark:text-white leading-tight">
+                Farm Fresh
+              </p>
+              <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
+                Handpicked farm harvest daily
               </p>
             </div>
           </div>
@@ -513,7 +510,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 Best Sellers & Fresh Arrivals
               </h3>
               <p className="text-xs text-stone-500 dark:text-stone-400">
-                100% Certified Vegetarian · Farm Fresh Harvest
+                Daily Essentials · Farm Fresh Harvest
               </p>
             </div>
             <button

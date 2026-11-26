@@ -94,9 +94,6 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
               <span className="font-heading font-extrabold text-xl lg:text-2xl text-stone-900 dark:text-white tracking-tight">
                 CartPilot
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-300/80 dark:border-emerald-700">
-                100% Veg
-              </span>
             </div>
           </button>
 
