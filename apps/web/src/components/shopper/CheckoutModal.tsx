@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   ArrowLeft,
@@ -8,9 +8,15 @@ import {
   Check,
   Loader2,
   Wallet,
+  Mail,
+  ShieldAlert,
+  CheckCircle2,
+  KeyRound,
+  Send,
 } from 'lucide-react';
 import { CartData, UserAddress, OrderData } from '../../types';
 import { API_BASE } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -35,9 +41,64 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   walletBalance = 349.0,
   onDeductWallet,
 }) => {
+  const { user, sendEmailVerification, verifyEmail: verifyEmailAction } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<'RAZORPAY' | 'WALLET' | 'UPI' | 'COD'>('RAZORPAY');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Email verification state
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationStatus, setVerificationStatus] = useState<'IDLE' | 'CODE_SENT' | 'VERIFYING' | 'VERIFIED'>('IDLE');
+  const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
+  const [simulatedEmailCode, setSimulatedEmailCode] = useState<string | null>(null);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  const isEmailVerified = Boolean(user?.isEmailVerified) || verificationStatus === 'VERIFIED';
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  const handleSendVerificationCode = async () => {
+    setIsSendingCode(true);
+    setVerificationMessage(null);
+    const res = await sendEmailVerification();
+    setIsSendingCode(false);
+    if (res.success) {
+      setVerificationStatus('CODE_SENT');
+      setVerificationMessage(res.message || 'Verification code sent to your email.');
+      if (res.simulatedCode) {
+        setSimulatedEmailCode(res.simulatedCode);
+      }
+      setResendCooldown(60);
+    } else {
+      setVerificationMessage(res.error || 'Failed to send verification code.');
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!verificationCode || verificationCode.trim().length !== 6) {
+      setVerificationMessage('Please enter a valid 6-digit verification code.');
+      return;
+    }
+    setVerificationStatus('VERIFYING');
+    const res = await verifyEmailAction(verificationCode.trim());
+    if (res.success) {
+      setVerificationStatus('VERIFIED');
+      setVerificationMessage('Email verified successfully! You can now complete checkout.');
+      setError(null);
+    } else {
+      setVerificationStatus('CODE_SENT');
+      setVerificationMessage(res.error || 'Invalid verification code. Please check and try again.');
+    }
+  };
 
   if (!isOpen || !cart) return null;
 
@@ -58,6 +119,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const handlePlaceOrder = async () => {
     if (!token) {
       setError('You must be logged in to place an order');
+      return;
+    }
+
+    if (!isEmailVerified) {
+      setError('Email verification is required before checkout. Please complete the verification step above.');
+      if (verificationStatus === 'IDLE') {
+        handleSendVerificationCode();
+      }
       return;
     }
 
@@ -207,6 +276,126 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 ? `${selectedAddress.houseFlat ? selectedAddress.houseFlat + ', ' : ''}${selectedAddress.areaLocality || selectedAddress.apartmentStreet}, ${selectedAddress.city} - ${selectedAddress.pincode}`
                 : 'HSR Layout, Sector 2, Bengaluru - 560102'}
             </p>
+          </div>
+
+          {/* Email Verification Card */}
+          <div className={`p-3.5 rounded-2xl border transition-all ${
+            isEmailVerified
+              ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
+              : 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700/60 ring-2 ring-amber-400/20'
+          }`}>
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="font-extrabold flex items-center gap-1.5 text-stone-900 dark:text-white">
+                <Mail className={`w-4 h-4 ${isEmailVerified ? 'text-emerald-600' : 'text-amber-600'}`} />
+                <span>Account Email & Verification:</span>
+              </span>
+              {isEmailVerified ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Verified
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/60 px-2 py-0.5 rounded-full">
+                  <ShieldAlert className="w-3 h-3" />
+                  Action Required
+                </span>
+              )}
+            </div>
+
+            <p className="text-xs text-stone-600 dark:text-stone-300 font-medium pl-5.5">
+              {user?.email || 'customer@example.com'}
+            </p>
+
+            {!isEmailVerified && (
+              <div className="mt-3 pl-5.5 space-y-2.5">
+                <p className="text-[11px] text-amber-800 dark:text-amber-200 leading-relaxed">
+                  CartPilot enforces mandatory email verification to send order tracking receipts and ensure autonomous checkout security.
+                </p>
+
+                {verificationMessage && (
+                  <div className="p-2 rounded-xl text-xs font-semibold bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-200">
+                    {verificationMessage}
+                  </div>
+                )}
+
+                {verificationStatus === 'IDLE' ? (
+                  <button
+                    type="button"
+                    onClick={handleSendVerificationCode}
+                    disabled={isSendingCode}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs cursor-pointer transition-colors disabled:opacity-50"
+                  >
+                    {isSendingCode ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Sending Code…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Send 6-Digit Verification Code</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <KeyRound className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          maxLength={6}
+                          placeholder="Enter 6-digit code"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          className="w-full pl-9 pr-3 py-2 text-xs font-mono font-bold tracking-widest rounded-xl bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500 text-stone-900 dark:text-white"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleVerifyEmail}
+                        disabled={verificationStatus === 'VERIFYING' || verificationCode.length !== 6}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {verificationStatus === 'VERIFYING' ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <span>Verify</span>
+                        )}
+                      </button>
+                    </div>
+
+                    {simulatedEmailCode && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-stone-500 font-mono">Dev simulated code:</span>
+                        <button
+                          type="button"
+                          onClick={() => setVerificationCode(simulatedEmailCode)}
+                          className="text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-md hover:underline cursor-pointer"
+                        >
+                          Auto-fill {simulatedEmailCode}
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="text-[11px] text-stone-500">
+                      {resendCooldown > 0 ? (
+                        <span>Resend code in {resendCooldown}s</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSendVerificationCode}
+                          disabled={isSendingCode}
+                          className="text-amber-700 dark:text-amber-400 font-bold hover:underline cursor-pointer"
+                        >
+                          Resend verification code
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Order Summary Card */}
@@ -373,14 +562,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         <div className="p-4 border-t border-stone-200 dark:border-stone-800 space-y-2">
           <button
             type="button"
-            onClick={handlePlaceOrder}
+            onClick={!isEmailVerified ? handleSendVerificationCode : handlePlaceOrder}
             disabled={isProcessing || (selectedMethod === 'WALLET' && !isWalletSufficient)}
-            className="w-full py-4 px-5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-700/25 transition-all cursor-pointer disabled:opacity-50 min-h-[50px]"
+            className={`w-full py-4 px-5 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer disabled:opacity-50 min-h-[50px] text-white ${
+              !isEmailVerified
+                ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/25'
+                : 'bg-emerald-700 hover:bg-emerald-800 shadow-emerald-700/25'
+            }`}
           >
             {isProcessing ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Processing Order & Reserving Stock…</span>
+              </>
+            ) : !isEmailVerified ? (
+              <>
+                <Mail className="w-4 h-4" />
+                <span>Verify Email to Place Order · ₹{totalRupees}</span>
               </>
             ) : (
               <>

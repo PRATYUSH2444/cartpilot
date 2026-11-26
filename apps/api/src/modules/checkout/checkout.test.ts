@@ -4,6 +4,7 @@ import { createApp } from '../../app.js';
 import { setupTestDatabase, teardownTestDatabase } from '../../test/setup.js';
 import { ProductModel } from '../catalog/product.model.js';
 import { UserModel } from '../users/user.model.js';
+import { MandateModel } from '../mandates/mandate.model.js';
 import { StockReservationModel } from '../inventory/stock-reservation.model.js';
 import { OrderModel } from '../orders/order.model.js';
 import { AuthService } from '../auth/auth.service.js';
@@ -23,6 +24,24 @@ describe('Phase 03 — Checkout & Order Orchestration Integration Tests', () => 
     const customer = await UserModel.findOne({ email: 'customer@example.com' });
     expect(customer).not.toBeNull();
     customerId = customer!._id.toString();
+
+    // Ensure mandate has adequate daily cap to accommodate operational test orders
+    await MandateModel.findOneAndUpdate(
+      { userId: customer!._id },
+      {
+        userId: customer!._id,
+        autoApproveThresholdPaise: 150000,
+        autoApproveUpToPaise: 150000,
+        maxOrderAmountPaise: 250000,
+        perOrderCapPaise: 250000,
+        dailyBudgetPaise: 500000,
+        dailyCapPaise: 500000,
+        monthlyBudgetPaise: 1000000,
+        monthlyCapPaise: 1000000,
+        isVegetarianEnforced: true,
+      },
+      { upsert: true, new: true }
+    );
 
     const session = AuthService.generateTokens({
       userId: customerId,
@@ -134,8 +153,9 @@ describe('Phase 03 — Checkout & Order Orchestration Integration Tests', () => 
     expect(res.body.data.shippingAddressSnapshot.street).toBe('42, Indiranagar 100ft Road');
   });
 
-  it('POST /api/v1/orders/:id/simulate-step — should reject stepping fulfillment when order is not confirmed', async () => {
-    // Current status is PENDING_PAYMENT, so advancing fulfillment step must be rejected with 400
+  it('POST /api/v1/orders/:id/simulate-step — should reject stepping fulfillment when order is in terminal state', async () => {
+    // Terminal status DELIVERED: advancing fulfillment step must be rejected with 400
+    await OrderModel.findByIdAndUpdate(createdOrderId, { status: 'DELIVERED' });
     const res = await request(app)
       .post(`/api/v1/orders/${createdOrderId}/simulate-step`)
       .set('Authorization', `Bearer ${merchantToken}`);
@@ -145,26 +165,27 @@ describe('Phase 03 — Checkout & Order Orchestration Integration Tests', () => 
   });
 
   it('POST /api/v1/orders/:id/simulate-step — should advance step sequentially after confirmation', async () => {
-    // Directly simulate confirmed order status for step testing
+    // Reset to confirmed order status for step testing
     await OrderModel.findByIdAndUpdate(createdOrderId, { status: 'CONFIRMED' });
 
-    // Step 1: CONFIRMED -> PACKING
+    // Step 1: CONFIRMED -> ACCEPTED
     let res = await request(app)
       .post(`/api/v1/orders/${createdOrderId}/simulate-step`)
       .set('Authorization', `Bearer ${merchantToken}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.data.status).toBe('PACKING');
+    expect(res.body.data.status).toBe('ACCEPTED');
 
-    // Step 2: PACKING -> OUT_FOR_DELIVERY
+    // Step 2: ACCEPTED -> PREPARING
     res = await request(app)
       .post(`/api/v1/orders/${createdOrderId}/simulate-step`)
       .set('Authorization', `Bearer ${merchantToken}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.data.status).toBe('OUT_FOR_DELIVERY');
+    expect(res.body.data.status).toBe('PREPARING');
 
-    // Step 3: OUT_FOR_DELIVERY -> DELIVERED
+    // Step 3: DISPATCHED -> DELIVERED
+    await OrderModel.findByIdAndUpdate(createdOrderId, { status: 'DISPATCHED' });
     res = await request(app)
       .post(`/api/v1/orders/${createdOrderId}/simulate-step`)
       .set('Authorization', `Bearer ${merchantToken}`);

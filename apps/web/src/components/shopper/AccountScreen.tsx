@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import {
   ShoppingBag,
   MapPin,
@@ -27,6 +28,8 @@ import {
   Phone,
   Mail,
   ChevronDown,
+  Loader2,
+  KeyRound,
 } from 'lucide-react';
 import { OrderData, UserAddress } from '../../types';
 
@@ -37,6 +40,7 @@ interface AccountScreenProps {
     email?: string;
     phone?: string;
     role?: string;
+    isEmailVerified?: boolean;
   } | null;
   orders: OrderData[];
   selectedAddress?: UserAddress | null;
@@ -82,6 +86,58 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+
+  // In-context Email Verification state
+  const { sendEmailVerification, verifyEmail: verifyEmailAction } = useAuth();
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
+  const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendTimer > 0) {
+      timer = setInterval(() => {
+        setResendTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendTimer]);
+
+  const handleSendEmailCode = async () => {
+    setIsSendingCode(true);
+    setVerifyMessage(null);
+    const res = await sendEmailVerification();
+    setIsSendingCode(false);
+    if (res.success) {
+      setVerifyMessage(res.message || 'Verification code sent to your email.');
+      if (res.simulatedCode) setSimulatedCode(res.simulatedCode);
+      setResendTimer(60);
+    } else {
+      setVerifyMessage(res.error || 'Failed to send verification code.');
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!verificationCode || verificationCode.trim().length !== 6) {
+      setVerifyMessage('Please enter a 6-digit verification code.');
+      return;
+    }
+    setIsVerifying(true);
+    const res = await verifyEmailAction(verificationCode.trim());
+    setIsVerifying(false);
+    if (res.success) {
+      setVerifyMessage('Email verified successfully!');
+      setTimeout(() => {
+        setIsEmailModalOpen(false);
+      }, 1200);
+    } else {
+      setVerifyMessage(res.error || 'Invalid verification code. Please check and try again.');
+    }
+  };
 
   const activeOrdersCount = orders.filter(
     (o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED' && o.status !== 'FAILED'
@@ -189,6 +245,26 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                     <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400 font-medium truncate">
                       <Smartphone className="w-4 h-4 flex-shrink-0 text-stone-400" />
                       <span className="truncate">{displayPhone}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400 font-medium truncate">
+                      <Mail className="w-4 h-4 flex-shrink-0 text-stone-400" />
+                      <span className="truncate">{user?.email || 'shopper@cartpilot.local'}</span>
+                      {user?.isEmailVerified ? (
+                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700">
+                          Verified
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsEmailModalOpen(true);
+                            handleSendEmailCode();
+                          }}
+                          className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-700 hover:underline cursor-pointer"
+                        >
+                          Verify Now
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400 font-medium truncate">
                       <MapPin className="w-4 h-4 flex-shrink-0 text-stone-400" />
@@ -744,6 +820,99 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Email Verification Modal ─────────────────────────────────────── */}
+      {isEmailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-white dark:bg-stone-900 rounded-3xl shadow-2xl border border-stone-200 dark:border-stone-800 p-6 sm:p-7 space-y-5 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-stone-900 dark:text-white leading-tight">
+                    Verify Your Email
+                  </h3>
+                  <p className="text-xs text-stone-500">6-digit verification code</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEmailModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 flex items-center justify-center cursor-pointer hover:text-stone-900"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+              We send an OTP to <span className="font-bold text-stone-900 dark:text-white">{user?.email}</span>. Verifying your email is required to checkout and protects your account.
+            </p>
+
+            {verifyMessage && (
+              <div className="p-3 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-800 dark:text-stone-200 text-xs font-semibold">
+                {verifyMessage}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div className="relative">
+                <KeyRound className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="Enter 6-digit code"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="w-full pl-9 pr-3 py-3 text-sm font-mono font-bold tracking-widest rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {simulatedCode && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-stone-500 font-mono">Dev code:</span>
+                  <button
+                    type="button"
+                    onClick={() => setVerificationCode(simulatedCode)}
+                    className="text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-md hover:underline cursor-pointer"
+                  >
+                    Auto-fill {simulatedCode}
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleVerifyEmail}
+                disabled={isVerifying || verificationCode.length !== 6}
+                className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-md shadow-emerald-600/25 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Verifying Code…</span>
+                  </>
+                ) : (
+                  <span>Verify Email Address</span>
+                )}
+              </button>
+
+              <div className="flex items-center justify-between text-xs pt-1 text-stone-500">
+                <button
+                  type="button"
+                  onClick={handleSendEmailCode}
+                  disabled={isSendingCode || resendTimer > 0}
+                  className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer disabled:opacity-50"
+                >
+                  {isSendingCode ? 'Sending…' : resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
+                </button>
+                <span>Code valid for 15 minutes</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

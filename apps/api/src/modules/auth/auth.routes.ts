@@ -19,6 +19,8 @@ import {
   loginWithPhoneOtp,
   syncClerkUser,
   clerkWebhook,
+  sendEmailVerification,
+  verifyEmail,
 } from './auth.controller.js';
 import { validate } from '../../common/middleware/validate.js';
 import { authenticate, authenticateOptional, requireRole } from '../../common/middleware/auth.js';
@@ -53,6 +55,8 @@ authRouter.post('/phone/verify-otp', authRateLimiter, authenticateOptional, veri
 authRouter.post('/phone/login', authRateLimiter, validate(phoneOtpLoginSchema), loginWithPhoneOtp);
 
 // Authenticated Session & Account Management (logout accepts optional auth to cleanly clear expired sessions)
+authRouter.post('/email/send-verification', authenticate, sendEmailVerification);
+authRouter.post('/email/verify', authenticate, verifyEmail);
 authRouter.post('/logout', authenticateOptional, logout);
 authRouter.post('/logout-all', authenticate, logoutAll);
 authRouter.get('/me', authenticate, getMe);

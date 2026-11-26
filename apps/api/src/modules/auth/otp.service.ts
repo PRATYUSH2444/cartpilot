@@ -245,6 +245,7 @@ export class OtpService {
         role: user.role,
         phone: user.phone,
         mustChangePassword: false,
+        isEmailVerified: user.isEmailVerified,
       },
       accessToken,
       refreshToken,

@@ -51,6 +51,7 @@ export interface UserProfile {
   isStaff?: boolean;
   staffPermissions?: string[];
   mustChangePassword?: boolean;
+  isEmailVerified?: boolean;
 }
 
 export interface AuthContextType {
@@ -86,6 +87,18 @@ export interface AuthContextType {
     password: string,
     phone?: string
   ) => Promise<{ success: boolean; role?: UserRole; error?: string }>;
+  sendEmailVerification: () => Promise<{
+    success: boolean;
+    message?: string;
+    simulatedCode?: string;
+    expiresInSeconds?: number;
+    error?: string;
+  }>;
+  verifyEmail: (code: string) => Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+  }>;
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
@@ -154,6 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isStaff: d.data.user.isStaff,
             staffPermissions: d.data.user.staffPermissions,
             mustChangePassword: d.data.user.mustChangePassword,
+            isEmailVerified: d.data.user.isEmailVerified ?? (clerkUser.primaryEmailAddress?.verification?.status === 'verified'),
           };
           setUser(profile);
           setAuthStatus('AUTHENTICATED');
@@ -216,6 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isStaff: data.data.user.isStaff,
             staffPermissions: data.data.user.staffPermissions,
             mustChangePassword: data.data.user.mustChangePassword,
+            isEmailVerified: data.data.user.isEmailVerified,
           };
 
           latestTokenRef.current = data.data.accessToken;
@@ -425,6 +440,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isStaff: data.data.user.isStaff,
           staffPermissions: data.data.user.staffPermissions,
           mustChangePassword: data.data.user.mustChangePassword,
+          isEmailVerified: data.data.user.isEmailVerified,
         };
 
         latestTokenRef.current = accessToken;
@@ -510,6 +526,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isStaff: data.data.user.isStaff,
           staffPermissions: data.data.user.staffPermissions,
           mustChangePassword: data.data.user.mustChangePassword,
+          isEmailVerified: data.data.user.isEmailVerified,
         };
 
         latestTokenRef.current = accessToken;
@@ -563,6 +580,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: data.data.user.email,
           name: data.data.user.name,
           role: data.data.user.role,
+          isEmailVerified: data.data.user.isEmailVerified ?? false,
         };
 
         latestTokenRef.current = accessToken;
@@ -589,6 +607,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         success: false,
         error: 'Cannot reach backend server. Please verify connection.',
+      };
+    }
+  };
+
+  const sendEmailVerification = async () => {
+    try {
+      const res = await authFetch(`${API_BASE}/auth/email/send-verification`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return {
+          success: true,
+          message: data.data?.message || 'Verification code sent to your email',
+          simulatedCode: data.data?.simulatedCode,
+          expiresInSeconds: data.data?.expiresInSeconds || 900,
+        };
+      } else {
+        return {
+          success: false,
+          error: data.error?.message || data.message || 'Failed to send verification code',
+        };
+      }
+    } catch {
+      return {
+        success: false,
+        error: 'Network error sending verification email',
+      };
+    }
+  };
+
+  const verifyEmail = async (code: string) => {
+    try {
+      const res = await authFetch(`${API_BASE}/auth/email/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setUser((prev) => (prev ? { ...prev, isEmailVerified: true } : prev));
+        return {
+          success: true,
+          message: data.data?.message || 'Email verified successfully',
+        };
+      } else {
+        return {
+          success: false,
+          error: data.error?.message || data.message || 'Invalid or expired verification code',
+        };
+      }
+    } catch {
+      return {
+        success: false,
+        error: 'Network error verifying email',
       };
     }
   };
@@ -691,6 +764,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           sendPhoneOtp,
           loginWithPhoneOtp,
           register,
+          sendEmailVerification,
+          verifyEmail,
           logout,
           logoutAll,
           refreshSession,

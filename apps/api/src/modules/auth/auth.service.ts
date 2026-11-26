@@ -54,6 +54,7 @@ export interface AuthUserDTO {
   isStaff?: boolean;
   staffPermissions?: MerchantPermission[];
   mustChangePassword?: boolean;
+  isEmailVerified?: boolean;
 }
 
 export interface AuthResult {
@@ -242,6 +243,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        isEmailVerified: user.isEmailVerified,
       },
       accessToken,
       refreshToken,
@@ -371,6 +373,7 @@ export class AuthService {
         isStaff,
         staffPermissions,
         mustChangePassword: user.mustChangePassword,
+        isEmailVerified: user.isEmailVerified,
       },
       accessToken,
       refreshToken,
@@ -562,6 +565,7 @@ export class AuthService {
         isStaff,
         staffPermissions,
         mustChangePassword: user.mustChangePassword,
+        isEmailVerified: user.isEmailVerified,
       },
       accessToken,
       refreshToken: newRefreshToken,
@@ -943,6 +947,7 @@ export class AuthService {
       isStaff,
       staffPermissions,
       mustChangePassword: user.mustChangePassword,
+      isEmailVerified: user.isEmailVerified,
     };
   }
 
@@ -1013,6 +1018,7 @@ export class AuthService {
       isStaff,
       staffPermissions,
       mustChangePassword: user.mustChangePassword,
+      isEmailVerified: user.isEmailVerified,
     };
   }
 
@@ -1066,5 +1072,93 @@ export class AuthService {
         );
       }
     }
+  }
+
+  /**
+   * Dispatch a 6-digit email verification code to user's registered email.
+   */
+  public static async sendEmailVerificationCode(userId: string): Promise<{
+    message: string;
+    expiresInSeconds: number;
+    simulatedCode?: string;
+  }> {
+    const user = await UserModel.findById(userId);
+    if (!user || !user.isActive) {
+      throw new UnauthorizedError('User account not found or deactivated');
+    }
+
+    if (user.isEmailVerified) {
+      return {
+        message: 'Email is already verified',
+        expiresInSeconds: 0,
+      };
+    }
+
+    // Generate 6-digit verification code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const hash = crypto.createHash('sha256').update(code).digest('hex');
+
+    user.emailVerificationTokenHash = hash;
+    user.emailVerificationExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+    await user.save();
+
+    await emailAdapter.sendEmailVerification(user.email, code);
+
+    return {
+      message: `Verification code sent to ${user.email}`,
+      expiresInSeconds: 900,
+      simulatedCode: env.isProduction ? undefined : code,
+    };
+  }
+
+  /**
+   * Verify 6-digit email verification code.
+   */
+  public static async verifyEmailCode(
+    userId: string,
+    code: string
+  ): Promise<{ message: string; isEmailVerified: boolean }> {
+    const user = await UserModel.findById(userId);
+    if (!user || !user.isActive) {
+      throw new UnauthorizedError('User account not found or deactivated');
+    }
+
+    if (user.isEmailVerified) {
+      return {
+        message: 'Email is already verified',
+        isEmailVerified: true,
+      };
+    }
+
+    if (!user.emailVerificationTokenHash || !user.emailVerificationExpires) {
+      throw new BadRequestError('No active verification code found. Please request a new code.');
+    }
+
+    if (new Date() > user.emailVerificationExpires) {
+      throw new BadRequestError('Verification code has expired. Please request a new code.');
+    }
+
+    const hash = crypto.createHash('sha256').update(code.trim()).digest('hex');
+    if (hash !== user.emailVerificationTokenHash) {
+      throw new BadRequestError('Invalid verification code. Please check and try again.');
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationTokenHash = null;
+    user.emailVerificationExpires = null;
+    await user.save();
+
+    await auditService.recordEvent({
+      eventType: 'AUTH_EMAIL_VERIFIED',
+      actorId: user._id.toString(),
+      actorRole: user.role,
+      resourceId: user._id.toString(),
+      resourceType: 'USER',
+    });
+
+    return {
+      message: 'Email verified successfully',
+      isEmailVerified: true,
+    };
   }
 }

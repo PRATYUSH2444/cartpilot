@@ -198,4 +198,99 @@ describe('Auth & Session Lifecycle Integration Tests', () => {
       expect(adminRes.body.success).toBe(false);
     });
   });
+
+  describe('Milestone 2: Shopper Onboarding & Email Verification Enforcement', () => {
+    let unverifiedToken: string;
+
+    it('should register a new shopper with isEmailVerified: false by default', async () => {
+      const res = await request(app).post('/api/v1/auth/register').send({
+        email: 'unverified_shopper@example.com',
+        password: 'P@ssw0rdSecure!2026',
+        name: 'Unverified Shopper',
+        role: 'CUSTOMER',
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.user.isEmailVerified).toBe(false);
+      unverifiedToken = res.body.data.accessToken;
+    });
+
+    it('should dispatch an email verification code (200 OK with simulated code)', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/email/send-verification')
+        .set('Authorization', `Bearer ${unverifiedToken}`)
+        .send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.simulatedCode).toBeDefined();
+      expect(res.body.data.simulatedCode).toHaveLength(6);
+    });
+
+    it('should reject email verification with incorrect code (400 Bad Request)', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/email/verify')
+        .set('Authorization', `Bearer ${unverifiedToken}`)
+        .send({ code: '000000' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.message).toContain('Invalid verification code');
+    });
+
+    it('should verify email successfully with correct code (200 OK)', async () => {
+      const sendRes = await request(app)
+        .post('/api/v1/auth/email/send-verification')
+        .set('Authorization', `Bearer ${unverifiedToken}`)
+        .send({});
+
+      const code = sendRes.body.data.simulatedCode;
+      expect(code).toBeDefined();
+
+      const verifyRes = await request(app)
+        .post('/api/v1/auth/email/verify')
+        .set('Authorization', `Bearer ${unverifiedToken}`)
+        .send({ code });
+
+      expect(verifyRes.status).toBe(200);
+      expect(verifyRes.body.success).toBe(true);
+      expect(verifyRes.body.data.isEmailVerified).toBe(true);
+
+      const meRes = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${unverifiedToken}`);
+
+      expect(meRes.status).toBe(200);
+      expect(meRes.body.data.isEmailVerified).toBe(true);
+    });
+
+    it('should reject checkout when user email is unverified (403 Forbidden)', async () => {
+      const regRes = await request(app).post('/api/v1/auth/register').send({
+        email: 'checkout_blocked@example.com',
+        password: 'P@ssw0rdSecure!2026',
+        name: 'Blocked Shopper',
+        role: 'CUSTOMER',
+      });
+      const blockedToken = regRes.body.data.accessToken;
+
+      const { ProductModel } = await import('../catalog/product.model.js');
+      const product = await ProductModel.findOne();
+      expect(product).not.toBeNull();
+
+      await request(app)
+        .post('/api/v1/cart/items')
+        .set('Authorization', `Bearer ${blockedToken}`)
+        .send({ productId: product!._id.toString(), quantity: 1 });
+
+      const checkoutRes = await request(app)
+        .post('/api/v1/checkout/initiate')
+        .set('Authorization', `Bearer ${blockedToken}`)
+        .send({});
+
+      expect(checkoutRes.status).toBe(403);
+      expect(checkoutRes.body.success).toBe(false);
+      expect(checkoutRes.body.error.code).toBe('EMAIL_VERIFICATION_REQUIRED');
+    });
+  });
 });

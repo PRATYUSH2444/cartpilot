@@ -1,13 +1,14 @@
 import mongoose from 'mongoose';
 import { CartModel } from '../cart/cart.model.js';
 import { ProductModel, IProduct } from '../catalog/product.model.js';
+import { UserModel } from '../users/user.model.js';
 import { PricingService } from '../pricing/pricing.service.js';
 import { InventoryService } from '../inventory/inventory.service.js';
 import { OrderModel, IOrder, IOrderItemSnapshot } from '../orders/order.model.js';
 import { PaymentModel } from '../payments/payment.model.js';
 import { PaymentService } from '../payments/payment.service.js';
 import { env } from '../../config/env.config.js';
-import { AppError, BadRequestError, NotFoundError } from '../../common/errors/app-error.js';
+import { AppError, BadRequestError, NotFoundError, ForbiddenError } from '../../common/errors/app-error.js';
 import { logger } from '../../common/logging/logger.js';
 import { policyService } from '../policy/policy.service.js';
 import { mandateService } from '../mandates/mandate.service.js';
@@ -42,6 +43,15 @@ export class CheckoutService {
     input?: InitiateCheckoutInput
   ): Promise<CheckoutResult> {
     const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    // 0. Enforce mandatory email verification before checkout
+    const user = await UserModel.findById(userObjectId);
+    if (!user || !user.isEmailVerified) {
+      throw new ForbiddenError(
+        'Email verification is required before checkout. Please verify your email to proceed.',
+        'EMAIL_VERIFICATION_REQUIRED'
+      );
+    }
 
     // 1. Fetch active cart
     const cart = await CartModel.findOne({ userId: userObjectId, status: 'ACTIVE' });

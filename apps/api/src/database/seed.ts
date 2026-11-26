@@ -43,6 +43,8 @@ export async function runSeed(dropExisting = false): Promise<void> {
       role: 'ADMIN',
       isActive: true,
       tokenVersion: 0,
+      isEmailVerified: true,
+      isPhoneVerified: true,
     },
     { upsert: true, new: true }
   );
@@ -56,6 +58,8 @@ export async function runSeed(dropExisting = false): Promise<void> {
       role: 'ADMIN',
       isActive: true,
       tokenVersion: 0,
+      isEmailVerified: true,
+      isPhoneVerified: true,
     },
     { upsert: true, new: true }
   );
@@ -69,6 +73,8 @@ export async function runSeed(dropExisting = false): Promise<void> {
       role: 'MERCHANT',
       isActive: true,
       tokenVersion: 0,
+      isEmailVerified: true,
+      isPhoneVerified: true,
     },
     { upsert: true, new: true }
   );
@@ -82,6 +88,8 @@ export async function runSeed(dropExisting = false): Promise<void> {
       role: 'MERCHANT',
       isActive: true,
       tokenVersion: 0,
+      isEmailVerified: true,
+      isPhoneVerified: true,
     },
     { upsert: true, new: true }
   );
@@ -95,6 +103,8 @@ export async function runSeed(dropExisting = false): Promise<void> {
       role: 'CUSTOMER',
       isActive: true,
       tokenVersion: 0,
+      isEmailVerified: true,
+      isPhoneVerified: true,
     },
     { upsert: true, new: true }
   );
@@ -108,6 +118,8 @@ export async function runSeed(dropExisting = false): Promise<void> {
       role: 'CUSTOMER',
       isActive: true,
       tokenVersion: 0,
+      isEmailVerified: true,
+      isPhoneVerified: true,
     },
     { upsert: true, new: true }
   );

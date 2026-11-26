@@ -467,3 +467,51 @@ export async function clerkWebhook(
     next(error);
   }
 }
+
+export async function sendEmailVerification(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { message: 'Authentication required' } });
+      return;
+    }
+
+    const result = await AuthService.sendEmailVerificationCode(req.user.id);
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyEmail(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { message: 'Authentication required' } });
+      return;
+    }
+
+    const { code } = req.body;
+    if (!code || typeof code !== 'string') {
+      res.status(400).json({ success: false, error: { message: 'Verification code is required' } });
+      return;
+    }
+
+    const result = await AuthService.verifyEmailCode(req.user.id, code);
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
