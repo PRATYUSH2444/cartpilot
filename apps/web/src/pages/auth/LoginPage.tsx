@@ -83,6 +83,9 @@ export const LoginPage: React.FC = () => {
   // Immediate synchronous guard: never render login page if already authenticated
   if (!authLoading && isAuthenticated && user) {
     const target = user.role === 'MERCHANT' ? '/merchant' : user.role === 'ADMIN' ? '/admin' : '/shopper';
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({ cartpilotApp: true, tab: 'home' }, '', target);
+    }
     return <Navigate to={target} replace />;
   }
 
@@ -504,7 +507,13 @@ export const LoginPage: React.FC = () => {
 
                 {/* Google Sign-In Pill Button (Clerk OAuth or Fallback) */}
                 {Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY) ? (
-                  <SignInButton mode="modal">
+                  <SignInButton
+                    mode="modal"
+                    forceRedirectUrl="/shopper"
+                    fallbackRedirectUrl="/shopper"
+                    signUpForceRedirectUrl="/shopper"
+                    signUpFallbackRedirectUrl="/shopper"
+                  >
                     <button
                       type="button"
                       className="w-full py-3.5 px-4 rounded-full bg-white/65 dark:bg-stone-800/65 hover:bg-white/90 dark:hover:bg-stone-750 backdrop-blur-md border border-white/90 dark:border-stone-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2.5 shadow-2xs hover:shadow transition-all cursor-pointer active:scale-[0.99]"

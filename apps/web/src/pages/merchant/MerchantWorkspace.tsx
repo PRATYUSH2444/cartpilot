@@ -132,57 +132,67 @@ export const MerchantWorkspace: React.FC = () => {
 
   // ── Smart In-App Back Navigation & History Trap (Merchant) ─────────────────
   // Prevents browser back button from leaking into Google OAuth or Login.
+  const merchantBackStateRef = useRef({
+    hasOpenModal: false,
+    closeAllModals: () => {},
+    activeTab: 'home',
+    goToHome: () => {},
+  });
+
+  merchantBackStateRef.current = {
+    hasOpenModal: Boolean(
+      isCommandPaletteOpen ||
+      isNotificationsOpen ||
+      isAddProductOpen ||
+      isCreateOrderOpen ||
+      productToEdit ||
+      isIntegrationsOpen ||
+      isMobileSidebarOpen
+    ),
+    closeAllModals: () => {
+      setIsCommandPaletteOpen(false);
+      setIsNotificationsOpen(false);
+      setIsAddProductOpen(false);
+      setIsCreateOrderOpen(false);
+      setProductToEdit(null);
+      setIsIntegrationsOpen(false);
+      setIsMobileSidebarOpen(false);
+    },
+    activeTab,
+    goToHome: () => {
+      setActiveTab('home');
+      navigate('/merchant');
+    },
+  };
+
   useEffect(() => {
     window.history.replaceState({ cartpilotMerchant: true }, '', window.location.pathname);
     window.history.pushState({ cartpilotMerchant: true, guard: true }, '', window.location.pathname);
 
     const handlePopState = () => {
-      // 1. Close open merchant modals
-      if (
-        isCommandPaletteOpen ||
-        isNotificationsOpen ||
-        isAddProductOpen ||
-        isCreateOrderOpen ||
-        productToEdit ||
-        isIntegrationsOpen ||
-        isMobileSidebarOpen
-      ) {
-        setIsCommandPaletteOpen(false);
-        setIsNotificationsOpen(false);
-        setIsAddProductOpen(false);
-        setIsCreateOrderOpen(false);
-        setProductToEdit(null);
-        setIsIntegrationsOpen(false);
-        setIsMobileSidebarOpen(false);
-        window.history.pushState({ cartpilotMerchant: true, guard: true }, '', window.location.pathname);
-        return;
-      }
-
-      // 2. Return to 'home' if on another tab
-      if (activeTab !== 'home' && activeTab !== 'overview') {
-        setActiveTab('home');
-        navigate('/merchant');
-        window.history.pushState({ cartpilotMerchant: true, guard: true }, '', '/merchant');
-        return;
-      }
-
-      // 3. Anchor on merchant home
+      // 1. Immediately re-arm guard on current path
       window.history.pushState({ cartpilotMerchant: true, guard: true }, '', window.location.pathname);
+
+      const navState = merchantBackStateRef.current;
+
+      // 2. Close open merchant modals
+      if (navState.hasOpenModal) {
+        navState.closeAllModals();
+        return;
+      }
+
+      // 3. Return to 'home' if on another tab
+      if (navState.activeTab !== 'home' && navState.activeTab !== 'overview') {
+        navState.goToHome();
+        return;
+      }
+
+      // 4. Anchor on merchant home
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [
-    activeTab,
-    isCommandPaletteOpen,
-    isNotificationsOpen,
-    isAddProductOpen,
-    isCreateOrderOpen,
-    productToEdit,
-    isIntegrationsOpen,
-    isMobileSidebarOpen,
-    navigate,
-  ]);
+  }, [navigate]);
 
   // Global Ctrl+K / Cmd+K listener
   useEffect(() => {

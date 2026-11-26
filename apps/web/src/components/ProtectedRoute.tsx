@@ -22,6 +22,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     }
   }, [isLoading, token, user, location]);
 
+  // Strip OAuth callback query parameters and anchor authenticated history
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (isAuthenticated && (window.location.search.includes('__clerk') || window.location.search.includes('status'))) {
+      window.history.replaceState({ cartpilotAuth: true }, '', window.location.pathname);
+    }
+  }, [isAuthenticated, location.pathname]);
+
   // While restoring session from secure cookie, display modern cryptographic verification state
   if (isLoading || authStatus === 'INITIALIZING') {
     return (

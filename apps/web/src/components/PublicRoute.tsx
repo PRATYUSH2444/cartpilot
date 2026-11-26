@@ -41,6 +41,11 @@ export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
       target = '/admin';
     }
 
+    // Erase the public authentication route from browser history so back button cannot re-enter
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({ cartpilotApp: true, tab: 'home' }, '', target);
+    }
+
     return <Navigate to={target} replace />;
   }
 
