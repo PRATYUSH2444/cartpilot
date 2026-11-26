@@ -230,20 +230,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const refreshPromise = (async (): Promise<boolean> => {
       const authProvider = typeof window !== 'undefined' ? localStorage.getItem('cartpilot_auth_provider') : null;
 
-      // Handle Clerk session refresh: Clerk uses its own token engine
+      // Handle Clerk session refresh: re-sync with backend to maintain valid backend JWT
       if (authProvider === 'clerk') {
         if (clerkGetTokenRef.current) {
           try {
-            const freshToken = await clerkGetTokenRef.current();
-            if (freshToken) {
-              latestTokenRef.current = freshToken;
-              setToken(freshToken);
+            const freshClerkToken = await clerkGetTokenRef.current();
+            if (freshClerkToken) {
+              const res = await fetch(`${API_BASE}/auth/sync`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${freshClerkToken}`,
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                  clerkUserId: user?.id,
+                  email: user?.email,
+                  name: user?.name,
+                }),
+              });
+              if (res.ok) {
+                const d = await res.json();
+                const resolvedToken = d.data?.accessToken || freshClerkToken;
+                latestTokenRef.current = resolvedToken;
+                setToken(resolvedToken);
+                setAuthStatus('AUTHENTICATED');
+                setIsSessionExpired(false);
+                return true;
+              }
+              latestTokenRef.current = freshClerkToken;
+              setToken(freshClerkToken);
               setAuthStatus('AUTHENTICATED');
-              setIsSessionExpired(false);
               return true;
             }
           } catch (err) {
-            console.warn('Clerk token refresh error:', err);
+            console.warn('Clerk session re-sync error:', err);
           }
         }
         return false;
@@ -452,8 +473,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const reqOptions: RequestInit = { ...options };
       const headers = new Headers(reqOptions.headers || {});
 
+      // Use active backend JWT token; only fetch fresh Clerk token if current token is missing
       let currentToken = latestTokenRef.current;
-      if (clerkGetTokenRef.current) {
+      if (!currentToken && clerkGetTokenRef.current) {
         try {
           const fresh = await clerkGetTokenRef.current();
           if (fresh) {
@@ -472,8 +494,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       let response = await fetch(url, reqOptions);
 
-      // If token expired right at call time, refresh and retry once transparently (non-Clerk fallback)
-      if (response.status === 401 && !hasClerk) {
+      // If token expired right at call time, refresh and retry once transparently
+      if (response.status === 401) {
         const refreshed = await refreshSession();
         if (refreshed && latestTokenRef.current) {
           const retryHeaders = new Headers(options.headers || {});
