@@ -21,6 +21,9 @@ import {
   clerkWebhook,
   sendEmailVerification,
   verifyEmail,
+  adminLogin,
+  verifyAdminMfa,
+  getMasterAdminStatus,
 } from './auth.controller.js';
 import { validate } from '../../common/middleware/validate.js';
 import { authenticate, authenticateOptional, requireRole } from '../../common/middleware/auth.js';
@@ -36,6 +39,8 @@ import {
   createAdminSchema,
   phoneOtpSendSchema,
   phoneOtpLoginSchema,
+  adminLoginSchema,
+  adminMfaVerifySchema,
 } from './auth.schema.js';
 
 export const authRouter = Router();
@@ -53,6 +58,11 @@ authRouter.post('/reset-password', authRateLimiter, validate(resetPasswordSchema
 authRouter.post('/phone/send-otp', authRateLimiter, validate(phoneOtpSendSchema), sendPhoneOtp);
 authRouter.post('/phone/verify-otp', authRateLimiter, authenticateOptional, verifyPhoneOtp);
 authRouter.post('/phone/login', authRateLimiter, validate(phoneOtpLoginSchema), loginWithPhoneOtp);
+
+// Master Admin Security Gate & MFA Guard Flow
+authRouter.get('/admin/status', getMasterAdminStatus);
+authRouter.post('/admin/login', authRateLimiter, validate(adminLoginSchema), adminLogin);
+authRouter.post('/admin/mfa/verify', authRateLimiter, validate(adminMfaVerifySchema), verifyAdminMfa);
 
 // Authenticated Session & Account Management (logout accepts optional auth to cleanly clear expired sessions)
 authRouter.post('/email/send-verification', authenticate, sendEmailVerification);

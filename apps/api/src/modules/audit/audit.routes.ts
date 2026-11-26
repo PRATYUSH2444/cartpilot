@@ -16,3 +16,13 @@ auditRouter.get(
 auditRouter.get('/events', authenticate, requireRole('ADMIN'), (req, res, next) =>
   auditController.getEvents(req, res).catch(next)
 );
+
+// Real-time SSE streaming audit events log for Master Admin console
+auditRouter.get('/stream', authenticate, requireRole('ADMIN'), (req, res, next) =>
+  auditController.streamEvents(req, res).catch(next)
+);
+
+// Streaming NDJSON export of the full cryptographic audit ledger
+auditRouter.get('/export', authenticate, requireRole('ADMIN'), (req, res, next) =>
+  auditController.exportLedger(req, res).catch(next)
+);

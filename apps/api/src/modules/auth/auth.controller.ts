@@ -515,3 +515,48 @@ export async function verifyEmail(
     next(error);
   }
 }
+
+export async function adminLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const context = getClientContext(req);
+    const result = await AuthService.initiateAdminLogin(req.body, context);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyAdminMfa(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const context = getClientContext(req);
+    const { mfaToken, code } = req.body;
+    const result = await AuthService.verifyAdminMfa(mfaToken, code, context);
+    setRefreshCookie(res, result.refreshToken, result.user.role);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user: result.user,
+        accessToken: result.accessToken,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getMasterAdminStatus(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const status = await AuthService.getMasterAdminStatus();
+    res.status(200).json({
+      success: true,
+      data: status,
+    });
+  } catch (error) {
+    next(error);
+  }
+}

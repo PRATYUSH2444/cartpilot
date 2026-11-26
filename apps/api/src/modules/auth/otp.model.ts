@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type OtpPurpose = 'PHONE_VERIFICATION' | 'LOGIN_2FA' | 'PASSWORD_RESET' | 'PHONE_LOGIN';
+export type OtpPurpose = 'PHONE_VERIFICATION' | 'LOGIN_2FA' | 'PASSWORD_RESET' | 'PHONE_LOGIN' | 'ADMIN_MFA';
 
 export interface IOtpVerification extends Document {
   phone: string;
@@ -26,7 +26,7 @@ const OtpVerificationSchema = new Schema<IOtpVerification>(
     },
     purpose: {
       type: String,
-      enum: ['PHONE_VERIFICATION', 'LOGIN_2FA', 'PASSWORD_RESET', 'PHONE_LOGIN'],
+      enum: ['PHONE_VERIFICATION', 'LOGIN_2FA', 'PASSWORD_RESET', 'PHONE_LOGIN', 'ADMIN_MFA'],
       default: 'PHONE_VERIFICATION',
     },
     attempts: {

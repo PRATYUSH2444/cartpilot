@@ -39,6 +39,9 @@ export interface IUser extends Document {
   isPhoneVerified: boolean;
   mustChangePassword: boolean;
   isStaff: boolean;
+  isMasterAdmin?: boolean;
+  isMfaEnforced?: boolean;
+  lastMfaVerifiedAt?: Date | null;
   walletBalancePaise: number;
   themePreference?: 'LIGHT' | 'DARK';
   createdAt: Date;
@@ -173,6 +176,18 @@ const UserSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
       required: true,
+    },
+    isMasterAdmin: {
+      type: Boolean,
+      default: false,
+    },
+    isMfaEnforced: {
+      type: Boolean,
+      default: true,
+    },
+    lastMfaVerifiedAt: {
+      type: Date,
+      default: null,
     },
     walletBalancePaise: {
       type: Number,

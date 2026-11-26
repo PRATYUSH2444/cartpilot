@@ -16,6 +16,7 @@ export interface AuthenticatedUser {
   merchantId?: string;
   isStaff?: boolean;
   staffPermissions?: MerchantPermission[];
+  isMfaVerified?: boolean;
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -27,14 +28,16 @@ export async function authenticate(
   _res: Response,
   next: NextFunction
 ): Promise<void> {
+  let token: string | undefined;
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next(new UnauthorizedError('Authentication token missing or invalid'));
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (typeof req.query.token === 'string' && req.query.token.trim()) {
+    token = req.query.token.trim();
   }
 
-  const token = authHeader.split(' ')[1];
   if (!token) {
-    return next(new UnauthorizedError('Authentication token missing'));
+    return next(new UnauthorizedError('Authentication token missing or invalid'));
   }
 
   // 1. If Clerk secret key is present, attempt Clerk token verification first
@@ -136,6 +139,7 @@ export async function authenticate(
       merchantId: decoded.merchantId,
       isStaff: decoded.isStaff,
       staffPermissions: decoded.staffPermissions,
+      isMfaVerified: decoded.isMfaVerified !== false,
     };
     next();
   } catch (err: unknown) {
@@ -164,6 +168,10 @@ export function authorize(...allowedRoles: UserRole[]) {
     if (allowedRoles.includes('ADMIN') && req.user.role === 'ADMIN') {
       if (env.ADMIN_CLERK_USER_ID && req.user.clerkUserId && req.user.clerkUserId !== env.ADMIN_CLERK_USER_ID) {
         throw new ForbiddenError('Access denied. Admin identity does not match provisioned Master Admin.');
+      }
+
+      if (req.user.isMfaVerified === false) {
+        throw new ForbiddenError('Master Admin MFA verification required. Complete 2FA at /admin/login', 'MFA_REQUIRED');
       }
     }
 

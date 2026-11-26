@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { auditService } from './audit.service.js';
+import { auditService, GENESIS_HASH } from './audit.service.js';
+import { AuditEventModel } from './audit-event.model.js';
 
 export class AuditController {
   async getEvents(req: Request, res: Response): Promise<void> {
@@ -29,6 +30,57 @@ export class AuditController {
       success: verification.valid,
       data: verification,
     });
+  }
+
+  /**
+   * Real-time Server-Sent Events (SSE) streaming audit log for Master Admin console.
+   */
+  async streamEvents(req: Request, res: Response): Promise<void> {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    if (typeof (res as any).flushHeaders === 'function') {
+      (res as any).flushHeaders();
+    }
+
+    const lastEvent = await AuditEventModel.findOne().sort({ sequenceNumber: -1 }).lean();
+    const initialPayload = JSON.stringify({
+      type: 'INIT',
+      ledgerHeight: lastEvent ? lastEvent.sequenceNumber : 0,
+      latestHash: lastEvent ? lastEvent.currentHash : GENESIS_HASH,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.write(`event: initial_state\ndata: ${initialPayload}\n\n`);
+
+    const onEvent = (event: Record<string, unknown>) => {
+      res.write(`event: audit_event\ndata: ${JSON.stringify(event)}\n\n`);
+    };
+
+    auditService.streamEmitter.on('audit_event', onEvent);
+
+    const heartbeat = setInterval(() => {
+      res.write(': ping\n\n');
+    }, 15000);
+
+    req.on('close', () => {
+      clearInterval(heartbeat);
+      auditService.streamEmitter.off('audit_event', onEvent);
+      res.end();
+    });
+  }
+
+  /**
+   * Stream the entire cryptographic hash ledger line-by-line as NDJSON.
+   */
+  async exportLedger(_req: Request, res: Response): Promise<void> {
+    res.setHeader('Content-Type', 'application/x-ndjson');
+    res.setHeader('Content-Disposition', 'attachment; filename="cartpilot-audit-ledger.ndjson"');
+
+    for await (const chunk of auditService.exportLedgerStream()) {
+      res.write(chunk);
+    }
+    res.end();
   }
 }
 

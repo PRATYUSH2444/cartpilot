@@ -34,6 +34,8 @@ async function provisionAdmin(): Promise<void> {
     failedLoginAttempts: 0,
     isSuspended: false,
     isEmailVerified: true,
+    isMasterAdmin: true,
+    isMfaEnforced: true,
   });
 
   await auditService.recordEvent({

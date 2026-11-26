@@ -32,6 +32,7 @@ import {
   Sparkles,
   Zap,
   AlertTriangle,
+  Download,
 } from 'lucide-react';
 import { API_BASE } from '../../config/api';
 
@@ -98,6 +99,70 @@ export const AdminWorkspace: React.FC = () => {
   const [adminPassword, setAdminPassword] = useState('');
   const [currentAdminPassword, setCurrentAdminPassword] = useState('');
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
+  const [isStreamConnected, setIsStreamConnected] = useState(false);
+
+  // Real-time Audit Event Streaming via SSE
+  useEffect(() => {
+    if (!token) return;
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource(`${API_BASE}/audit/stream?token=${encodeURIComponent(token)}`);
+
+      eventSource.addEventListener('initial_state', () => {
+        setIsStreamConnected(true);
+      });
+
+      eventSource.addEventListener('audit_event', (e: MessageEvent) => {
+        try {
+          const newEvent = JSON.parse(e.data);
+          setAuditEvents((prev) => {
+            const exists = prev.some((ev) => ev.sequenceNumber === newEvent.sequenceNumber);
+            if (exists) return prev;
+            return [newEvent, ...prev.slice(0, 49)];
+          });
+        } catch (err) {
+          console.error('Failed to parse incoming audit stream event', err);
+        }
+      });
+
+      eventSource.onopen = () => {
+        setIsStreamConnected(true);
+      };
+
+      eventSource.onerror = () => {
+        setIsStreamConnected(false);
+      };
+    } catch (err) {
+      console.warn('Audit SSE connection error', err);
+    }
+
+    return () => {
+      eventSource?.close();
+    };
+  }, [token]);
+
+  const handleExportLedger = async () => {
+    try {
+      const res = await authFetch(`${API_BASE}/audit/export`);
+      if (!res.ok) {
+        showBanner('error', 'Failed to export audit ledger');
+        return;
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cartpilot-audit-ledger-${Date.now()}.ndjson`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      showBanner('success', 'Cryptographic audit ledger exported successfully');
+    } catch {
+      showBanner('error', 'Error exporting audit ledger');
+    }
+  };
 
   const toggleTheme = () => {
     const newDark = !isDark;
@@ -409,6 +474,10 @@ export const AdminWorkspace: React.FC = () => {
                 <span className="text-[10px] font-mono uppercase bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold px-2 py-0.5 rounded-full border border-purple-500/20">
                   Zero-Trust
                 </span>
+                <span className="text-[10px] font-mono uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                  MFA Guard Enforced
+                </span>
               </div>
               <p className="text-xs text-mut mt-0.5">
                 CartPilot Policy Enforcement, Cryptographic Ledger & Merchant Lifecycle Governance
@@ -575,16 +644,42 @@ export const AdminWorkspace: React.FC = () => {
         {/* Tab 1: Audit Ledger */}
         {activeTab === 'audit' && (
           <div className="bg-card border border-brd rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-4 border-b border-brd flex items-center justify-between">
+            <div className="p-4 border-b border-brd flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="font-bold text-sm text-ink">SHA-256 Chained Event Stream</h3>
-                <p className="text-xs text-mut">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm text-ink">SHA-256 Chained Event Stream</h3>
+                  {isStreamConnected ? (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      LIVE STREAM ACTIVE
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-stone-500/10 border border-stone-500/30 text-stone-500 text-[10px] font-bold">
+                      STREAM IDLE
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-mut mt-0.5">
                   Append-only immutable record verifying state transitions and zero-trust policy decisions
                 </p>
               </div>
-              <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-paper border border-brd text-ink">
-                Page Size: 25 Events
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportLedger}
+                  className="px-3 py-1.5 rounded-xl border border-brd bg-paper hover:bg-card text-xs font-semibold text-ink flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                  title="Export cryptographic ledger as NDJSON"
+                >
+                  <Download className="w-3.5 h-3.5 text-mut" />
+                  <span>Export Stream (NDJSON)</span>
+                </button>
+                <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-paper border border-brd text-ink">
+                  Ledger Height: #{auditEvents[0]?.sequenceNumber || auditEvents.length}
+                </span>
+              </div>
             </div>
 
             <div className="overflow-x-auto">

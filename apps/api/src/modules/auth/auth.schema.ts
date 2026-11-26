@@ -118,8 +118,20 @@ export const merchantStatusActionSchema = z.object({
   reason: z.string().max(500).optional(),
 });
 
+export const adminLoginSchema = z.object({
+  email: z.string().email('Valid administrator email is required').toLowerCase().trim(),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export const adminMfaVerifySchema = z.object({
+  mfaToken: z.string().min(1, 'MFA challenge session token is required'),
+  code: z.string().length(6, '6-digit MFA verification code is required').trim(),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
+export type AdminMfaVerifyInput = z.infer<typeof adminMfaVerifySchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

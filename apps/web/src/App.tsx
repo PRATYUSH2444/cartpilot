@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { SessionEndedModal } from './components/SessionEndedModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/auth/LoginPage';
+import { AdminLoginPage } from './pages/auth/AdminLoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
@@ -52,6 +53,7 @@ export function App() {
           <Routes>
             {/* Public Authentication Routes */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />

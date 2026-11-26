@@ -7,6 +7,7 @@ import { logger } from '../../common/logging/logger.js';
 import { UserModel, IUser, UserRole } from '../users/user.model.js';
 import { MerchantUserModel, MerchantPermission } from '../merchants/merchant-user.model.js';
 import { SessionModel, ISession } from './session.model.js';
+import { OtpVerificationModel } from './otp.model.js';
 import { auditService } from '../audit/audit.service.js';
 import { emailAdapter } from '../../integrations/email/email-adapter.js';
 import { parseDeviceInfo } from '../../common/utils/device-parser.js';
@@ -25,6 +26,7 @@ import {
   ChangePasswordInput,
   ForceChangePasswordInput,
   CreateAdminInput,
+  AdminLoginInput,
 } from './auth.schema.js';
 
 export interface TokenPayload {
@@ -35,6 +37,7 @@ export interface TokenPayload {
   merchantId?: string;
   isStaff?: boolean;
   staffPermissions?: MerchantPermission[];
+  isMfaVerified?: boolean;
 }
 
 export interface RefreshTokenPayload {
@@ -55,6 +58,7 @@ export interface AuthUserDTO {
   staffPermissions?: MerchantPermission[];
   mustChangePassword?: boolean;
   isEmailVerified?: boolean;
+  isMfaVerified?: boolean;
 }
 
 export interface AuthResult {
@@ -93,7 +97,8 @@ export class AuthService {
     user: IUser | { _id: mongoose.Types.ObjectId | string; email: string; role: UserRole; tokenVersion: number },
     merchantId?: string,
     isStaff = false,
-    staffPermissions: MerchantPermission[] = []
+    staffPermissions: MerchantPermission[] = [],
+    isMfaVerified?: boolean
   ): string {
     const rawId = '_id' in user && user._id ? user._id : '';
     const userIdStr = typeof rawId === 'string' ? rawId : rawId.toString();
@@ -106,6 +111,7 @@ export class AuthService {
       merchantId,
       isStaff,
       staffPermissions,
+      isMfaVerified: isMfaVerified !== undefined ? isMfaVerified : user.role === 'ADMIN' ? true : undefined,
     };
 
     return jwt.sign(payload, env.JWT_ACCESS_SECRET, {
@@ -122,7 +128,8 @@ export class AuthService {
     existingFamilyId?: string,
     merchantId?: string,
     isStaff = false,
-    staffPermissions: MerchantPermission[] = []
+    staffPermissions: MerchantPermission[] = [],
+    isMfaVerified?: boolean
   ): Promise<{ accessToken: string; refreshToken: string; session: ISession }> {
     const familyId = existingFamilyId || crypto.randomUUID();
     const sessionId = new mongoose.Types.ObjectId();
@@ -158,7 +165,7 @@ export class AuthService {
       lastUsedAt: new Date(),
     });
 
-    const accessToken = this.generateAccessToken(user, merchantId, isStaff, staffPermissions);
+    const accessToken = this.generateAccessToken(user, merchantId, isStaff, staffPermissions, isMfaVerified);
 
     return { accessToken, refreshToken, session };
   }
@@ -913,6 +920,229 @@ export class AuthService {
       email: newAdmin.email,
       name: newAdmin.name,
       role: 'ADMIN',
+    };
+  }
+
+  /**
+   * Initiate Master Admin login with forced MFA challenge generation.
+   */
+  public static async initiateAdminLogin(
+    input: AdminLoginInput,
+    _context: ClientContext = {}
+  ): Promise<{
+    mfaRequired: true;
+    mfaToken: string;
+    simulatedMfaCode?: string;
+    expiresInSeconds: number;
+    user: { id: string; email: string; name: string; role: 'ADMIN' };
+  }> {
+    const normalizedEmail = input.email.toLowerCase().trim();
+    const user = await UserModel.findOne({ email: normalizedEmail });
+
+    if (!user || user.role !== 'ADMIN') {
+      throw new UnauthorizedError('Invalid administrator credentials');
+    }
+
+    if (user.isSuspended) {
+      throw new ForbiddenError(`Account suspended. ${user.suspensionReason || 'Contact platform security.'}`);
+    }
+
+    if (!user.isActive) {
+      throw new ForbiddenError('Account deactivated');
+    }
+
+    if (user.lockoutUntil && user.lockoutUntil > new Date()) {
+      const remainingMinutes = Math.ceil((user.lockoutUntil.getTime() - Date.now()) / (60 * 1000));
+      throw new TooManyRequestsError(
+        `Account locked. Try again in ${remainingMinutes} minute(s).`,
+        'ACCOUNT_LOCKED'
+      );
+    }
+
+    if (!user.passwordHash) {
+      throw new UnauthorizedError('Administrator account requires password authentication or Clerk SSO');
+    }
+
+    const isMatch = await bcrypt.compare(input.password, user.passwordHash);
+    if (!isMatch) {
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+      if (user.failedLoginAttempts >= 5) {
+        user.lockoutUntil = new Date(Date.now() + 15 * 60 * 1000);
+      }
+      await user.save();
+      throw new UnauthorizedError('Invalid administrator credentials');
+    }
+
+    user.failedLoginAttempts = 0;
+    user.lockoutUntil = null;
+    await user.save();
+
+    // Generate 6-digit MFA challenge
+    const rawMfaCode = crypto.randomInt(100000, 999999).toString();
+    const hashedOtp = await bcrypt.hash(rawMfaCode, 10);
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    // Remove any prior pending MFA challenge for this admin email
+    await OtpVerificationModel.deleteMany({ phone: user.email, purpose: 'ADMIN_MFA' });
+
+    await OtpVerificationModel.create({
+      phone: user.email,
+      hashedOtp,
+      purpose: 'ADMIN_MFA',
+      attempts: 0,
+      isVerified: false,
+      expiresAt,
+    });
+
+    const mfaToken = jwt.sign(
+      {
+        userId: user._id.toString(),
+        email: user.email,
+        role: 'ADMIN',
+        purpose: 'ADMIN_MFA',
+      },
+      env.JWT_ACCESS_SECRET,
+      { expiresIn: '5m' }
+    );
+
+    await auditService.recordEvent({
+      eventType: 'ADMIN_MFA_CHALLENGE_GENERATED',
+      actorId: user._id.toString(),
+      actorRole: 'ADMIN',
+      resourceId: user._id.toString(),
+      resourceType: 'USER',
+      payload: { email: user.email, action: 'MFA_CHALLENGE_ISSUED' },
+    });
+
+    return {
+      mfaRequired: true,
+      mfaToken,
+      simulatedMfaCode: rawMfaCode,
+      expiresInSeconds: 300,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        role: 'ADMIN',
+      },
+    };
+  }
+
+  /**
+   * Complete Master Admin MFA verification and issue authenticated session tokens.
+   */
+  public static async verifyAdminMfa(
+    mfaToken: string,
+    code: string,
+    context: ClientContext = {}
+  ): Promise<AuthResult> {
+    if (!mfaToken) {
+      throw new BadRequestError('MFA session token is required');
+    }
+    if (!code || code.trim().length !== 6) {
+      throw new BadRequestError('A valid 6-digit MFA verification code is required');
+    }
+
+    let decoded: { userId: string; email: string; role: string; purpose: string };
+    try {
+      decoded = jwt.verify(mfaToken, env.JWT_ACCESS_SECRET) as any;
+    } catch {
+      throw new UnauthorizedError('MFA session has expired or is invalid. Please sign in again.');
+    }
+
+    if (decoded.purpose !== 'ADMIN_MFA' || decoded.role !== 'ADMIN') {
+      throw new UnauthorizedError('Invalid MFA session context');
+    }
+
+    const user = await UserModel.findById(decoded.userId);
+    if (!user || user.role !== 'ADMIN' || !user.isActive) {
+      throw new UnauthorizedError('Administrator account not found or deactivated');
+    }
+
+    const verification = await OtpVerificationModel.findOne({
+      phone: user.email,
+      purpose: 'ADMIN_MFA',
+      isVerified: false,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!verification) {
+      throw new BadRequestError('MFA verification code has expired. Please request a new code.');
+    }
+
+    if (verification.attempts >= 5) {
+      await OtpVerificationModel.deleteOne({ _id: verification._id });
+      throw new TooManyRequestsError('Too many failed attempts. Please sign in again.');
+    }
+
+    const isMatch = await bcrypt.compare(code.trim(), verification.hashedOtp);
+    if (!isMatch) {
+      verification.attempts += 1;
+      await verification.save();
+      throw new BadRequestError('Invalid MFA verification code');
+    }
+
+    verification.isVerified = true;
+    await verification.save();
+
+    user.lastMfaVerifiedAt = new Date();
+    await user.save();
+
+    const { accessToken, refreshToken } = await this.createSessionTokens(
+      user,
+      context,
+      undefined,
+      undefined,
+      false,
+      [],
+      true // isMfaVerified = true
+    );
+
+    await auditService.recordEvent({
+      eventType: 'ADMIN_MFA_VERIFIED',
+      actorId: user._id.toString(),
+      actorRole: 'ADMIN',
+      resourceId: user._id.toString(),
+      resourceType: 'USER',
+      payload: { email: user.email, action: 'MFA_VERIFIED_SUCCESS' },
+    });
+
+    return {
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        isMfaVerified: true,
+        mustChangePassword: user.mustChangePassword,
+      },
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  /**
+   * Retrieve Single Master Admin provisioning and security status.
+   */
+  public static async getMasterAdminStatus(): Promise<{
+    isProvisioned: boolean;
+    masterAdminEmail: string | null;
+    clerkBindingActive: boolean;
+    mfaEnforcementActive: boolean;
+    adminCount: number;
+  }> {
+    const adminCount = await UserModel.countDocuments({ role: 'ADMIN' });
+    const masterAdmin =
+      (await UserModel.findOne({ role: 'ADMIN', isMasterAdmin: true }).select('email isMasterAdmin clerkUserId')) ||
+      (await UserModel.findOne({ role: 'ADMIN' }).sort({ createdAt: 1 }).select('email isMasterAdmin clerkUserId'));
+
+    return {
+      isProvisioned: adminCount > 0,
+      masterAdminEmail: masterAdmin ? masterAdmin.email : null,
+      clerkBindingActive: Boolean(env.ADMIN_CLERK_USER_ID),
+      mfaEnforcementActive: true,
+      adminCount,
     };
   }
 

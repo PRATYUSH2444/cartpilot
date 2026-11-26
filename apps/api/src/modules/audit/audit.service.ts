@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { EventEmitter } from 'events';
 import { logger } from '../../common/logging/logger.js';
 import {
   AuditActorRole,
@@ -75,6 +76,12 @@ export function computeEventCurrentHash(params: {
 }
 
 export class AuditService {
+  public readonly streamEmitter: EventEmitter = new EventEmitter();
+
+  constructor() {
+    this.streamEmitter.setMaxListeners(50);
+  }
+
   /**
    * Append an immutable, cryptographically chained audit event to the ledger.
    */
@@ -130,6 +137,8 @@ export class AuditService {
           },
           'Audit event recorded in hash-chained ledger'
         );
+
+        this.streamEmitter.emit('audit_event', event.toObject());
 
         return event;
       } catch (err: unknown) {
@@ -266,6 +275,16 @@ export class AuditService {
     ]);
 
     return { events, total, page, limit };
+  }
+
+  /**
+   * Stream the entire ledger line-by-line as NDJSON for streaming audit export.
+   */
+  async *exportLedgerStream(): AsyncGenerator<string, void, unknown> {
+    const cursor = AuditEventModel.find().sort({ sequenceNumber: 1 }).cursor();
+    for await (const doc of cursor) {
+      yield JSON.stringify(doc.toObject()) + '\n';
+    }
   }
 }
 
