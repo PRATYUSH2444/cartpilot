@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   MapPin,
   ChevronDown,
@@ -8,7 +8,6 @@ import {
   Minus,
   Truck,
   Leaf,
-  Clock,
   Sparkles,
   Bell,
   Heart,
@@ -16,8 +15,6 @@ import {
   Calendar,
   Wallet,
   LayoutGrid,
-  ChevronLeft,
-  ChevronRight,
   BadgePercent,
   CheckCircle2,
 } from 'lucide-react';
@@ -123,21 +120,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     orders.find(
       (o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED' && o.status !== 'FAILED'
     ) || (orders.length > 0 ? orders[0] : null);
-
-  // Carousel slide index
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const totalSlides = 2;
-
-  // Auto-play paused on hover
-  const [isPaused, setIsPaused] = useState(false);
-
-  useEffect(() => {
-    if (isPaused) return;
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % totalSlides);
-    }, 6000);
-    return () => clearInterval(timer);
-  }, [isPaused, totalSlides]);
 
   const getCartQuantity = (productId: string): number => {
     if (!cart || !cart.items) return 0;
@@ -282,126 +264,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* ── Main Fluid Page Container (Capped at 1400px per UX_CONTRACT) ── */}
       <div className="page-container pt-4 lg:pt-6 space-y-5 lg:space-y-7">
-        {/* ── Hero Carousel Banner (Responsive 2-Column with Fluid Height 240px - 360px) ── */}
-        <div
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#175C37] via-[#1D6E42] to-[#258550] text-white p-5 sm:p-7 lg:p-8 min-h-[220px] sm:min-h-[280px] lg:min-h-[320px] max-h-[380px] flex items-center justify-between gap-6 shadow-md"
-        >
-          {/* Subtle Ambient Leaf Lighting */}
-          <div className="absolute top-0 right-0 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+        {/* ── SOP Delivery Promise Banner (Thin, Standing-Out, Humble & Static) ── */}
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white p-4 sm:p-5 shadow-sm border border-emerald-600/30">
+          {/* Subtle Ambient Glow */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Slide 1: Morning Delivery Guarantee */}
-          {currentSlide === 0 ? (
-            <div className="relative z-10 flex-1 max-w-xl space-y-3">
-              {/* Delivery Schedule Chip Row (Separate row, never inline in headline) */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fbf4d8] text-stone-900 font-extrabold text-xs shadow-2xs">
-                  <Calendar className="w-3.5 h-3.5 text-amber-700" />
-                  <span>{deliveryWindow.slot}</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-medium text-white">
-                  <Clock className="w-3.5 h-3.5 text-emerald-200" />
-                  <span>{deliveryWindow.cutoffHeadline}</span>
-                </span>
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white/15 backdrop-blur-xs border border-white/20 flex items-center justify-center flex-shrink-0 text-emerald-100 shadow-inner">
+                <Truck className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
               </div>
-
-              {/* Fluid Headline */}
-              <h2 className="hero-headline font-heading font-extrabold text-white tracking-tight">
-                Get it Tomorrow Morning
-              </h2>
-
-              <p className="text-white/85 text-xs sm:text-sm leading-relaxed max-w-md">
-                Fresh organic vegetables, fruits & daily dairy delivered to your doorstep within your household spending rules.
-              </p>
-
-              {/* Action Button & Controls */}
-              <div className="pt-1 flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => onSelectTab('browse')}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-emerald-950 font-extrabold text-xs sm:text-sm shadow-sm hover:bg-stone-50 active:scale-95 transition-all cursor-pointer min-h-[42px]"
-                >
-                  <span>Shop Fresh Groceries</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+              <div className="space-y-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="font-heading font-extrabold text-sm sm:text-base text-white tracking-tight leading-tight">
+                    Order till Midnight • Delivery 6 AM – 10 AM
+                  </h2>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/15 text-emerald-100 border border-white/20 text-[10px] font-bold shadow-2xs">
+                    Tomorrow Morning
+                  </span>
+                </div>
+                <p className="text-emerald-100/85 text-xs sm:text-xs leading-normal">
+                  Fresh organic vegetables, fruits & daily dairy delivered right to your doorstep.
+                </p>
               </div>
-            </div>
-          ) : (
-            <div className="relative z-10 flex-1 max-w-xl space-y-3">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-200 text-purple-950 font-extrabold text-xs">
-                <Sparkles className="w-3.5 h-3.5 text-purple-700" />
-                <span>AI Meal & Basket Planning</span>
-              </div>
-
-              <h2 className="hero-headline font-heading font-extrabold text-white tracking-tight">
-                Smart Autonomous Shopping
-              </h2>
-
-              <p className="text-white/85 text-xs sm:text-sm leading-relaxed max-w-md">
-                Let your AI Assistant plan recipes, optimize multi-item packs, and enforce budget policies automatically.
-              </p>
-
-              <div className="pt-1 flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => onSelectTab('chat')}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-purple-950 font-extrabold text-xs sm:text-sm shadow-sm hover:bg-stone-50 active:scale-95 transition-all cursor-pointer min-h-[42px]"
-                >
-                  <span>Launch AI Assistant</span>
-                  <Sparkles className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Right Artwork: Contained, non-clipped harvest illustration */}
-          <div className="hidden sm:flex flex-shrink-0 w-44 md:w-56 lg:w-72 h-full items-center justify-center p-2 relative">
-            <div className="relative w-full max-h-56 aspect-square rounded-3xl bg-white/10 backdrop-blur-xs border border-white/15 p-4 flex flex-col items-center justify-center text-center shadow-inner">
-              <div className="text-4xl lg:text-5xl mb-2 select-none">🥗</div>
-              <span className="font-heading font-extrabold text-sm lg:text-base text-white">
-                100% Pure Veg
-              </span>
-              <span className="text-[11px] text-emerald-200 mt-0.5">
-                Farm Harvest Guarantee
-              </span>
-            </div>
-          </div>
-
-          {/* Desktop Arrow Controls & Dot Indicators */}
-          <div className="absolute bottom-3 right-4 sm:right-6 flex items-center gap-2 z-20">
-            <button
-              type="button"
-              onClick={() => setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides)}
-              className="w-7 h-7 rounded-full bg-black/25 hover:bg-black/40 text-white flex items-center justify-center transition-colors cursor-pointer"
-              title="Previous slide"
-              aria-label="Previous slide"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-1.5 px-2">
-              {[0, 1].map((idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setCurrentSlide(idx)}
-                  className={`w-2 h-2 rounded-full transition-all cursor-pointer ${
-                    currentSlide === idx ? 'w-5 bg-white' : 'bg-white/40'
-                  }`}
-                  aria-label={`Go to slide ${idx + 1}`}
-                />
-              ))}
             </div>
 
             <button
               type="button"
-              onClick={() => setCurrentSlide((prev) => (prev + 1) % totalSlides)}
-              className="w-7 h-7 rounded-full bg-black/25 hover:bg-black/40 text-white flex items-center justify-center transition-colors cursor-pointer"
-              title="Next slide"
-              aria-label="Next slide"
+              onClick={() => onSelectTab('browse')}
+              className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-emerald-950 font-extrabold text-xs shadow-2xs hover:bg-emerald-50 active:scale-95 transition-all cursor-pointer flex-shrink-0 min-h-[38px]"
             >
-              <ChevronRight className="w-4 h-4" />
+              <span>Shop Fresh</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
