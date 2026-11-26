@@ -177,6 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             localStorage.setItem('cartpilot_has_session', 'true');
             localStorage.setItem('cartpilot_user_role', profile.role);
+            localStorage.setItem('cartpilot_auth_provider', 'clerk');
           } catch {}
           return;
         }
@@ -184,11 +185,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('Clerk user sync error:', err);
       }
     } else if (hasClerk && !isSignedIn) {
-      // Do NOT wipe private Master Admin sessions!
-      const storedRole = localStorage.getItem('cartpilot_user_role') || sessionStorage.getItem('cartpilot_user_role');
-      if (storedRole === 'ADMIN' || sessionStorage.getItem('cartpilot_admin_token')) {
+      // CRITICAL SAFEGUARD: Do NOT wipe active Native or Admin sessions!
+      // Only clear if the active provider was Clerk or no session exists.
+      const authProvider = typeof window !== 'undefined' ? localStorage.getItem('cartpilot_auth_provider') : null;
+      const storedRole = typeof window !== 'undefined' ? localStorage.getItem('cartpilot_user_role') || sessionStorage.getItem('cartpilot_user_role') : null;
+      const hasNativeSession = typeof window !== 'undefined' && localStorage.getItem('cartpilot_has_session') === 'true';
+
+      if (authProvider === 'native' || storedRole === 'ADMIN' || sessionStorage.getItem('cartpilot_admin_token') || (hasNativeSession && authProvider !== 'clerk')) {
+        // Native JWT session is active — do not wipe it!
         return;
       }
+
       setUser(null);
       setToken(null);
       latestTokenRef.current = null;
@@ -197,6 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         localStorage.removeItem('cartpilot_has_session');
         localStorage.removeItem('cartpilot_user_role');
+        localStorage.removeItem('cartpilot_auth_provider');
       } catch {}
     }
   }, []);
@@ -367,8 +375,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      if (hasClerk) {
-        // When Clerk is active, Clerk handles shopper and merchant restoration via ClerkBridge.
+      const authProvider = typeof window !== 'undefined' ? localStorage.getItem('cartpilot_auth_provider') : null;
+      const hasSession = typeof window !== 'undefined' && localStorage.getItem('cartpilot_has_session') === 'true';
+
+      // When Clerk was specifically used to authenticate, Clerk handles restoration via ClerkBridge
+      if (hasClerk && authProvider === 'clerk') {
         return;
       }
 
@@ -376,11 +387,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthStatus('INITIALIZING');
         setIsLoading(true);
 
-        const hasSession =
-          typeof window !== 'undefined' && localStorage.getItem('cartpilot_has_session') === 'true';
-
         if (!hasSession) {
-          if (isMounted) setAuthStatus('UNAUTHENTICATED');
+          if (isMounted) {
+            setAuthStatus('UNAUTHENTICATED');
+            setIsLoading(false);
+          }
           return;
         }
 
@@ -476,6 +487,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           localStorage.setItem('cartpilot_has_session', 'true');
           localStorage.setItem('cartpilot_user_role', profile.role);
+          localStorage.setItem('cartpilot_auth_provider', 'native');
           authChannelRef.current?.postMessage({
             type: 'AUTH_LOGIN',
             role: profile.role,
@@ -562,6 +574,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           localStorage.setItem('cartpilot_has_session', 'true');
           localStorage.setItem('cartpilot_user_role', profile.role);
+          localStorage.setItem('cartpilot_auth_provider', 'native');
           authChannelRef.current?.postMessage({
             type: 'AUTH_LOGIN',
             role: profile.role,
@@ -616,6 +629,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           localStorage.setItem('cartpilot_has_session', 'true');
           localStorage.setItem('cartpilot_user_role', profile.role);
+          localStorage.setItem('cartpilot_auth_provider', 'native');
           authChannelRef.current?.postMessage({
             type: 'AUTH_LOGIN',
             role: profile.role,
@@ -715,6 +729,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         localStorage.removeItem('cartpilot_has_session');
         localStorage.removeItem('cartpilot_user_role');
+        localStorage.removeItem('cartpilot_auth_provider');
+        if (clerkSignOutRef.current) {
+          clerkSignOutRef.current().catch(() => {});
+        }
         sessionStorage.removeItem('cartpilot_admin_token');
         sessionStorage.removeItem('cartpilot_admin_user');
         sessionStorage.removeItem('cartpilot_redirect');
@@ -743,6 +761,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         localStorage.removeItem('cartpilot_has_session');
         localStorage.removeItem('cartpilot_user_role');
+        localStorage.removeItem('cartpilot_auth_provider');
+        if (clerkSignOutRef.current) {
+          clerkSignOutRef.current().catch(() => {});
+        }
         sessionStorage.removeItem('cartpilot_admin_token');
         sessionStorage.removeItem('cartpilot_admin_user');
         sessionStorage.removeItem('cartpilot_redirect');
