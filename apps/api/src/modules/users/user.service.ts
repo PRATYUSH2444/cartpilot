@@ -107,6 +107,9 @@ export class UserService {
       throw new NotFoundError('User not found');
     }
 
+    if (!user.passwordHash) {
+      throw new BadRequestError('This account does not have a local password configured.');
+    }
     const matches = await bcrypt.compare(currentPass, user.passwordHash);
     if (!matches) {
       throw new UnauthorizedError('Current password does not match');

@@ -17,6 +17,8 @@ import {
   sendPhoneOtp,
   verifyPhoneOtp,
   loginWithPhoneOtp,
+  syncClerkUser,
+  clerkWebhook,
 } from './auth.controller.js';
 import { validate } from '../../common/middleware/validate.js';
 import { authenticate, authenticateOptional, requireRole } from '../../common/middleware/auth.js';
@@ -37,6 +39,8 @@ import {
 export const authRouter = Router();
 
 // Public Authentication Flow
+authRouter.post('/sync', syncClerkUser);
+authRouter.post('/clerk-webhook', clerkWebhook);
 authRouter.post('/register', authRateLimiter, validate(registerSchema), register);
 authRouter.post('/login', authRateLimiter, validate(loginSchema), login);
 authRouter.post('/refresh', validate(refreshSchema), refresh);

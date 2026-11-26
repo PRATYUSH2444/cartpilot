@@ -1,6 +1,35 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth as useClerkAuth, useUser as useClerkUser, useClerk } from '@clerk/clerk-react';
 import { DEMO_CREDENTIALS } from '../config/demo-credentials';
 import { API_BASE } from '../config/api';
+
+const hasClerk = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+
+interface ClerkAuthBridgeProps {
+  onClerkAuth: (authData: {
+    isSignedIn: boolean;
+    getToken: () => Promise<string | null>;
+    clerkUser: any;
+    signOut: () => Promise<void>;
+  }) => void;
+}
+
+const ClerkBridge: React.FC<ClerkAuthBridgeProps> = ({ onClerkAuth }) => {
+  const { isSignedIn, getToken } = useClerkAuth();
+  const { user: clerkUser } = useClerkUser();
+  const { signOut } = useClerk();
+
+  useEffect(() => {
+    onClerkAuth({
+      isSignedIn: Boolean(isSignedIn),
+      getToken,
+      clerkUser,
+      signOut,
+    });
+  }, [isSignedIn, clerkUser, getToken, signOut, onClerkAuth]);
+
+  return null;
+};
 
 export type UserRole = 'CUSTOMER' | 'MERCHANT' | 'ADMIN';
 
@@ -80,6 +109,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const latestTokenRef = useRef<string | null>(token);
   const activeRefreshPromiseRef = useRef<Promise<boolean> | null>(null);
   const authChannelRef = useRef<BroadcastChannel | null>(null);
+  const clerkGetTokenRef = useRef<(() => Promise<string | null>) | null>(null);
+  const clerkSignOutRef = useRef<(() => Promise<void>) | null>(null);
+
+  const handleClerkAuth = useCallback(async ({ isSignedIn, getToken, clerkUser, signOut }: any) => {
+    clerkGetTokenRef.current = getToken;
+    clerkSignOutRef.current = signOut;
+
+    if (isSignedIn && clerkUser) {
+      try {
+        const freshToken = await getToken();
+        latestTokenRef.current = freshToken;
+        setToken(freshToken);
+
+        const email = clerkUser.primaryEmailAddress?.emailAddress;
+        const phone = clerkUser.primaryPhoneNumber?.phoneNumber;
+        const name = clerkUser.fullName || clerkUser.firstName || 'Shopper';
+
+        const res = await fetch(`${API_BASE}/auth/sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(freshToken ? { Authorization: `Bearer ${freshToken}` } : {}),
+          },
+          body: JSON.stringify({
+            clerkUserId: clerkUser.id,
+            email,
+            name,
+            phone,
+            isEmailVerified: clerkUser.primaryEmailAddress?.verification?.status === 'verified',
+            isPhoneVerified: clerkUser.primaryPhoneNumber?.verification?.status === 'verified',
+          }),
+        });
+
+        if (res.ok) {
+          const d = await res.json();
+          const profile: UserProfile = {
+            id: d.data.user.id,
+            email: d.data.user.email,
+            name: d.data.user.name,
+            role: d.data.user.role,
+            phone: d.data.user.phone,
+            merchantId: d.data.user.merchantId,
+            isStaff: d.data.user.isStaff,
+            staffPermissions: d.data.user.staffPermissions,
+            mustChangePassword: d.data.user.mustChangePassword,
+          };
+          setUser(profile);
+          setAuthStatus('AUTHENTICATED');
+          setIsLoading(false);
+          setIsSessionExpired(false);
+          try {
+            localStorage.setItem('cartpilot_has_session', 'true');
+            localStorage.setItem('cartpilot_user_role', profile.role);
+          } catch {}
+          return;
+        }
+      } catch (err) {
+        console.warn('Clerk user sync error:', err);
+      }
+    } else if (hasClerk && !isSignedIn) {
+      setUser(null);
+      setToken(null);
+      latestTokenRef.current = null;
+      setAuthStatus('UNAUTHENTICATED');
+      setIsLoading(false);
+      try {
+        localStorage.removeItem('cartpilot_has_session');
+        localStorage.removeItem('cartpilot_user_role');
+      } catch {}
+    }
+  }, []);
 
   useEffect(() => {
     latestTokenRef.current = token;
@@ -227,6 +327,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
     const initAuth = async () => {
+      if (hasClerk) {
+        // When Clerk is active, Clerk handles its own initialization and restoration.
+        // Never call the cross-origin failing /auth/refresh cookie endpoint.
+        return;
+      }
+
       try {
         setAuthStatus('INITIALIZING');
         setIsLoading(true);
@@ -255,21 +361,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [refreshSession]);
 
-  // Unified authenticated fetch with automatic 401 retry
+  // Unified authenticated fetch with automatic token retrieval
   const authFetch = useCallback(
     async (url: string, options: RequestInit = {}): Promise<Response> => {
       const reqOptions: RequestInit = { ...options };
       const headers = new Headers(reqOptions.headers || {});
-      if (latestTokenRef.current) {
-        headers.set('Authorization', `Bearer ${latestTokenRef.current}`);
+
+      let currentToken = latestTokenRef.current;
+      if (clerkGetTokenRef.current) {
+        try {
+          const fresh = await clerkGetTokenRef.current();
+          if (fresh) {
+            currentToken = fresh;
+            latestTokenRef.current = fresh;
+            setToken(fresh);
+          }
+        } catch {}
+      }
+
+      if (currentToken) {
+        headers.set('Authorization', `Bearer ${currentToken}`);
       }
       reqOptions.headers = headers;
       reqOptions.credentials = reqOptions.credentials || 'include';
 
       let response = await fetch(url, reqOptions);
 
-      // If token expired right at call time, refresh and retry once transparently
-      if (response.status === 401) {
+      // If token expired right at call time, refresh and retry once transparently (non-Clerk fallback)
+      if (response.status === 401 && !hasClerk) {
         const refreshed = await refreshSession();
         if (refreshed && latestTokenRef.current) {
           const retryHeaders = new Headers(options.headers || {});
@@ -476,6 +595,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      if (clerkSignOutRef.current) {
+        try {
+          await clerkSignOutRef.current();
+        } catch {}
+      }
       if (latestTokenRef.current) {
         await fetch(`${API_BASE}/auth/logout`, {
           method: 'POST',
@@ -552,30 +676,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        authStatus,
-        isLoading,
-        isAuthenticated,
-        isSessionExpired,
-        dismissSessionExpired,
-        login,
-        sendPhoneOtp,
-        loginWithPhoneOtp,
-        register,
-        logout,
-        logoutAll,
-        refreshSession,
-        authFetch,
-        switchRoleQuick,
-        setUserProfile: setUser,
-        setSession,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <>
+      {hasClerk && <ClerkBridge onClerkAuth={handleClerkAuth} />}
+      <AuthContext.Provider
+        value={{
+          user,
+          token,
+          authStatus,
+          isLoading,
+          isAuthenticated,
+          isSessionExpired,
+          dismissSessionExpired,
+          login,
+          sendPhoneOtp,
+          loginWithPhoneOtp,
+          register,
+          logout,
+          logoutAll,
+          refreshSession,
+          authFetch,
+          switchRoleQuick,
+          setUserProfile: setUser,
+          setSession,
+        }}
+      >
+        {children}
+      </AuthContext.Provider>
+    </>
   );
 };
 

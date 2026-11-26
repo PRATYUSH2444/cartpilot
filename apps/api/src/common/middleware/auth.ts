@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { verifyToken } from '@clerk/backend';
 import { env } from '../../config/env.config.js';
 import { UserModel, UserRole } from '../../modules/users/user.model.js';
-import { MerchantPermission } from '../../modules/merchants/merchant-user.model.js';
+import { MerchantUserModel, MerchantPermission } from '../../modules/merchants/merchant-user.model.js';
 import { UnauthorizedError, ForbiddenError } from '../errors/app-error.js';
 import { TokenPayload } from '../../modules/auth/auth.service.js';
 
@@ -11,6 +12,7 @@ export interface AuthenticatedUser {
   userId: string;
   email: string;
   role: UserRole;
+  clerkUserId?: string;
   merchantId?: string;
   isStaff?: boolean;
   staffPermissions?: MerchantPermission[];
@@ -35,6 +37,80 @@ export async function authenticate(
     return next(new UnauthorizedError('Authentication token missing'));
   }
 
+  // 1. If Clerk secret key is present, attempt Clerk token verification first
+  if (env.CLERK_SECRET_KEY) {
+    try {
+      const clerkPayload = await verifyToken(token, {
+        secretKey: env.CLERK_SECRET_KEY,
+      });
+
+      if (clerkPayload && clerkPayload.sub) {
+        const clerkUserId = clerkPayload.sub;
+        let user = await UserModel.findOne({ clerkUserId });
+
+        // If not found by clerkUserId, attempt lookup by email claim if present
+        if (!user && (clerkPayload as any).email) {
+          const emailClaim = String((clerkPayload as any).email).toLowerCase().trim();
+          user = await UserModel.findOne({ email: emailClaim });
+          if (user) {
+            user.clerkUserId = clerkUserId;
+            await user.save();
+          }
+        }
+
+        // If newly authenticated Clerk user without MongoDB record, auto-provision as CUSTOMER
+        if (!user) {
+          const emailClaim = (clerkPayload as any).email || `${clerkUserId}@cartpilot.app`;
+          user = await UserModel.create({
+            clerkUserId,
+            email: String(emailClaim).toLowerCase().trim(),
+            name: (clerkPayload as any).name || 'CartPilot Shopper',
+            role: 'CUSTOMER',
+            isActive: true,
+            isEmailVerified: true,
+          });
+        }
+
+        if (!user.isActive) {
+          return next(new UnauthorizedError('User account not found or deactivated'));
+        }
+
+        if (user.isSuspended) {
+          return next(new ForbiddenError('User account has been suspended'));
+        }
+
+        let merchantId: string | undefined;
+        let isStaff = false;
+        let staffPermissions: MerchantPermission[] = [];
+
+        if (user.role === 'MERCHANT') {
+          const mapping = await MerchantUserModel.findOne({ userId: user._id });
+          if (mapping) {
+            merchantId = mapping.merchantId.toString();
+            isStaff = mapping.role === 'STAFF';
+            staffPermissions = mapping.permissions || [];
+          }
+        }
+
+        req.user = {
+          id: user._id.toString(),
+          userId: user._id.toString(),
+          email: user.email,
+          role: user.role,
+          clerkUserId: user.clerkUserId,
+          merchantId,
+          isStaff,
+          staffPermissions,
+        };
+
+        return next();
+      }
+    } catch {
+      // Not a valid Clerk token; fall through to local JWT verification
+    }
+  }
+
+  // 2. Standard JWT verification (for local development, seed scripts, and test suites)
   try {
     const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as TokenPayload;
 
@@ -83,6 +159,12 @@ export function authorize(...allowedRoles: UserRole[]) {
       throw new ForbiddenError(
         `Access denied. Role '${req.user.role}' is not authorized to perform this operation.`
       );
+    }
+
+    if (allowedRoles.includes('ADMIN') && req.user.role === 'ADMIN') {
+      if (env.ADMIN_CLERK_USER_ID && req.user.clerkUserId && req.user.clerkUserId !== env.ADMIN_CLERK_USER_ID) {
+        throw new ForbiddenError('Access denied. Admin identity does not match provisioned Master Admin.');
+      }
     }
 
     next();

@@ -290,6 +290,9 @@ export class AuthService {
     }
 
     // 4. Verify password
+    if (!user.passwordHash) {
+      throw new UnauthorizedError('This account is configured with Clerk SSO. Please sign in with Clerk or Google.');
+    }
     const isMatch = await bcrypt.compare(input.password, user.passwordHash);
     if (!isMatch) {
       user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
@@ -685,6 +688,9 @@ export class AuthService {
       throw new UnauthorizedError('User account not found');
     }
 
+    if (!user.passwordHash) {
+      throw new BadRequestError('This account is authenticated through Clerk. Password management is handled by Clerk.');
+    }
     const isMatch = await bcrypt.compare(input.currentPassword, user.passwordHash);
     if (!isMatch) {
       throw new UnauthorizedError('Current password is incorrect');
@@ -852,6 +858,9 @@ export class AuthService {
     }
 
     // Re-authenticate acting admin with currentAdminPassword
+    if (!actingAdmin.passwordHash) {
+      throw new UnauthorizedError('Administrator account authentication requires a valid local password verification.');
+    }
     const isMatch = await bcrypt.compare(input.currentAdminPassword, actingAdmin.passwordHash);
     if (!isMatch) {
       throw new UnauthorizedError('Current administrator password confirmation failed', 'REAUTH_REQUIRED');
@@ -935,5 +944,127 @@ export class AuthService {
       staffPermissions,
       mustChangePassword: user.mustChangePassword,
     };
+  }
+
+  /**
+   * Idempotently sync a Clerk user to the application database.
+   * Enforces server authority: database role is never overridden by client.
+   */
+  public static async syncClerkUser(input: {
+    clerkUserId: string;
+    email: string;
+    name?: string;
+    phone?: string;
+    role?: UserRole;
+    isEmailVerified?: boolean;
+    isPhoneVerified?: boolean;
+  }): Promise<AuthUserDTO> {
+    const normalizedEmail = input.email.toLowerCase().trim();
+
+    let user = await UserModel.findOne({ clerkUserId: input.clerkUserId });
+    if (!user) {
+      // Check if user exists by email (link identity)
+      user = await UserModel.findOne({ email: normalizedEmail });
+      if (user) {
+        user.clerkUserId = input.clerkUserId;
+      }
+    }
+
+    if (!user) {
+      user = new UserModel({
+        clerkUserId: input.clerkUserId,
+        email: normalizedEmail,
+        name: input.name || 'Shopper',
+        phone: input.phone,
+        role: input.role || 'CUSTOMER',
+        isActive: true,
+        isEmailVerified: input.isEmailVerified ?? true,
+        isPhoneVerified: input.isPhoneVerified ?? false,
+      });
+    } else {
+      // Update name/phone/verification if provided, but NEVER override role from client
+      if (input.name) user.name = input.name;
+      if (input.phone) user.phone = input.phone;
+      if (input.isEmailVerified !== undefined) user.isEmailVerified = input.isEmailVerified;
+      if (input.isPhoneVerified !== undefined) user.isPhoneVerified = input.isPhoneVerified;
+    }
+
+    await user.save();
+
+    let merchantId: string | undefined;
+    let isStaff = false;
+    let staffPermissions: MerchantPermission[] = [];
+
+    if (user.role === 'MERCHANT') {
+      const mapping = await MerchantUserModel.findOne({ userId: user._id });
+      if (mapping) {
+        merchantId = mapping.merchantId.toString();
+        isStaff = mapping.role === 'STAFF';
+        staffPermissions = mapping.permissions || [];
+      }
+    }
+
+    return {
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      merchantId,
+      isStaff,
+      staffPermissions,
+      mustChangePassword: user.mustChangePassword,
+    };
+  }
+
+  /**
+   * Handle incoming Clerk webhooks with Svix signature verification.
+   */
+  public static async handleClerkWebhook(payload: string, headers: Record<string, string>): Promise<void> {
+    const webhookSecret = env.CLERK_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      logger.warn('Clerk webhook received but CLERK_WEBHOOK_SECRET is not configured');
+      return;
+    }
+
+    const { Webhook } = await import('svix');
+    const wh = new Webhook(webhookSecret);
+    const evt = wh.verify(payload, headers) as unknown as {
+      type: string;
+      data: any;
+    };
+
+    const eventType = evt.type;
+    const data = evt.data;
+
+    if (eventType === 'user.created' || eventType === 'user.updated') {
+      const clerkUserId = data.id;
+      const primaryEmailId = data.primary_email_address_id;
+      const emailObj = data.email_addresses?.find((e: any) => e.id === primaryEmailId) || data.email_addresses?.[0];
+      const email = emailObj?.email_address;
+      const isEmailVerified = emailObj?.verification?.status === 'verified';
+      const name = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.username || 'User';
+      const phoneObj = data.phone_numbers?.[0];
+      const phone = phoneObj?.phone_number;
+      const isPhoneVerified = phoneObj?.verification?.status === 'verified';
+
+      if (email && clerkUserId) {
+        await this.syncClerkUser({
+          clerkUserId,
+          email,
+          name,
+          phone,
+          isEmailVerified,
+          isPhoneVerified,
+        });
+      }
+    } else if (eventType === 'user.deleted') {
+      const clerkUserId = data.id;
+      if (clerkUserId) {
+        await UserModel.findOneAndUpdate(
+          { clerkUserId },
+          { isActive: false, isSuspended: true, suspensionReason: 'User deleted in Clerk' }
+        );
+      }
+    }
   }
 }

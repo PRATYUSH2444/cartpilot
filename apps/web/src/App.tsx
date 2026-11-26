@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ClerkProvider } from '@clerk/clerk-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { SessionEndedModal } from './components/SessionEndedModal';
@@ -38,77 +39,89 @@ const RootRedirect: React.FC = () => {
   return <Navigate to="/shopper" replace />;
 };
 
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
 export function App() {
-  return (
+  const appContent = (
     <ErrorBoundary fallbackTitle="Application Workspace Encountered an Error">
       <AuthProvider>
         <BrowserRouter>
-        {/* Session expiry re-auth dialog */}
-        <SessionEndedModal />
+          {/* Session expiry re-auth dialog */}
+          <SessionEndedModal />
 
-        <Routes>
-          {/* Public Authentication Routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/become-merchant" element={<BecomeMerchantPage />} />
-          <Route path="/accept-invite" element={<AcceptStaffInvitePage />} />
+          <Routes>
+            {/* Public Authentication Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/become-merchant" element={<BecomeMerchantPage />} />
+            <Route path="/accept-invite" element={<AcceptStaffInvitePage />} />
 
-          {/* Account Security (All authenticated roles) */}
-          <Route
-            path="/account-security"
-            element={
-              <ProtectedRoute>
-                <AccountSecurityPage />
-              </ProtectedRoute>
-            }
-          />
+            {/* Account Security (All authenticated roles) */}
+            <Route
+              path="/account-security"
+              element={
+                <ProtectedRoute>
+                  <AccountSecurityPage />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Role-Specific Workspaces */}
-          <Route
-            path="/shopper"
-            element={
-              <ProtectedRoute allowedRoles={['CUSTOMER']}>
-                <ShopperWorkspace />
-              </ProtectedRoute>
-            }
-          />
+            {/* Role-Specific Workspaces */}
+            <Route
+              path="/shopper"
+              element={
+                <ProtectedRoute allowedRoles={['CUSTOMER']}>
+                  <ShopperWorkspace />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/merchant"
-            element={
-              <ProtectedRoute allowedRoles={['MERCHANT']}>
-                <MerchantWorkspace />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/merchant/*"
-            element={
-              <ProtectedRoute allowedRoles={['MERCHANT']}>
-                <MerchantWorkspace />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/merchant"
+              element={
+                <ProtectedRoute allowedRoles={['MERCHANT']}>
+                  <MerchantWorkspace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/merchant/*"
+              element={
+                <ProtectedRoute allowedRoles={['MERCHANT']}>
+                  <MerchantWorkspace />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <AdminWorkspace />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <AdminWorkspace />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Root & Fallback Redirection */}
-          <Route path="/" element={<RootRedirect />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            {/* Root & Fallback Redirection */}
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </ErrorBoundary>
   );
+
+  if (CLERK_PUBLISHABLE_KEY) {
+    return (
+      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+        {appContent}
+      </ClerkProvider>
+    );
+  }
+
+  return appContent;
 }
 
 export default App;

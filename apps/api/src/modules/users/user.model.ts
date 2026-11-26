@@ -12,8 +12,9 @@ export interface INotificationPreferences {
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
+  clerkUserId?: string;
   email: string;
-  passwordHash: string;
+  passwordHash?: string;
   name: string;
   role: UserRole;
   phone?: string;
@@ -46,6 +47,12 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
+    clerkUserId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
     email: {
       type: String,
       required: true,
@@ -56,7 +63,7 @@ const UserSchema = new Schema<IUser>(
     },
     passwordHash: {
       type: String,
-      required: true,
+      required: false,
     },
     name: {
       type: String,

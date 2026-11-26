@@ -21,6 +21,13 @@
     }
   },
   "dependencies": {
+    "@clerk/backend": "^3.33.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.8.1",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -31,14 +38,9 @@
     "mongoose": "^8.7.2",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",
-    "zod": "^3.23.8",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cookie-parser": "^1.4.10",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^22.8.1",
-    "typescript": "^5.6.3"
+    "svix": "^2.11.1",
+    "typescript": "^5.6.3",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/supertest": "^6.0.2",

@@ -412,3 +412,58 @@ export async function getPermissions(
     next(error);
   }
 }
+
+export async function syncClerkUser(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { clerkUserId, email, name, phone, role, isEmailVerified, isPhoneVerified } = req.body;
+    if (!clerkUserId || !email) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'clerkUserId and email are required for identity sync' },
+      });
+      return;
+    }
+
+    const user = await AuthService.syncClerkUser({
+      clerkUserId,
+      email,
+      name,
+      phone,
+      role,
+      isEmailVerified,
+      isPhoneVerified,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: { user },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function clerkWebhook(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const rawPayload = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    const headers = {
+      'svix-id': (req.headers['svix-id'] as string) || '',
+      'svix-timestamp': (req.headers['svix-timestamp'] as string) || '',
+      'svix-signature': (req.headers['svix-signature'] as string) || '',
+    };
+
+    await AuthService.handleClerkWebhook(rawPayload, headers);
+
+    res.status(200).json({ success: true, message: 'Webhook processed' });
+  } catch (error) {
+    next(error);
+  }
+}

@@ -151,4 +151,51 @@ describe('Auth & Session Lifecycle Integration Tests', () => {
       expect(['UNAUTHORIZED', 'TOKEN_REUSE_DETECTED']).toContain(failedRefresh.body.error.code);
     });
   });
+
+  describe('Milestone 1: Identity Sync & Role-Based Access Isolation', () => {
+    it('should idempotently sync a newly authenticated Clerk shopper', async () => {
+      const syncRes = await request(app).post('/api/v1/auth/sync').send({
+        clerkUserId: 'user_clerk_test_12345',
+        email: 'clerk_shopper@example.com',
+        name: 'Clerk Shopper Test',
+        phone: '+919876543210',
+        isEmailVerified: true,
+      });
+
+      expect(syncRes.status).toBe(200);
+      expect(syncRes.body.success).toBe(true);
+      expect(syncRes.body.data.user.email).toBe('clerk_shopper@example.com');
+      expect(syncRes.body.data.user.role).toBe('CUSTOMER');
+    });
+
+    it('should reject a shopper attempting to access merchant-only endpoints (403 Forbidden)', async () => {
+      const loginRes = await request(app).post('/api/v1/auth/login').send({
+        email: 'customer@example.com',
+        password: 'Customer1234!',
+      });
+      const customerToken = loginRes.body.data.accessToken;
+
+      const merchantRes = await request(app)
+        .get('/api/v1/merchants/my-store')
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(merchantRes.status).toBe(403);
+      expect(merchantRes.body.success).toBe(false);
+    });
+
+    it('should reject a shopper attempting to access admin endpoints (403 Forbidden)', async () => {
+      const loginRes = await request(app).post('/api/v1/auth/login').send({
+        email: 'customer@example.com',
+        password: 'Customer1234!',
+      });
+      const customerToken = loginRes.body.data.accessToken;
+
+      const adminRes = await request(app)
+        .get('/api/v1/system/integrations')
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(adminRes.status).toBe(403);
+      expect(adminRes.body.success).toBe(false);
+    });
+  });
 });

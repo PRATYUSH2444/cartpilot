@@ -40,6 +40,11 @@ const envSchema = z
 
     GOOGLE_MAPS_API_KEY: z.string().optional(),
 
+    CLERK_PUBLISHABLE_KEY: z.string().optional(),
+    CLERK_SECRET_KEY: z.string().optional(),
+    CLERK_WEBHOOK_SECRET: z.string().optional(),
+    ADMIN_CLERK_USER_ID: z.string().optional(),
+
     RESERVATION_SWEEPER_INTERVAL_MS: z.coerce.number().default(60000),
     FEATURE_EMAIL_VERIFICATION: z.coerce.boolean().default(false),
     USE_IN_MEMORY_DB: z.coerce.boolean().default(false),
