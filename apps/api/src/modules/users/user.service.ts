@@ -120,4 +120,47 @@ export class UserService {
     user.tokenVersion += 1; // Invalidate previous sessions
     await user.save();
   }
+
+  public static async getWallet(userId: string): Promise<{ balancePaise: number; balanceRupees: number; currency: string }> {
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const user = await UserModel.findById(userObjectId);
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+    const balancePaise = user.walletBalancePaise ?? 34900;
+    return {
+      balancePaise,
+      balanceRupees: balancePaise / 100,
+      currency: 'INR',
+    };
+  }
+
+  public static async topUpWallet(
+    userId: string,
+    amountPaise: number
+  ): Promise<{ balancePaise: number; balanceRupees: number; addedPaise: number; bonusPaise: number; currency: string }> {
+    if (!amountPaise || amountPaise <= 0) {
+      throw new BadRequestError('Invalid top-up amount');
+    }
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const user = await UserModel.findById(userObjectId);
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    // Limited time offer: Add ₹999 (99900 paise) or more, get ₹100 (10000 paise) instant bonus
+    const bonusPaise = amountPaise >= 99900 ? 10000 : 0;
+    const totalCredit = amountPaise + bonusPaise;
+
+    user.walletBalancePaise = (user.walletBalancePaise || 0) + totalCredit;
+    await user.save();
+
+    return {
+      balancePaise: user.walletBalancePaise,
+      balanceRupees: user.walletBalancePaise / 100,
+      addedPaise: amountPaise,
+      bonusPaise,
+      currency: 'INR',
+    };
+  }
 }

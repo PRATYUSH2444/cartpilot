@@ -93,8 +93,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   return (
     <div className="flex-1 overflow-y-auto pb-16 bg-[#f8faf9] dark:bg-stone-950 text-stone-900 dark:text-stone-100 font-sans">
       {/* ── Top Header ──────────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-30 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md px-4 sm:px-6 lg:px-10 py-3.5 border-b border-stone-200/80 dark:border-stone-800 shadow-xs">
-        <div className="max-w-[1560px] mx-auto flex items-center justify-between">
+      <div className="sticky top-0 z-30 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md py-3.5 border-b border-stone-200/80 dark:border-stone-800 shadow-xs">
+        <div className="page-container flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 flex items-center justify-center">
               <ShoppingBag className="w-4 h-4 text-emerald-700" />
@@ -118,7 +118,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         </div>
       </div>
 
-      <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-10 pt-6">
+      <div className="page-container pt-6">
         {itemCount === 0 ? (
           <div className="py-24 flex flex-col items-center justify-center text-center space-y-4 max-w-md mx-auto">
             <div className="w-20 h-20 rounded-3xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600">

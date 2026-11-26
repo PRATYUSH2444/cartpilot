@@ -51,4 +51,37 @@ export class UserController {
       next(err);
     }
   }
+
+  public static async getWallet(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const wallet = await UserService.getWallet(req.user!.userId);
+      res.status(200).json({
+        success: true,
+        data: wallet,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async topUpWallet(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { amountPaise } = req.body;
+      const wallet = await UserService.topUpWallet(req.user!.userId, Number(amountPaise));
+      res.status(200).json({
+        success: true,
+        data: wallet,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }

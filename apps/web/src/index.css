@@ -18,6 +18,11 @@
   --ask: #C98A14;
   --stop: #D23F36;
 
+  /* Dedicated AI Assistant single semantic token (replaces scattered purple/green drift) */
+  --ai-accent: #6D28D9;
+  --ai-soft: #F5F3FF;
+  --ai-border: #DDD6FE;
+
   --radius-card: 16px;
   --radius-bubble: 16px;
   --radius-input: 12px;
@@ -36,18 +41,53 @@
   --mut: #9AAAA0;
   --line: #2A372F;
   --brand: #43C07D;
+  --brand-hover: #5AD695;
   --brand-soft: #173826;
   --go: #43C07D;
   --ask: #F0B94E;
   --stop: #FF7B73;
+
+  --ai-accent: #A78BFA;
+  --ai-soft: #2E1065;
+  --ai-border: #4C1D95;
 }
 
 body {
   background-color: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  min-width: 320px;
+}
+
+/* ── Universal Fluid Page Container (Capped at 1400px per UX_CONTRACT) ── */
+.page-container {
+  width: 100%;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(1rem, 2.5vw, 2.5rem);
+  padding-right: clamp(1rem, 2.5vw, 2.5rem);
+}
+
+/* ── Fluid Typography Scale ── */
+.hero-headline {
+  font-size: clamp(1.625rem, 2.8vw, 2.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.section-headline {
+  font-size: clamp(1.125rem, 1.8vw, 1.5rem);
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.card-title {
+  font-size: clamp(0.875rem, 1.1vw, 1rem);
+  line-height: 1.35;
 }
 
 h1, h2, h3, h4, .font-heading {

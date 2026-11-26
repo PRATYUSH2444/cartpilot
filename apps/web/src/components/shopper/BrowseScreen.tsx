@@ -104,7 +104,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
     <div className="flex-1 overflow-y-auto pb-8 bg-[--bg]">
       {/* ── Top Search & Filter Bar ────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-[--bg]/95 backdrop-blur-md border-b border-[--line]/60">
-        <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-10 pt-3 pb-2 space-y-2.5">
+        <div className="page-container pt-3 pb-2 space-y-2.5">
           <div className="relative">
             <Search className="w-4 h-4 text-[--mut] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -171,7 +171,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
       </div>
 
       {/* ── Products Grid (Responsive Multi-Column Widescreen Layout) ─────────────────────────── */}
-      <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-10 pt-4 space-y-4">
+      <div className="page-container pt-4 space-y-4">
         <div className="flex items-center justify-between text-xs text-[--mut]">
           <span>
             Showing <strong className="text-[--ink]">{filteredProducts.length}</strong> vegetarian

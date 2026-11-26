@@ -135,8 +135,8 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   return (
     <div className="flex-1 overflow-y-auto pb-20 bg-[#f8faf9] dark:bg-stone-950 text-stone-900 dark:text-stone-100 font-sans">
       {/* ── Top Header Banner ─────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-30 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md px-6 sm:px-8 lg:px-12 py-4 border-b border-stone-200/80 dark:border-stone-800 shadow-xs">
-        <div className="w-full max-w-[1560px] mx-auto flex items-center justify-between">
+      <div className="sticky top-0 z-30 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md py-4 border-b border-stone-200/80 dark:border-stone-800 shadow-xs">
+        <div className="page-container flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="font-extrabold text-xl sm:text-2xl text-stone-900 dark:text-white leading-none">
               Account & Settings
@@ -158,7 +158,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
       </div>
 
       {/* ── Main Proportional Desktop Viewport Container ─────────────────────── */}
-      <div className="w-full max-w-[1560px] mx-auto px-6 sm:px-8 lg:px-12 pt-8">
+      <div className="page-container pt-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
           {/* ── Left Column: Identity, Wallet & Spending Security (4-5 Cols) ─── */}
           <div className="lg:col-span-5 xl:col-span-4 space-y-6">

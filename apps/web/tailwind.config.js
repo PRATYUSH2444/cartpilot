@@ -26,6 +26,12 @@ export default {
         'brd-h': 'var(--mut)',
         acc: 'var(--brand)',
         sub: 'var(--mut)',
+        // Semantic AI Assistant token (prevents purple/green drift)
+        ai: {
+          DEFAULT: 'var(--ai-accent)',
+          soft: 'var(--ai-soft)',
+          border: 'var(--ai-border)',
+        },
       },
       fontFamily: {
         heading: ['Bricolage Grotesque', 'system-ui', 'sans-serif'],

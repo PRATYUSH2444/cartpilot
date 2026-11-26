@@ -229,6 +229,20 @@ export const ShopperWorkspace: React.FC = () => {
           console.warn('Addresses fetch failed:', e);
         }
 
+        // Fetch Wallet balance from real backend
+        try {
+          const walletRes = await authFetch(`${API_BASE}/users/wallet`);
+          if (walletRes.ok) {
+            const wData = await walletRes.json();
+            if (wData.data?.balanceRupees !== undefined) {
+              setWalletBalance(wData.data.balanceRupees);
+              localStorage.setItem('cartpilot_wallet_balance', wData.data.balanceRupees.toString());
+            }
+          }
+        } catch (e) {
+          console.warn('Wallet fetch failed:', e);
+        }
+
         // Fetch Chat sessions
         const sessionRes = await fetch(`${API_BASE}/chat/sessions`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -748,11 +762,30 @@ export const ShopperWorkspace: React.FC = () => {
     });
   };
 
-  const handleAddWalletFunds = (amount: number) => {
+  const handleAddWalletFunds = async (amount: number) => {
+    try {
+      const res = await authFetch(`${API_BASE}/users/wallet/top-up`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amountPaise: Math.round(amount * 100) }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        const newBalance = d.data.balanceRupees;
+        setWalletBalance(newBalance);
+        localStorage.setItem('cartpilot_wallet_balance', newBalance.toString());
+        const bonusMsg = d.data.bonusPaise > 0 ? ` (including ₹${(d.data.bonusPaise / 100).toFixed(0)} bonus)` : '';
+        showBanner('success', `Added ₹${amount.toFixed(0)} to CartPilot Wallet${bonusMsg}`);
+        return;
+      }
+    } catch (err) {
+      console.warn('Failed to top up wallet on server, falling back to local state:', err);
+    }
+
     setWalletBalance((prev) => {
       const next = prev + amount;
       localStorage.setItem('cartpilot_wallet_balance', next.toString());
-      showBanner('success', `Added ₹${amount.toFixed(2)} to CartPilot Wallet`);
+      showBanner('success', `Added ₹${amount.toFixed(0)} to CartPilot Wallet`);
       return next;
     });
   };

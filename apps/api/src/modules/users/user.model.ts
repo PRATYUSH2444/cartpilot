@@ -38,6 +38,8 @@ export interface IUser extends Document {
   isPhoneVerified: boolean;
   mustChangePassword: boolean;
   isStaff: boolean;
+  walletBalancePaise: number;
+  themePreference?: 'LIGHT' | 'DARK';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -164,6 +166,16 @@ const UserSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
       required: true,
+    },
+    walletBalancePaise: {
+      type: Number,
+      default: 34900,
+      min: 0,
+    },
+    themePreference: {
+      type: String,
+      enum: ['LIGHT', 'DARK'],
+      default: 'LIGHT',
     },
   },
   {

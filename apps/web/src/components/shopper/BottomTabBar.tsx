@@ -79,10 +79,10 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
           <span className="text-[11px] tracking-tight mt-0.5">Browse</span>
         </button>
 
-        {/* 3. AI Shop (Signature elevated mint-circle button matching reference screenshot) */}
+        {/* 3. AI Assistant (Signature elevated center button) */}
         <button
           data-testid="tab-chat"
-          aria-label="AI Shop"
+          aria-label="AI Assistant"
           onClick={() => onSelectTab('chat')}
           className="flex-1 flex flex-col items-center justify-center -mt-5 cursor-pointer group"
         >
@@ -102,7 +102,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
                 : 'text-stone-500 dark:text-stone-400'
             }`}
           >
-            AI Shop
+            AI Assistant
           </span>
         </button>
 
