@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthService, ClientContext } from './auth.service.js';
 import { AuthenticatedRequest } from '../../common/middleware/auth.js';
 import { env } from '../../config/env.config.js';
-import { UserRole } from '../users/user.model.js';
+import { UserModel, UserRole } from '../users/user.model.js';
 
 const REFRESH_COOKIE_NAME = 'cartpilot_refresh_token';
 
@@ -437,6 +437,29 @@ export async function syncClerkUser(
       isEmailVerified,
       isPhoneVerified,
     });
+
+    const userDoc = await UserModel.findById(user.id);
+    if (userDoc) {
+      const context = getClientContext(req);
+      const tokens = await AuthService.createSessionTokens(
+        userDoc,
+        context,
+        undefined,
+        user.merchantId,
+        user.isStaff,
+        user.staffPermissions
+      );
+      setRefreshCookie(res, tokens.refreshToken, user.role);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          user,
+          accessToken: tokens.accessToken,
+        },
+      });
+      return;
+    }
 
     res.status(200).json({
       success: true,

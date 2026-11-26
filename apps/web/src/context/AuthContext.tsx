@@ -146,6 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             'Content-Type': 'application/json',
             ...(freshToken ? { Authorization: `Bearer ${freshToken}` } : {}),
           },
+          credentials: 'include',
           body: JSON.stringify({
             clerkUserId: clerkUser.id,
             email,
@@ -170,6 +171,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             mustChangePassword: d.data.user.mustChangePassword,
             isEmailVerified: d.data.user.isEmailVerified ?? (clerkUser.primaryEmailAddress?.verification?.status === 'verified'),
           };
+          const resolvedToken = d.data.accessToken || freshToken;
+          latestTokenRef.current = resolvedToken;
+          setToken(resolvedToken);
           setUser(profile);
           setAuthStatus('AUTHENTICATED');
           setIsLoading(false);
@@ -224,6 +228,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const refreshPromise = (async (): Promise<boolean> => {
+      const authProvider = typeof window !== 'undefined' ? localStorage.getItem('cartpilot_auth_provider') : null;
+
+      // Handle Clerk session refresh: Clerk uses its own token engine
+      if (authProvider === 'clerk') {
+        if (clerkGetTokenRef.current) {
+          try {
+            const freshToken = await clerkGetTokenRef.current();
+            if (freshToken) {
+              latestTokenRef.current = freshToken;
+              setToken(freshToken);
+              setAuthStatus('AUTHENTICATED');
+              setIsSessionExpired(false);
+              return true;
+            }
+          } catch (err) {
+            console.warn('Clerk token refresh error:', err);
+          }
+        }
+        return false;
+      }
+
       try {
         const res = await fetch(`${API_BASE}/auth/refresh`, {
           method: 'POST',
@@ -260,21 +285,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           return true;
         } else {
+          // Only clear if this was an active native session
+          if (authProvider === 'native') {
+            latestTokenRef.current = null;
+            setToken(null);
+            setUser(null);
+            setAuthStatus('UNAUTHENTICATED');
+            try {
+              localStorage.removeItem('cartpilot_has_session');
+              localStorage.removeItem('cartpilot_user_role');
+              localStorage.removeItem('cartpilot_auth_provider');
+            } catch {}
+          }
+          return false;
+        }
+      } catch {
+        if (authProvider === 'native') {
           latestTokenRef.current = null;
           setToken(null);
           setUser(null);
           setAuthStatus('UNAUTHENTICATED');
-          try {
-            localStorage.removeItem('cartpilot_has_session');
-            localStorage.removeItem('cartpilot_user_role');
-          } catch {}
-          return false;
         }
-      } catch {
-        latestTokenRef.current = null;
-        setToken(null);
-        setUser(null);
-        setAuthStatus('UNAUTHENTICATED');
         return false;
       } finally {
         activeRefreshPromiseRef.current = null;
@@ -320,6 +351,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Proactive automated token refresh timer: refreshes before access token expires (15m expiry)
   useEffect(() => {
     if (!token) return;
+    const authProvider = typeof window !== 'undefined' ? localStorage.getItem('cartpilot_auth_provider') : null;
+    // Clerk SDK manages its own token refreshing automatically; do NOT run the custom timer for Clerk!
+    if (authProvider === 'clerk') return;
+
     try {
       const parts = token.split('.');
       if (parts.length >= 2) {
