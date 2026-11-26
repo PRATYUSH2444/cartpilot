@@ -113,7 +113,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   userInitial = 'U',
   walletBalance = 349,
   onOpenWallet,
-  onOpenCoupons,
   onOpenWishlist,
   onOpenNotifications,
 }) => {
@@ -403,38 +402,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               aria-label="Next slide"
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* ── Wallet Offer Card (Balanced Desktop Spacing & Explicit Action) ── */}
-        <div
-          onClick={onOpenWallet || onOpenCoupons}
-          className="rounded-2xl bg-gradient-to-r from-emerald-50/80 via-white to-amber-50/30 dark:from-emerald-950/20 dark:via-stone-900 dark:to-amber-950/20 border border-emerald-500/20 p-4 sm:p-5 shadow-2xs hover:shadow-xs hover:border-emerald-500/40 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3.5"
-        >
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-extrabold text-[11px] border border-emerald-300/50 dark:border-emerald-800">
-              <BadgePercent className="w-3 h-3 text-emerald-700" />
-              <span>Limited Time Offer</span>
-            </div>
-            <h4 className="font-heading font-extrabold text-sm sm:text-base text-stone-900 dark:text-white leading-tight">
-              Add ₹999 & Get ₹100 Instant Bonus
-            </h4>
-            <p className="text-xs text-stone-500 dark:text-stone-400">
-              Credited automatically to your CartPilot wallet for all pure vegetarian grocery orders
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 self-start sm:self-auto flex-shrink-0">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onOpenWallet) onOpenWallet();
-              }}
-              className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs shadow-xs transition-colors cursor-pointer min-h-[40px]"
-            >
-              Add ₹999
             </button>
           </div>
         </div>
