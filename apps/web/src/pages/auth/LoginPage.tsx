@@ -322,7 +322,7 @@ export const LoginPage: React.FC = () => {
       </svg>
 
       {/* Ultra-Premium Glassmorphic Authentication Card */}
-      <div className="w-full max-w-[440px] sm:max-w-[460px] bg-white/75 dark:bg-stone-900/75 backdrop-blur-3xl border border-white/80 dark:border-white/10 rounded-[32px] sm:rounded-[36px] shadow-[0_24px_64px_-12px_rgba(10,92,54,0.15),0_0_0_1px_rgba(255,255,255,0.7)_inset] dark:shadow-[0_24px_64px_-12px_rgba(0,0,0,0.5)] p-6 sm:p-9 relative z-10 transition-all duration-300">
+      <div className="w-full max-w-[420px] sm:max-w-[440px] bg-white/55 dark:bg-stone-900/60 backdrop-blur-2xl border-2 border-white/80 dark:border-white/15 rounded-[38px] sm:rounded-[42px] shadow-[0_32px_80px_-16px_rgba(10,92,54,0.18),inset_0_1px_2px_rgba(255,255,255,0.95)] dark:shadow-[0_32px_80px_-16px_rgba(0,0,0,0.6)] p-6 sm:p-8 relative z-10 transition-all duration-300">
         
         {/* Top Centered Brand Logo */}
         <div className="flex flex-col items-center text-center">
@@ -341,7 +341,7 @@ export const LoginPage: React.FC = () => {
           </div>
 
           {/* Dual-Pill Role Switcher (Matching Exact Reference Layout) */}
-          <div className="mt-5 inline-flex p-1 rounded-full bg-slate-200/60 dark:bg-stone-800/60 backdrop-blur-md border border-white/40 dark:border-stone-700/50 shadow-inner">
+          <div className="mt-5 inline-flex p-1 rounded-full bg-white/40 dark:bg-stone-800/40 backdrop-blur-md border border-white/60 dark:border-stone-700/60 shadow-xs">
             <button
               type="button"
               onClick={() => {
@@ -385,13 +385,13 @@ export const LoginPage: React.FC = () => {
                   <h2 className="font-extrabold text-2xl text-slate-900 dark:text-white tracking-tight">
                     Welcome to <span className="text-[#0a5c36] dark:text-emerald-400">CartPilot</span>
                   </h2>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
-                    Sign in to shop fresh groceries
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
+                    Fresh Groceries, Smarter & Faster
                   </p>
                 </div>
 
                 {/* Blinkit / Instamart Live Location Indicator Bar */}
-                <div className="flex items-center justify-between p-2 px-3 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/40 text-xs mb-5 shadow-2xs">
+                <div className="flex items-center justify-between p-2 px-3 rounded-full bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/40 text-xs mb-5 shadow-2xs backdrop-blur-xs">
                   <div className="flex items-center gap-1.5 truncate">
                     <span className="relative flex h-2 w-2 flex-shrink-0">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -427,7 +427,7 @@ export const LoginPage: React.FC = () => {
                     <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
                       Email Address
                     </label>
-                    <div className="relative flex items-center rounded-full bg-white/90 dark:bg-stone-800/90 border border-slate-200/90 dark:border-stone-700 px-4 py-3 shadow-inner hover:border-emerald-500 focus-within:border-[#0a5c36] focus-within:ring-2 focus-within:ring-[#0a5c36]/20 transition-all">
+                    <div className="relative flex items-center rounded-full bg-white/60 dark:bg-stone-800/60 backdrop-blur-md border border-white/90 dark:border-stone-700/90 px-4 py-3.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] hover:border-emerald-500/70 focus-within:border-[#0a5c36] focus-within:ring-2 focus-within:ring-[#0a5c36]/20 transition-all">
                       <Mail className="w-4 h-4 text-slate-400 mr-2.5 flex-shrink-0" />
                       <input
                         type="email"
@@ -444,12 +444,12 @@ export const LoginPage: React.FC = () => {
                     <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
                       Phone Number
                     </label>
-                    <div className="relative flex items-center rounded-full bg-white/90 dark:bg-stone-800/90 border border-slate-200/90 dark:border-stone-700 px-4 py-3 shadow-inner hover:border-emerald-500 focus-within:border-[#0a5c36] focus-within:ring-2 focus-within:ring-[#0a5c36]/20 transition-all">
+                    <div className="relative flex items-center rounded-full bg-white/60 dark:bg-stone-800/60 backdrop-blur-md border border-white/90 dark:border-stone-700/90 px-4 py-3.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] hover:border-emerald-500/70 focus-within:border-[#0a5c36] focus-within:ring-2 focus-within:ring-[#0a5c36]/20 transition-all">
                       <Phone className="w-4 h-4 text-slate-400 mr-2 flex-shrink-0" />
-                      <div className="flex items-center gap-1 text-xs font-bold text-slate-800 dark:text-slate-200 select-none flex-shrink-0">
-                        <span className="text-sm">🇮🇳</span>
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 select-none flex-shrink-0">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full overflow-hidden text-sm flex-shrink-0 shadow-2xs">🇮🇳</span>
                         <span>+91</span>
-                        <ChevronDown className="w-3 h-3 text-slate-400" />
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                       </div>
                       <span className="mx-2.5 h-4 w-px bg-slate-300 dark:bg-stone-600 flex-shrink-0" />
                       <input
@@ -464,32 +464,34 @@ export const LoginPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Primary Glowing Action Button */}
+                  {/* Primary Glowing Action Button (With Reference Circular Arrow Badge) */}
                   <button
                     type="submit"
                     disabled={phoneNumber.length !== 10 || isLoading}
-                    className="w-full py-3.5 px-4 rounded-full bg-gradient-to-r from-[#0a5c36] to-[#0d7543] hover:from-[#084e2e] hover:to-[#0a5c36] text-white font-bold text-sm shadow-lg shadow-[#0a5c36]/25 hover:shadow-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer mt-4 group active:scale-[0.99]"
+                    className="w-full py-3.5 pl-6 pr-3 rounded-full bg-gradient-to-r from-[#047857] via-[#059669] to-[#047857] hover:from-[#065f46] hover:to-[#047857] text-white font-bold text-sm shadow-[0_10px_25px_-5px_rgba(5,150,105,0.4)] hover:shadow-[0_12px_28px_-5px_rgba(5,150,105,0.5)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-between cursor-pointer mt-4 group active:scale-[0.99]"
                   >
                     {isLoading ? (
-                      <>
+                      <div className="w-full flex items-center justify-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
                         <span>Sending OTP...</span>
-                      </>
+                      </div>
                     ) : (
                       <>
-                        <span>Continue with OTP</span>
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                        <span className="flex-1 text-center font-bold">Continue with OTP</span>
+                        <span className="w-7 h-7 rounded-full bg-white flex items-center justify-center text-emerald-700 shadow-xs flex-shrink-0 group-hover:translate-x-0.5 transition-transform">
+                          <ArrowRight className="w-4 h-4" />
+                        </span>
                       </>
                     )}
                   </button>
                 </form>
 
-                {/* Subtle Divider */}
+                {/* Subtle Divider with Floating OR Pill */}
                 <div className="relative my-4 flex items-center justify-center">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200/80 dark:border-stone-700/80" />
+                    <div className="w-full border-t border-slate-300/60 dark:border-stone-700/60" />
                   </div>
-                  <span className="relative bg-white/70 dark:bg-stone-900/70 px-3 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest backdrop-blur-sm">
+                  <span className="relative px-3.5 py-0.5 rounded-full bg-white/80 dark:bg-stone-800/80 backdrop-blur-md border border-white/90 dark:border-stone-700 text-[10px] font-extrabold text-slate-400 dark:text-slate-400 uppercase tracking-widest shadow-2xs">
                     OR
                   </span>
                 </div>
@@ -499,7 +501,7 @@ export const LoginPage: React.FC = () => {
                   <SignInButton mode="modal">
                     <button
                       type="button"
-                      className="w-full py-3 px-4 rounded-full bg-white dark:bg-stone-800 hover:bg-slate-50 dark:hover:bg-stone-750 border border-slate-200/90 dark:border-stone-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2.5 shadow-2xs hover:shadow transition-all cursor-pointer"
+                      className="w-full py-3.5 px-4 rounded-full bg-white/65 dark:bg-stone-800/65 hover:bg-white/90 dark:hover:bg-stone-750 backdrop-blur-md border border-white/90 dark:border-stone-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2.5 shadow-2xs hover:shadow transition-all cursor-pointer"
                     >
                       <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
                         <path
@@ -526,7 +528,7 @@ export const LoginPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleQuickLogin('CUSTOMER')}
-                    className="w-full py-3 px-4 rounded-full bg-white dark:bg-stone-800 hover:bg-slate-50 dark:hover:bg-stone-750 border border-slate-200/90 dark:border-stone-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2.5 shadow-2xs hover:shadow transition-all cursor-pointer"
+                    className="w-full py-3.5 px-4 rounded-full bg-white/65 dark:bg-stone-800/65 hover:bg-white/90 dark:hover:bg-stone-750 backdrop-blur-md border border-white/90 dark:border-stone-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2.5 shadow-2xs hover:shadow transition-all cursor-pointer"
                   >
                     <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
                       <path
@@ -555,10 +557,10 @@ export const LoginPage: React.FC = () => {
                   <span>New to CartPilot? </span>
                   <Link
                     to="/register"
-                    className="font-bold text-[#0a5c36] dark:text-emerald-400 hover:underline inline-flex items-center gap-0.5"
+                    className="font-bold text-[#0a5c36] dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
                   >
                     <span>Create an account</span>
-                    <ArrowRight className="w-3 h-3" />
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
               </div>
@@ -659,15 +661,20 @@ export const LoginPage: React.FC = () => {
                   type="button"
                   onClick={() => verifyPhoneOtp(otpDigits.join(''))}
                   disabled={otpDigits.some((d) => d === '') || isLoading}
-                  className="w-full py-3.5 px-4 rounded-full bg-gradient-to-r from-[#0a5c36] to-[#0d7543] hover:from-[#084e2e] hover:to-[#0a5c36] text-white font-bold text-sm shadow-lg shadow-[#0a5c36]/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer mb-4 active:scale-[0.99]"
+                  className="w-full py-3.5 pl-6 pr-3 rounded-full bg-gradient-to-r from-[#047857] via-[#059669] to-[#047857] hover:from-[#065f46] hover:to-[#047857] text-white font-bold text-sm shadow-[0_10px_25px_-5px_rgba(5,150,105,0.4)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-between cursor-pointer mb-4 group active:scale-[0.99]"
                 >
                   {isLoading ? (
-                    <>
+                    <div className="w-full flex items-center justify-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span>Verifying Code...</span>
-                    </>
+                    </div>
                   ) : (
-                    <span>Verify & Continue →</span>
+                    <>
+                      <span className="flex-1 text-center font-bold">Verify & Continue</span>
+                      <span className="w-7 h-7 rounded-full bg-white flex items-center justify-center text-emerald-700 shadow-xs flex-shrink-0 group-hover:translate-x-0.5 transition-transform">
+                        <ArrowRight className="w-4 h-4" />
+                      </span>
+                    </>
                   )}
                 </button>
 
@@ -719,7 +726,7 @@ export const LoginPage: React.FC = () => {
                 <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
                   Merchant Email Address
                 </label>
-                <div className="relative flex items-center rounded-full bg-white/90 dark:bg-stone-800/90 border border-slate-200/90 dark:border-stone-700 px-4 py-3 shadow-inner hover:border-emerald-500 focus-within:border-[#0a5c36] focus-within:ring-2 focus-within:ring-[#0a5c36]/20 transition-all">
+                <div className="relative flex items-center rounded-full bg-white/60 dark:bg-stone-800/60 backdrop-blur-md border border-white/90 dark:border-stone-700/90 px-4 py-3.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] hover:border-emerald-500/70 focus-within:border-[#0a5c36] focus-within:ring-2 focus-within:ring-[#0a5c36]/20 transition-all">
                   <Mail className="w-4 h-4 text-slate-400 mr-2.5 flex-shrink-0" />
                   <input
                     type="email"
@@ -744,7 +751,7 @@ export const LoginPage: React.FC = () => {
                     Forgot password?
                   </Link>
                 </div>
-                <div className="relative flex items-center rounded-full bg-white/90 dark:bg-stone-800/90 border border-slate-200/90 dark:border-stone-700 px-4 py-3 shadow-inner hover:border-emerald-500 focus-within:border-[#0a5c36] focus-within:ring-2 focus-within:ring-[#0a5c36]/20 transition-all">
+                <div className="relative flex items-center rounded-full bg-white/60 dark:bg-stone-800/60 backdrop-blur-md border border-white/90 dark:border-stone-700/90 px-4 py-3.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] hover:border-emerald-500/70 focus-within:border-[#0a5c36] focus-within:ring-2 focus-within:ring-[#0a5c36]/20 transition-all">
                   <Lock className="w-4 h-4 text-slate-400 mr-2.5 flex-shrink-0" />
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -768,17 +775,19 @@ export const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 px-4 rounded-full bg-gradient-to-r from-[#0a5c36] to-[#0d7543] hover:from-[#084e2e] hover:to-[#0a5c36] text-white font-bold text-sm shadow-lg shadow-[#0a5c36]/25 hover:shadow-xl disabled:opacity-50 cursor-pointer active:scale-[0.99] transition-all flex items-center justify-center gap-2 mt-4"
+                className="w-full py-3.5 pl-6 pr-3 rounded-full bg-gradient-to-r from-[#047857] via-[#059669] to-[#047857] hover:from-[#065f46] hover:to-[#047857] text-white font-bold text-sm shadow-[0_10px_25px_-5px_rgba(5,150,105,0.4)] hover:shadow-[0_12px_28px_-5px_rgba(5,150,105,0.5)] disabled:opacity-50 cursor-pointer active:scale-[0.99] transition-all flex items-center justify-between mt-4 group"
               >
                 {isLoading ? (
-                  <>
+                  <div className="w-full flex items-center justify-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Signing in...</span>
-                  </>
+                  </div>
                 ) : (
                   <>
-                    <span>Sign In to Merchant Hub</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <span className="flex-1 text-center font-bold">Sign In to Merchant Hub</span>
+                    <span className="w-7 h-7 rounded-full bg-white flex items-center justify-center text-emerald-700 shadow-xs flex-shrink-0 group-hover:translate-x-0.5 transition-transform">
+                      <ArrowRight className="w-4 h-4" />
+                    </span>
                   </>
                 )}
               </button>
