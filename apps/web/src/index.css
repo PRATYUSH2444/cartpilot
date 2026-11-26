@@ -246,3 +246,13 @@ h1, h2, h3, h4, .font-heading {
   overscroll-behavior: contain;
 }
 
+/* ── Smooth Horizontal Scrollbar Concealer ────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+

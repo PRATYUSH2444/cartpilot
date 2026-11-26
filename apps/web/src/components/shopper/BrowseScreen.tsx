@@ -23,14 +23,14 @@ interface BrowseScreenProps {
 
 const CATEGORIES = [
   { id: 'ALL', label: 'All Items', emoji: '🛒' },
-  { id: 'FRUITS_VEGETABLES', label: 'Fruits & Veg', emoji: '🍎' },
+  { id: 'FRUITS_VEGETABLES', label: 'Vegetables & Fruits', emoji: '🥬' },
   { id: 'DAIRY_BREAKFAST', label: 'Dairy & Breakfast', emoji: '🥛' },
   { id: 'ATTA_RICE_DAL', label: 'Atta, Rice & Dal', emoji: '🌾' },
-  { id: 'SNACKS_MUNCHIES', label: 'Snacks & Munchies', emoji: '🍿' },
-  { id: 'COLD_DRINKS_JUICES', label: 'Cold Drinks', emoji: '🧃' },
-  { id: 'BAKERY', label: 'Bakery', emoji: '🍞' },
-  { id: 'MASALA_DRY_FRUITS', label: 'Masala & Spices', emoji: '🌰' },
-  { id: 'INSTANT_FROZEN_FOOD', label: 'Instant & Frozen', emoji: '🍲' },
+  { id: 'MASALA_DRY_FRUITS', label: 'Oil, Ghee & Masala', emoji: '🫙' },
+  { id: 'BAKERY', label: 'Bakery & Bread', emoji: '🍞' },
+  { id: 'SNACKS_MUNCHIES', label: 'Snacks & Munchies', emoji: '🍪' },
+  { id: 'COLD_DRINKS_JUICES', label: 'Drinks & Juices', emoji: '🥤' },
+  { id: 'INSTANT_FROZEN_FOOD', label: 'Instant & Ready Food', emoji: '🍲' },
 ];
 
 const SUBCATEGORIES: Record<string, string[]> = {
@@ -69,9 +69,18 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      // Category match
-      if (selectedCategory !== 'ALL' && p.category !== selectedCategory) {
-        return false;
+      // Category match with database schema alias support
+      if (selectedCategory !== 'ALL') {
+        const matchesCategory =
+          p.category === selectedCategory ||
+          (selectedCategory === 'FRUITS_VEGETABLES' && (p.category === 'VEGETABLES' || p.category === 'FRUITS')) ||
+          (selectedCategory === 'DAIRY_BREAKFAST' && p.category === 'DAIRY') ||
+          (selectedCategory === 'ATTA_RICE_DAL' && (p.category === 'GRAINS' || p.category === 'PULSES')) ||
+          (selectedCategory === 'MASALA_DRY_FRUITS' && (p.category === 'OILS' || p.category === 'SPICES'));
+
+        if (!matchesCategory) {
+          return false;
+        }
       }
 
       // Search match

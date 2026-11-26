@@ -12,11 +12,14 @@ import {
   Bell,
   Heart,
   ShieldCheck,
-  Calendar,
   Wallet,
-  LayoutGrid,
   BadgePercent,
-  CheckCircle2,
+  Milk,
+  Wheat,
+  Flame,
+  Utensils,
+  Cookie,
+  Soup,
 } from 'lucide-react';
 import { Product, CartData, OrderData, UserAddress } from '../../types';
 import { TabKey } from './BottomTabBar';
@@ -49,39 +52,51 @@ interface HomeScreenProps {
 const CATEGORIES = [
   {
     id: 'FRUITS_VEGETABLES',
-    title: 'Fruits &\nVegetables',
+    title: 'Vegetables & Fruits',
     icon: Leaf,
     bg: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300',
   },
   {
     id: 'DAIRY_BREAKFAST',
-    title: 'Dairy &\nBreakfast',
-    icon: CheckCircle2,
-    bg: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300',
+    title: 'Dairy & Breakfast',
+    icon: Milk,
+    bg: 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300',
   },
   {
     id: 'ATTA_RICE_DAL',
-    title: 'Atta, Rice\n& Dal',
-    icon: BadgePercent,
+    title: 'Atta, Rice & Dal',
+    icon: Wheat,
     bg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300',
   },
   {
-    id: 'SNACKS_MUNCHIES',
-    title: 'Snacks &\nBeverages',
-    icon: Calendar,
+    id: 'MASALA_DRY_FRUITS',
+    title: 'Oil, Ghee & Masala',
+    icon: Flame,
     bg: 'bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300',
   },
   {
-    id: 'PERSONAL_CARE',
-    title: 'Personal\nCare',
-    icon: ShieldCheck,
-    bg: 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300',
+    id: 'BAKERY',
+    title: 'Bakery & Bread',
+    icon: Utensils,
+    bg: 'bg-yellow-50 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-300',
   },
   {
-    id: 'MORE',
-    title: 'All\nCategories',
-    icon: LayoutGrid,
-    bg: 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300',
+    id: 'SNACKS_MUNCHIES',
+    title: 'Snacks & Munchies',
+    icon: Cookie,
+    bg: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300',
+  },
+  {
+    id: 'COLD_DRINKS_JUICES',
+    title: 'Drinks & Juices',
+    icon: Sparkles,
+    bg: 'bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300',
+  },
+  {
+    id: 'INSTANT_FROZEN_FOOD',
+    title: 'Instant & Ready Food',
+    icon: Soup,
+    bg: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300',
   },
 ];
 
@@ -300,44 +315,30 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
 
-        {/* ── Shop by Category (Auto-fitting Responsive Grid) ── */}
+        {/* ── Shop by Category (Smooth Horizontal Single-Row Scroll) ── */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="section-headline font-heading font-extrabold text-stone-900 dark:text-white tracking-tight">
               Shop by Category
             </h3>
-            <button
-              type="button"
-              onClick={() => onSelectTab('browse')}
-              className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer flex items-center gap-1"
-            >
-              <span>View all categories</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth pb-1 pt-0.5 -mx-4 px-4 sm:mx-0 sm:px-0">
             {CATEGORIES.map((cat) => {
               const IconComp = cat.icon;
               return (
                 <button
                   key={cat.id}
                   type="button"
-                  onClick={() => {
-                    if (cat.id === 'MORE') {
-                      onSelectTab('browse');
-                    } else {
-                      onSelectTab('browse', cat.id);
-                    }
-                  }}
-                  className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3 flex flex-col items-center text-center shadow-2xs hover:shadow-sm hover:border-emerald-500/40 transition-all cursor-pointer group"
+                  onClick={() => onSelectTab('browse', cat.id)}
+                  className="flex-shrink-0 w-24 sm:w-28 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3 flex flex-col items-center text-center shadow-2xs hover:shadow-xs hover:border-emerald-500/40 transition-all cursor-pointer group active:scale-95"
                 >
                   <div
-                    className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-2 transition-transform group-hover:scale-105 shadow-2xs ${cat.bg}`}
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center mb-2 transition-transform group-hover:scale-105 shadow-2xs ${cat.bg}`}
                   >
-                    <IconComp className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <IconComp className="w-6 h-6" />
                   </div>
-                  <span className="text-xs font-bold text-stone-800 dark:text-stone-200 leading-tight whitespace-pre-line line-clamp-2">
+                  <span className="text-xs font-bold text-stone-800 dark:text-stone-200 leading-tight text-center line-clamp-2">
                     {cat.title}
                   </span>
                 </button>
