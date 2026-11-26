@@ -820,11 +820,21 @@ export const LoginPage: React.FC = () => {
         )}
 
         {/* Legal Micro-Footer */}
-        <div className="mt-6 pt-4 border-t border-slate-200/60 dark:border-stone-700/60 text-center text-[10px] text-slate-400 dark:text-slate-500">
-          <span>By continuing, you agree to our </span>
-          <span className="underline hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">Terms of Service</span>
-          <span> & </span>
-          <span className="underline hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">Privacy Policy</span>
+        <div className="mt-6 pt-4 border-t border-slate-200/60 dark:border-stone-700/60 text-center text-[10px] text-slate-400 dark:text-slate-500 flex flex-col items-center gap-1.5">
+          <div>
+            <span>By continuing, you agree to our </span>
+            <span className="underline hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">Terms of Service</span>
+            <span> & </span>
+            <span className="underline hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">Privacy Policy</span>
+          </div>
+          <Link
+            to="/admin/login"
+            className="hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors inline-flex items-center gap-1 opacity-70 hover:opacity-100"
+            title="Master Admin Security Gateway"
+          >
+            <Lock className="w-2.5 h-2.5" />
+            <span>Master Admin Portal</span>
+          </Link>
         </div>
       </div>
     </div>
