@@ -1,4 +1,5 @@
 import React from 'react';
+import { Sparkles } from 'lucide-react';
 import { CartData } from '../../types';
 
 export type TabKey = 'home' | 'browse' | 'chat' | 'cart' | 'account';
@@ -36,28 +37,6 @@ const BrowseGlyph: React.FC<{ className?: string }> = ({ className = 'w-6 h-6' }
     <rect x="13.3" y="3.5" width="7.2" height="7.2" rx="2.2" />
     <rect x="3.5" y="13.3" width="7.2" height="7.2" rx="2.2" />
     <rect x="13.3" y="13.3" width="7.2" height="7.2" rx="2.2" />
-  </svg>
-);
-
-// 3. Center AI Vision / Scanner Glyph: 4 corner brackets framing 4 tiles (Exact match to Purple Orb)
-const CenterScannerGlyph: React.FC<{ className?: string }> = ({ className = 'w-7 h-7' }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M7 3.5H5a2 2 0 0 0-2 2v2" />
-    <path d="M17 3.5h2a2 2 0 0 1 2 2v2" />
-    <path d="M21 16.5v2a2 2 0 0 1-2 2h-2" />
-    <path d="M3 16.5v2a2 2 0 0 0 2 2h2" />
-    <rect x="7" y="7" width="3.6" height="3.6" rx="1.2" fill="currentColor" stroke="none" />
-    <rect x="13.4" y="7" width="3.6" height="3.6" rx="1.2" fill="currentColor" stroke="none" />
-    <rect x="7" y="13.4" width="3.6" height="3.6" rx="1.2" fill="currentColor" stroke="none" />
-    <rect x="13.4" y="13.4" width="3.6" height="3.6" rx="1.2" fill="currentColor" stroke="none" />
   </svg>
 );
 
@@ -172,15 +151,15 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
           onClick={() => onSelectTab('chat')}
           className="relative z-20 flex-1 h-full flex items-center justify-center cursor-pointer group"
         >
-          {/* Elevated Floating Purple Circle with Dark Cutout Ring */}
+          {/* Elevated Floating Purple Circle with Dock Cutout Ring */}
           <div
             className={`-translate-y-4.5 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer ${
               isChatActive
-                ? 'bg-gradient-to-tr from-[#7c3aed] to-[#9333ea] text-white shadow-xl shadow-purple-500/50 scale-105 ring-4 ring-[#101115]'
-                : 'bg-[#802bf0] hover:bg-[#8b3eff] text-white shadow-lg shadow-purple-600/35 ring-4 ring-[#121316] group-hover:scale-105'
+                ? 'bg-gradient-to-tr from-[#7c3aed] to-[#9333ea] text-white shadow-xl shadow-purple-500/50 scale-105 ring-4 ring-[#1e2026]'
+                : 'bg-[#802bf0] hover:bg-[#8b3eff] text-white shadow-lg shadow-purple-600/35 ring-4 ring-[#1e2026] group-hover:scale-105'
             }`}
           >
-            <CenterScannerGlyph className="w-7 h-7 text-white" />
+            <Sparkles className="w-6.5 h-6.5 text-white stroke-[2.2px] fill-white/20 drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
           </div>
         </button>
 
