@@ -263,11 +263,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   return (
                     <div
                       key={item.productId}
-                      className="py-3 first:pt-1 last:pb-1 flex items-center justify-between gap-3 group"
+                      className="py-3 first:pt-1.5 last:pb-1.5 transition-colors group"
                     >
-                      {/* Left: Thumbnail & Details */}
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 dark:border-stone-750 flex items-center justify-center overflow-hidden flex-shrink-0 p-1.5 shadow-2xs group-hover:border-emerald-300/70 transition-colors">
+                      <div className="flex items-start gap-2.5 sm:gap-3">
+                        {/* Compact Product Thumbnail */}
+                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 dark:border-stone-750 flex items-center justify-center overflow-hidden flex-shrink-0 p-1 shadow-2xs mt-0.5">
                           {item.imageUrl ? (
                             <img
                               src={item.imageUrl}
@@ -275,71 +275,77 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                               className="w-full h-full object-contain"
                             />
                           ) : (
-                            <span className="text-xl">🛒</span>
+                            <span className="text-lg">🛒</span>
                           )}
                         </div>
-                        <div className="min-w-0 space-y-1">
-                          <h3 className="font-bold text-sm sm:text-[15px] text-stone-900 dark:text-stone-100 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
-                            {item.name}
-                          </h3>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-stone-500 dark:text-stone-400 font-medium">
-                              {item.packageSize} {item.packageUnit}
-                            </span>
-                            <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md inline-block">
-                              ₹{linePriceRupees} each
+
+                        {/* Content Area: Title on Top, Attributes & Controls Below */}
+                        <div className="flex-1 min-w-0">
+                          {/* Row 1: Full Product Title + Line Total Price */}
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-bold text-xs sm:text-sm text-stone-900 dark:text-white leading-snug line-clamp-2 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                              {item.name}
+                            </h3>
+                            <span className="font-mono font-black text-xs sm:text-sm text-stone-900 dark:text-white tabular-nums flex-shrink-0 ml-2">
+                              ₹{lineTotalRupees}
                             </span>
                           </div>
+
+                          {/* Row 2: Package Size / Unit Price + Quantity Stepper + Trash */}
+                          <div className="flex items-center justify-between gap-2 mt-2">
+                            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                              <span className="text-[11px] text-stone-500 dark:text-stone-400 font-medium">
+                                {item.packageSize} {item.packageUnit}
+                              </span>
+                              <span className="text-[10px] text-stone-300 dark:text-stone-600">•</span>
+                              <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-800 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-200/60 dark:border-emerald-800/50">
+                                ₹{linePriceRupees} each
+                              </span>
+                            </div>
+
+                            {/* Stepper + Delete Action */}
+                            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                              <div className="flex items-center gap-0.5 sm:gap-1 bg-stone-100 dark:bg-stone-800 text-stone-900 dark:text-stone-100 p-0.5 rounded-lg text-xs font-semibold border border-stone-200/80 dark:border-stone-700/80 shadow-2xs">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (item.quantity <= 1) {
+                                      onRemoveItem(item.productId);
+                                    } else {
+                                      onUpdateQuantity(item.productId, item.quantity - 1);
+                                    }
+                                  }}
+                                  className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-md bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-950 flex items-center justify-center font-bold active:scale-90 transition-all cursor-pointer shadow-2xs"
+                                  aria-label="Decrease quantity"
+                                >
+                                  <Minus className="w-3 h-3 stroke-[2.4px]" />
+                                </button>
+                                <span className="font-mono px-1.5 min-w-[18px] text-center text-xs tabular-nums font-bold text-stone-900 dark:text-white">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={item.quantity >= PRICING_CONFIG.maxQtyPerItem}
+                                  onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
+                                  className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-md bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-950 flex items-center justify-center font-bold active:scale-90 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-2xs"
+                                  aria-label="Increase quantity"
+                                >
+                                  <Plus className="w-3 h-3 stroke-[2.4px]" />
+                                </button>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => onRemoveItem(item.productId)}
+                                className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                                title="Remove item"
+                                aria-label={`Remove ${item.name}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-
-                      {/* Right: Quantity Stepper, Price & Trash */}
-                      <div className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0">
-                        {/* Tactile Stepper Pill */}
-                        <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 text-stone-900 dark:text-stone-100 p-1 rounded-xl text-xs font-semibold border border-stone-200/80 dark:border-stone-700/80 shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (item.quantity <= 1) {
-                                onRemoveItem(item.productId);
-                              } else {
-                                onUpdateQuantity(item.productId, item.quantity - 1);
-                              }
-                            }}
-                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-950 flex items-center justify-center font-bold active:scale-90 transition-all cursor-pointer shadow-2xs"
-                            aria-label="Decrease quantity"
-                          >
-                            <Minus className="w-3.5 h-3.5 stroke-[2.4px]" />
-                          </button>
-                          <span className="font-mono px-1.5 min-w-[20px] text-center text-xs sm:text-sm tabular-nums font-bold text-stone-900 dark:text-white">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={item.quantity >= PRICING_CONFIG.maxQtyPerItem}
-                            onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
-                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-950 flex items-center justify-center font-bold active:scale-90 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-2xs"
-                            aria-label="Increase quantity"
-                          >
-                            <Plus className="w-3.5 h-3.5 stroke-[2.4px]" />
-                          </button>
-                        </div>
-
-                        {/* Line Total */}
-                        <span className="font-mono font-black text-sm sm:text-base text-stone-900 dark:text-white min-w-[56px] text-right tabular-nums">
-                          ₹{lineTotalRupees}
-                        </span>
-
-                        {/* Trash Icon Button */}
-                        <button
-                          type="button"
-                          onClick={() => onRemoveItem(item.productId)}
-                          className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
-                          title="Remove item"
-                          aria-label={`Remove ${item.name}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
                     </div>
                   );
