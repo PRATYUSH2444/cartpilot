@@ -398,23 +398,23 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
 
       {/* Floating Cart Bar for < 1100px */}
       {Boolean(cart && cart.items && cart.items.length > 0 && onOpenCartDrawer) && (
-        <div className="min-[1100px]:hidden px-3 sm:px-4 pt-1 flex-shrink-0 z-20 max-w-[760px] mx-auto w-full">
+        <div className="min-[1100px]:hidden px-3 sm:px-4 pt-1.5 pb-0.5 flex-shrink-0 z-20 max-w-[760px] mx-auto w-full">
           <button
             type="button"
             onClick={onOpenCartDrawer}
-            className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl bg-stone-900 hover:bg-black dark:bg-stone-850 dark:hover:bg-stone-800 border border-stone-800 dark:border-stone-750 text-white shadow-2xs transition-all cursor-pointer font-sans"
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-800 via-emerald-850 to-emerald-900 hover:from-emerald-700 hover:to-emerald-850 text-white shadow-md shadow-emerald-950/20 border border-emerald-700/60 active:scale-[0.99] transition-all cursor-pointer group"
           >
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-stone-750 dark:bg-stone-700 text-white text-[11px] font-bold flex items-center justify-center font-sans">
+            <div className="flex items-center gap-2.5">
+              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-mono font-bold flex items-center justify-center shadow-xs">
                 {cart!.items.reduce((s, i) => s + i.quantity, 0)}
               </span>
-              <span className="text-xs font-semibold">View Cart</span>
+              <span className="text-xs sm:text-sm font-bold tracking-tight">View Cart</span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold font-sans">
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-bold font-mono">
               <span>
                 ₹{(cart!.items.reduce((s, i) => s + (i.itemTotalPaise || i.pricePaise * i.quantity), 0) / 100).toFixed(2)}
               </span>
-              <ArrowRight className="w-3.5 h-3.5 text-stone-300" />
+              <ArrowRight className="w-4 h-4 text-emerald-300 transition-transform group-hover:translate-x-1" />
             </div>
           </button>
         </div>

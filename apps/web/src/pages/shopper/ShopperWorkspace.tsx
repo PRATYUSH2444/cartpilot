@@ -93,6 +93,7 @@ export const ShopperWorkspace: React.FC = () => {
     } catch {}
     return 'home';
   });
+  const [previousTab, setPreviousTab] = useState<TabKey>('home');
   const [selectedBrowseCategory, setSelectedBrowseCategory] = useState<string>('ALL');
 
   // Core state
@@ -120,7 +121,6 @@ export const ShopperWorkspace: React.FC = () => {
   // Modals & Overlays state
   const [isConversationDrawerOpen, setIsConversationDrawerOpen] = useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
-  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [isLiveTrackingOpen, setIsLiveTrackingOpen] = useState(false);
   const [trackedOrder, setTrackedOrder] = useState<OrderData | null>(null);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
@@ -1255,7 +1255,10 @@ export const ShopperWorkspace: React.FC = () => {
   }, []);
 
   const handleSelectTab = useCallback((tab: TabKey, categoryId?: string) => {
-    setActiveMobileTab(tab);
+    setActiveMobileTab((prev) => {
+      if (prev !== tab) setPreviousTab(prev);
+      return tab;
+    });
     if (categoryId) {
       setSelectedBrowseCategory(categoryId);
     }
@@ -1569,7 +1572,10 @@ export const ShopperWorkspace: React.FC = () => {
                 setIsLoading(false);
               }}
               onOpenDrawer={() => setIsConversationDrawerOpen(true)}
-              onOpenCartDrawer={() => setIsCartDrawerOpen(true)}
+              onOpenCartDrawer={() => {
+                setPreviousTab('chat');
+                handleSelectTab('cart');
+              }}
               onNewChat={handleNewChat}
               cart={cart}
               onAddToCart={handleAddToCart}
@@ -1598,7 +1604,7 @@ export const ShopperWorkspace: React.FC = () => {
               onRemoveCoupon={handleRemoveCoupon}
               selectedDeliverySlot={selectedDeliverySlot}
               onSelectDeliverySlot={setSelectedDeliverySlot}
-              onBack={() => setActiveMobileTab('browse')}
+              onBack={() => handleSelectTab(previousTab || 'browse')}
               isLoading={isLoading}
             />
           )}
@@ -1682,37 +1688,6 @@ export const ShopperWorkspace: React.FC = () => {
           ).length
         }
       />
-
-            {/* ── Responsive Cart Drawer (< 1100px) ──────────────────────── */}
-      {isCartDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setIsCartDrawerOpen(false)}
-            aria-hidden="true"
-          />
-          <div className="relative w-full max-w-md h-full bg-card shadow-2xl z-10 flex flex-col">
-            <ContextPanel
-              cart={cart}
-              isCollapsed={false}
-              onToggleCollapse={() => setIsCartDrawerOpen(false)}
-              onUpdateQuantity={handleUpdateQuantity}
-              onRemoveItem={handleRemoveItem}
-              onClearCart={handleClearCart}
-              onInitiateCheckout={() => {
-                setIsCartDrawerOpen(false);
-                evaluatePolicy().catch(() => {});
-                setIsCheckoutModalOpen(true);
-              }}
-              onOpenBrowse={() => {
-                setIsCartDrawerOpen(false);
-                setActiveMobileTab('browse');
-              }}
-              isLoading={isLoading}
-            />
-          </div>
-        </div>
-      )}
 
       {/* ── Checkout Modal (Screen 12) ─────────────────────────────────────── */}
       <CheckoutModal
