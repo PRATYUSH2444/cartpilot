@@ -41,7 +41,7 @@ export class ChatService {
       userId: userObjectId,
       sender: 'AGENT',
       content:
-        'Welcome to CartPilot! I am your policy-controlled shopping assistant. I help you find strictly vegetarian groceries, plan meals, and assemble carts governed by deterministic spending mandates. The AI proposes, the policy engine decides, and you confirm payment.',
+        "I'm CartPilot. Tell me what you're cooking or your budget, and I'll build a vegetarian cart. Nothing is ordered until you approve.",
       cardType: 'rules',
       cardData: {
         autoApproveUpToPaise: mandate ? mandate.autoApproveUpToPaise : 30000,

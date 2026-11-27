@@ -157,6 +157,7 @@ export interface ApprovalData {
 export interface AuditEvent {
   sequenceNumber: number;
   timestamp: string;
+  createdAt?: string | number;
   eventType: string;
   actorId: string;
   actorRole: string;
@@ -255,14 +256,18 @@ export interface ToolCallItem {
   durationMs?: number;
 }
 
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'agent' | 'system';
   content: string;
   timestamp: string;
+  createdAt?: string | number;
   toolCalls?: ToolCallItem[];
   cardType?: 'rules' | 'items' | 'cart' | 'approval' | 'payment' | 'order' | 'proof';
   cardData?: unknown;
+  isError?: boolean;
+  retryText?: string;
 }
 
 export interface ChatSession {

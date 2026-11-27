@@ -412,7 +412,8 @@ export const ShopperWorkspace: React.FC = () => {
                   timestamp: new Date(m.createdAt).toLocaleTimeString([], {
                     hour: '2-digit',
                     minute: '2-digit',
-                  }),
+                }),
+                createdAt: m.createdAt,
                   toolCalls: m.toolCalls,
                   cardType: m.cardType,
                   cardData: m.cardData,
@@ -446,6 +447,7 @@ export const ShopperWorkspace: React.FC = () => {
                   hour: '2-digit',
                   minute: '2-digit',
                 }),
+                createdAt: m.createdAt,
                 toolCalls: m.toolCalls,
                 cardType: m.cardType,
                 cardData: m.cardData,
@@ -875,6 +877,7 @@ export const ShopperWorkspace: React.FC = () => {
         sender: 'user',
         content: trimmed,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        createdAt: Date.now(),
       },
     ]);
     setComposerText('');
@@ -918,6 +921,7 @@ export const ShopperWorkspace: React.FC = () => {
               sender: 'agent',
               content: agentMessage.content,
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              createdAt: Date.now(),
               toolCalls: agentMessage.toolCalls,
               cardType: agentMessage.cardType,
               cardData: agentMessage.cardData,
@@ -940,8 +944,11 @@ export const ShopperWorkspace: React.FC = () => {
             {
               id: `agent-err-${Date.now()}`,
               sender: 'agent',
-              content: `I ran into a temporary delay processing that request. Please ask again or explore our catalog in the **Browse** tab.`,
+              content: `I ran into a temporary delay processing that request. Please try again.`,
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              createdAt: Date.now(),
+              isError: true,
+              retryText: trimmed,
             },
           ]);
           showBanner('error', errMsg);

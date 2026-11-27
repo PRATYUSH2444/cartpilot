@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   Menu,
   Plus,
@@ -7,6 +7,9 @@ import {
   Loader2,
   Sparkles,
   Leaf,
+  ArrowDown,
+  AlertCircle,
+  RotateCcw,
 } from 'lucide-react';
 import { ChatMessage, LampStatus, CartData } from '../../types';
 import { ItemsCard } from '../cards/ItemsCard';
@@ -41,6 +44,13 @@ const EXAMPLE_PROMPTS = [
   { emoji: '🧄', label: 'Aloo Matar curry, feeds 6', prompt: 'Aloo Matar curry ingredients for 6 people' },
 ];
 
+const PROMPT_CHIPS = [
+  'Quick Paneer Pulao',
+  'Dal Tadka for 2',
+  'Weekly budget ₹1500',
+  'High protein veg',
+];
+
 export const AIShopScreen: React.FC<AIShopScreenProps> = ({
   messages,
   isLoading,
@@ -61,10 +71,32 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
   lampReasonText,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [usedChips, setUsedChips] = useState<string[]>([]);
+  const isNearBottomRef = useRef(true);
+
+  const handleScroll = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const nearBottom = distanceToBottom <= 80;
+    isNearBottomRef.current = nearBottom;
+    setShowJumpToLatest(!nearBottom);
+  };
+
+  const scrollToBottom = (smooth = true) => {
+    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+    setShowJumpToLatest(false);
+    isNearBottomRef.current = true;
+  };
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isNearBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages, isLoading]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -72,50 +104,99 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
       e.preventDefault();
       if (!isLoading && composerText.trim()) {
         onSendMessage(composerText);
+        if (composerRef.current) {
+          composerRef.current.style.height = 'auto';
+        }
       }
     }
   };
 
-  const renderMessageContent = (msg: ChatMessage) => {
+  const handleChipClick = (chipText: string) => {
+    setUsedChips((prev) => [...prev, chipText]);
+    onSendMessage(chipText);
+  };
+
+  // Helper to determine if timestamp should show (> 5 minutes apart from previous message)
+  const shouldShowTimestamp = (currMsg: ChatMessage, prevMsg?: ChatMessage) => {
+    if (!prevMsg) return true;
+    if (!currMsg.createdAt || !prevMsg.createdAt) {
+      return currMsg.timestamp !== prevMsg.timestamp;
+    }
+    const tCurr = typeof currMsg.createdAt === 'number' ? currMsg.createdAt : new Date(currMsg.createdAt).getTime();
+    const tPrev = typeof prevMsg.createdAt === 'number' ? prevMsg.createdAt : new Date(prevMsg.createdAt).getTime();
+    if (isNaN(tCurr) || isNaN(tPrev)) return true;
+    return Math.abs(tCurr - tPrev) >= 5 * 60 * 1000;
+  };
+
+  const renderMessageContent = (msg: ChatMessage, index: number) => {
     const isUser = msg.sender === 'user';
+    const prevMsg = index > 0 ? messages[index - 1] : undefined;
+    // Group assistant avatars: only render avatar on the first message of a consecutive assistant run
+    const isFirstInAssistantRun = !isUser && (!prevMsg || prevMsg.sender !== 'agent');
+    const showTimestamp = shouldShowTimestamp(msg, prevMsg);
 
     return (
       <div
         key={msg.id}
-        className={`flex gap-3 items-end ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
+        className={`flex gap-3 items-start ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
       >
         {!isUser && (
-          <div className="w-8 h-8 rounded-full bg-[--brand] flex items-center justify-center flex-shrink-0 text-white shadow-xs">
-            <Leaf className="w-4 h-4" />
-          </div>
+          isFirstInAssistantRun ? (
+            <div className="w-8 h-8 rounded-full bg-[--brand] flex items-center justify-center flex-shrink-0 text-white shadow-xs mt-0.5">
+              <Leaf className="w-4 h-4" />
+            </div>
+          ) : (
+            <div className="w-8 h-8 flex-shrink-0" />
+          )
         )}
 
         <div className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[78%]`}>
-          {msg.content && (
-            <div
-              className={`px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                isUser
-                  ? 'bg-[--brand] text-white rounded-[18px] rounded-br-xs shadow-xs font-medium'
-                  : 'bg-[--surface] text-[--ink] rounded-[18px] rounded-bl-xs border border-[--line] shadow-card'
-              }`}
-            >
-              <p>{msg.content}</p>
-
-              {/* Tool Calls audit badge */}
-              {msg.toolCalls && msg.toolCalls.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-[--line]/40 space-y-1">
-                  {msg.toolCalls.map((tc, idx) => (
-                    <div
-                      key={idx}
-                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[--brand-soft] text-[--brand] text-[10px] font-mono mr-1"
+          {msg.isError ? (
+            <div className="px-4 py-3 text-sm leading-relaxed rounded-[18px] rounded-bl-xs border border-rose-200 dark:border-rose-900/40 bg-rose-50/80 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200 shadow-xs">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 mt-0.5 flex-shrink-0" />
+                <div className="space-y-2">
+                  <p className="text-xs sm:text-sm font-medium">{msg.content}</p>
+                  {msg.retryText && (
+                    <button
+                      type="button"
+                      onClick={() => onSendMessage(msg.retryText!)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                     >
-                      <Sparkles className="w-3 h-3" />
-                      <span>{tc.toolName}</span>
-                    </div>
-                  ))}
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Retry</span>
+                    </button>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
+          ) : (
+            msg.content && (
+              <div
+                className={`px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                  isUser
+                    ? 'bg-[--brand] text-white rounded-[18px] rounded-br-xs shadow-xs font-medium'
+                    : 'bg-[--surface] text-[--ink] rounded-[18px] rounded-bl-xs border border-[--line] shadow-card'
+                }`}
+              >
+                <p>{msg.content}</p>
+
+                {/* Tool Calls audit badge */}
+                {msg.toolCalls && msg.toolCalls.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-[--line]/40 space-y-1">
+                    {msg.toolCalls.map((tc, idx) => (
+                      <div
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[--brand-soft] text-[--brand] text-[10px] font-mono mr-1"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>{tc.toolName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
           )}
 
           {/* Cards attached to Agent Message */}
@@ -184,11 +265,17 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
             </div>
           )}
 
-          <span className="text-[10px] text-[--mut] px-1 font-mono">{msg.timestamp}</span>
+          {showTimestamp && (
+            <span className="text-[10px] text-[--mut] px-1 select-none font-sans">
+              {msg.timestamp}
+            </span>
+          )}
         </div>
       </div>
     );
   };
+
+  const visiblePromptChips = PROMPT_CHIPS.filter((q) => !usedChips.includes(q));
 
   return (
     <div className="flex-1 flex flex-col h-full min-h-0 bg-[--bg] relative overflow-hidden">
@@ -226,7 +313,9 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
 
       {/* ── Messages Canvas ────────────────────────────────────────────────── */}
       <div
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain overflow-x-hidden px-4 py-4 space-y-4"
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain overflow-x-hidden px-4 py-4 space-y-4 relative"
         role="log"
         aria-live="polite"
       >
@@ -265,8 +354,8 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
             {messages.map(renderMessageContent)}
 
             {isLoading && (
-              <div className="flex gap-3 items-end">
-                <div className="w-8 h-8 rounded-full bg-[--brand] flex items-center justify-center text-white">
+              <div className="flex gap-3 items-start">
+                <div className="w-8 h-8 rounded-full bg-[--brand] flex items-center justify-center text-white mt-0.5 shadow-xs">
                   <Leaf className="w-4 h-4" />
                 </div>
                 <div className="px-4 py-3 bg-[--surface] border border-[--line] rounded-[18px] rounded-bl-xs shadow-card">
@@ -280,28 +369,42 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
             <div ref={messagesEndRef} />
           </div>
         )}
+
+        {/* Floating Jump to Latest button */}
+        {showJumpToLatest && (
+          <button
+            type="button"
+            onClick={() => scrollToBottom(true)}
+            className="sticky bottom-4 ml-auto mr-2 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[--surface] border border-[--line] text-xs font-semibold text-[--ink] shadow-lg hover:bg-[--surface-2] transition-all cursor-pointer z-30"
+            aria-label="Jump to latest message"
+          >
+            <span className="w-2 h-2 rounded-full bg-[--brand] animate-pulse" />
+            <span>Jump to latest</span>
+            <ArrowDown className="w-3.5 h-3.5 text-[--mut]" />
+          </button>
+        )}
       </div>
 
       {/* ── Composer Bar ───────────────────────────────────────────────────── */}
       <div className="bg-[--surface]/95 backdrop-blur-md border-t border-[--line] px-4 py-3 flex-shrink-0 z-20 shadow-md">
         <div className="max-w-[760px] mx-auto space-y-2">
-          {/* Quick suggestion prompt chips */}
-          <div
-            className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {['Quick Paneer Pulao', 'Dal Tadka for 2', 'Weekly budget ₹1500', 'High protein veg'].map(
-              (q) => (
+          {/* Quick suggestion prompt chips (hide on click) */}
+          {visiblePromptChips.length > 0 && (
+            <div
+              className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {visiblePromptChips.map((q) => (
                 <button
                   key={q}
-                  onClick={() => onSendMessage(q)}
+                  onClick={() => handleChipClick(q)}
                   className="flex-shrink-0 px-3 py-1 rounded-full bg-[--surface-2] hover:bg-[--brand-soft] text-[--mut] hover:text-[--brand] text-[11px] font-medium transition-colors cursor-pointer"
                 >
                   {q}
                 </button>
-              )
-            )}
-          </div>
+              ))}
+            </div>
+          )}
 
           <div className="flex items-end gap-2">
             <textarea
@@ -315,7 +418,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
               }}
               onKeyDown={handleKeyDown}
               placeholder="Ask CartPilot for vegetarian groceries, recipes, or budgets…"
-              className="flex-1 resize-none rounded-[var(--radius-input)] bg-[--surface-2] border border-[--line] px-4 py-2.5 text-xs text-[--ink] placeholder:text-[--mut] focus:outline-none focus:ring-2 focus:ring-[--brand]/20 focus:border-[--brand] min-h-[44px] max-h-24 leading-relaxed"
+              className="flex-1 resize-none rounded-[var(--radius-input)] bg-[--surface-2] border border-[--line] px-4 py-2.5 text-xs text-[--ink] placeholder:text-[--mut] focus:outline-none focus:ring-2 focus:ring-[--brand]/20 focus:border-[--brand] min-h-[44px] max-h-24 leading-relaxed font-sans"
             />
 
             {isLoading ? (
@@ -328,7 +431,14 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
               </button>
             ) : (
               <button
-                onClick={() => onSendMessage(composerText)}
+                onClick={() => {
+                  if (composerText.trim()) {
+                    onSendMessage(composerText);
+                    if (composerRef.current) {
+                      composerRef.current.style.height = 'auto';
+                    }
+                  }
+                }}
                 disabled={!composerText.trim()}
                 className="w-11 h-11 rounded-[var(--radius-input)] bg-[--brand] text-white flex items-center justify-center hover:opacity-90 disabled:opacity-40 transition-opacity cursor-pointer flex-shrink-0 shadow-xs"
                 title="Send"
