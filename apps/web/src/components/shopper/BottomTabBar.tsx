@@ -101,17 +101,17 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
           aria-label="AI Assistant"
           onClick={() => onSelectTab('chat')}
           className={`flex-1 flex flex-col items-center justify-center cursor-pointer group active:scale-95 transition-all ${
-            activeTab === 'chat' ? '-mt-1' : '-mt-3.5 sm:-mt-4'
+            activeTab === 'chat' ? 'mt-0' : '-mt-2 sm:-mt-2.5'
           }`}
         >
           <div
-            className={`w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all duration-200 shadow-md border-3 sm:border-4 border-white dark:border-stone-900 group-hover:scale-105 ${
+            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-md border-2 sm:border-3 border-white dark:border-stone-900 group-hover:scale-105 ${
               activeTab === 'chat'
-                ? 'bg-gradient-to-tr from-purple-600 via-purple-500 to-indigo-600 text-white shadow-purple-500/40 ring-2 ring-purple-400/30 scale-105'
+                ? 'bg-gradient-to-tr from-purple-600 via-purple-500 to-indigo-600 text-white shadow-purple-500/40 ring-2 ring-purple-400/30 scale-100'
                 : 'bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-purple-500/25 hover:shadow-purple-500/35'
             }`}
           >
-            <Sparkles className="w-6 h-6 stroke-[2.2px] fill-white/20 drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
+            <Sparkles className="w-5.5 h-5.5 stroke-[2.2px] fill-white/20 drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
           </div>
           <span
             className={`text-[11px] tracking-tight mt-0.5 font-semibold transition-colors ${

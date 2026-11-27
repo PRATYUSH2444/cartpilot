@@ -58,7 +58,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onOpenAddressSelector,
   onOrderSuccess,
   token,
-  walletBalance = 349.0,
+  walletBalance = 0,
   onDeductWallet,
   initialDeliverySlot = 'morning',
   appliedCoupon,

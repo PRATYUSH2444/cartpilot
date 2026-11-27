@@ -217,8 +217,59 @@ export const ShopperWorkspace: React.FC = () => {
   const [isUnserviceableModalOpen, setIsUnserviceableModalOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number>(() => {
     const saved = localStorage.getItem('cartpilot_wallet_balance');
-    return saved ? parseFloat(saved) : 349.0;
+    return saved ? parseFloat(saved) : 0;
   });
+
+  // Authoritative real-time ledger wallet sync via REST & WebSocket
+  useEffect(() => {
+    if (!token) return;
+
+    // 1. Fetch initial live balance from ledger API
+    authFetch(`${API_BASE}/wallet`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.data?.wallet && typeof data.data.wallet.balancePaise === 'number') {
+          const balRupees = data.data.wallet.balancePaise / 100;
+          setWalletBalance(balRupees);
+          try {
+            localStorage.setItem('cartpilot_wallet_balance', balRupees.toString());
+          } catch {}
+        }
+      })
+      .catch((err) => console.error('Failed to sync wallet balance:', err));
+
+    // 2. Connect to WebSocket for instant live balance updates
+    let ws: WebSocket | null = null;
+    try {
+      const isHttps = window.location.protocol === 'https:';
+      const wsProtocol = isHttps ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.event === 'wallet:updated' && msg.data?.balancePaise !== undefined) {
+            const updatedRupees = msg.data.balancePaise / 100;
+            setWalletBalance(updatedRupees);
+            try {
+              localStorage.setItem('cartpilot_wallet_balance', updatedRupees.toString());
+            } catch {}
+          }
+        } catch {}
+      };
+
+      ws.onerror = () => {
+        // Silent recovery
+      };
+    } catch {}
+
+    return () => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+  }, [token, authFetch]);
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('cartpilot_favorites');
@@ -1501,7 +1552,7 @@ export const ShopperWorkspace: React.FC = () => {
         <main
           className={`flex-1 flex flex-col min-w-0 w-full ${
             activeMobileTab === 'chat'
-              ? 'min-h-0 overflow-hidden pb-[96px] sm:pb-[100px] lg:pb-0'
+              ? 'min-h-0 overflow-hidden pb-0'
               : activeMobileTab === 'cart'
                 ? 'min-h-0 lg:overflow-hidden pb-16 lg:pb-0'
                 : activeMobileTab === 'account'
@@ -1724,6 +1775,7 @@ export const ShopperWorkspace: React.FC = () => {
         onClose={() => setIsWalletOpen(false)}
         balance={walletBalance}
         onAddFunds={handleAddWalletFunds}
+        token={token}
       />
 
       {/* ── Available Coupons & Offers Modal ───────────────────────────────── */}

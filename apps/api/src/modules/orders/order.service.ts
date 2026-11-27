@@ -203,6 +203,22 @@ export class OrderService {
     if ((targetStatus === 'CANCELLED' || targetStatus === 'REJECTED') && order.reservationId) {
       await InventoryService.releaseReservation(order.reservationId);
     }
+    if (targetStatus === 'DELIVERED') {
+      try {
+        const { WalletService } = await import('../wallet/wallet.service.js');
+        await WalletService.evaluateAndCreditCashback(order.userId.toString(), order.pricingSnapshot.totalPaise, order._id.toString());
+      } catch (cashbackErr) {
+        logger.error({ cashbackErr, orderId: order._id }, 'Failed to evaluate cashback on delivery');
+      }
+    }
+    if ((targetStatus === 'CANCELLED' || targetStatus === 'REJECTED') && order.walletAmountPaidPaise && order.walletAmountPaidPaise > 0) {
+      try {
+        const { WalletService } = await import('../wallet/wallet.service.js');
+        await WalletService.refundToWallet(order.userId.toString(), order.walletAmountPaidPaise, order._id.toString());
+      } catch (refundErr) {
+        logger.error({ refundErr, orderId: order._id }, 'Failed to refund to wallet on cancellation');
+      }
+    }
     order.status = targetStatus;
     await order.save();
     logger.info({ orderId: order._id, targetStatus, reason }, 'Order status updated');
@@ -239,6 +255,12 @@ export class OrderService {
     order.status = nextStatus;
     if (nextStatus === 'DELIVERED') {
       order.deliveredAt = new Date();
+      try {
+        const { WalletService } = await import('../wallet/wallet.service.js');
+        await WalletService.evaluateAndCreditCashback(order.userId.toString(), order.pricingSnapshot.totalPaise, order._id.toString());
+      } catch (cashbackErr) {
+        logger.error({ cashbackErr, orderId: order._id }, 'Failed to evaluate cashback on simulated delivery');
+      }
     }
 
     await order.save();

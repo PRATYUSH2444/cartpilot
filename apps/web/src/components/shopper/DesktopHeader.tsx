@@ -57,7 +57,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   onLogout,
   userInitial = 'U',
   userName = 'Customer',
-  walletBalance = 349,
+  walletBalance = 0,
   favoritesCount = 0,
   isDark,
   onToggleTheme,

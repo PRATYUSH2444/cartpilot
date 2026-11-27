@@ -193,7 +193,7 @@ const UserSchema = new Schema<IUser>(
     },
     walletBalancePaise: {
       type: Number,
-      default: 34900,
+      default: 0,
       min: 0,
     },
     themePreference: {

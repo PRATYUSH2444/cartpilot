@@ -105,9 +105,11 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
   // Auto-resize composer textarea smoothly as user types or when text changes
   useEffect(() => {
     if (composerRef.current) {
-      composerRef.current.style.height = 'auto';
+      composerRef.current.style.height = '44px';
       const scrollH = composerRef.current.scrollHeight;
-      composerRef.current.style.height = `${Math.min(Math.max(scrollH, 48), 128)}px`;
+      if (composerText.trim()) {
+        composerRef.current.style.height = `${Math.min(Math.max(scrollH, 44), 112)}px`;
+      }
     }
   }, [composerText]);
 
@@ -117,7 +119,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
       if (!isLoading && composerText.trim()) {
         onSendMessage(composerText);
         if (composerRef.current) {
-          composerRef.current.style.height = '48px';
+          composerRef.current.style.height = '44px';
         }
       }
     }
@@ -421,7 +423,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
       )}
 
       {/* ── Composer Bar ───────────────────────────────────────────────────── */}
-      <div className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-stone-200/80 dark:border-zinc-800 px-3 sm:px-4 py-2 sm:py-2.5 flex-shrink-0 z-20 shadow-2xs">
+      <div className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-stone-200/80 dark:border-zinc-800 px-3 sm:px-4 pt-2 sm:pt-2.5 pb-[calc(76px+env(safe-area-inset-bottom,0px))] lg:pb-3 flex-shrink-0 z-20 shadow-2xs">
         <div className="max-w-[760px] mx-auto space-y-2">
           {/* Quick suggestion prompt chips (hide on click) */}
           {visiblePromptChips.length > 0 && (
@@ -449,13 +451,13 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
               onChange={(e) => setComposerText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask for groceries, recipes, or meals…"
-              className="flex-1 resize-none rounded-2xl bg-stone-100/90 dark:bg-zinc-900 border border-stone-200/90 dark:border-zinc-800 px-4 py-3 text-[14px] text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 dark:focus:ring-emerald-500/30 min-h-[48px] max-h-32 leading-[22px] font-sans box-border transition-all"
+              className="flex-1 resize-none rounded-2xl bg-stone-100/90 dark:bg-zinc-900 border border-stone-200/90 dark:border-zinc-800 px-4 py-2.5 text-[14px] text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 dark:focus:ring-emerald-500/30 h-[44px] min-h-[44px] max-h-28 leading-[22px] font-sans box-border transition-all"
             />
 
             {isLoading ? (
               <button
                 onClick={onStopGeneration}
-                className="w-12 h-12 rounded-2xl bg-stone-900 hover:bg-black text-white dark:bg-zinc-100 dark:text-zinc-900 flex items-center justify-center transition-all cursor-pointer flex-shrink-0 shadow-sm active:scale-95"
+                className="w-12 h-11 sm:w-12 sm:h-12 rounded-2xl bg-stone-900 hover:bg-black text-white dark:bg-zinc-100 dark:text-zinc-900 flex items-center justify-center transition-all cursor-pointer flex-shrink-0 shadow-sm active:scale-95"
                 title="Stop generation"
                 aria-label="Stop generation"
               >
@@ -467,20 +469,20 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
                   if (composerText.trim()) {
                     onSendMessage(composerText);
                     if (composerRef.current) {
-                      composerRef.current.style.height = '48px';
+                      composerRef.current.style.height = '44px';
                     }
                   }
                 }}
                 disabled={!composerText.trim()}
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 flex-shrink-0 cursor-pointer shadow-sm active:scale-95 ${
+                className={`w-12 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all duration-200 flex-shrink-0 cursor-pointer shadow-sm active:scale-95 ${
                   composerText.trim()
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30 ring-2 ring-emerald-500/30'
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30 ring-2 ring-emerald-500/30'
                     : 'bg-stone-200/80 dark:bg-zinc-800 text-stone-400 dark:text-zinc-600 cursor-not-allowed opacity-60'
                 }`}
                 title="Send message"
                 aria-label="Send message"
               >
-                <Send className="w-5.5 h-5.5 stroke-[2.2px] ml-0.5" />
+                <Send className="w-5.5 h-5.5 stroke-[2.4px] ml-0.5" />
               </button>
             )}
           </div>

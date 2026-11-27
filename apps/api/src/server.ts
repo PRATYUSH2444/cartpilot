@@ -3,6 +3,7 @@ import { env } from './config/env.config.js';
 import { logger } from './common/logging/logger.js';
 import { connectDatabase, disconnectDatabase } from './database/connection.js';
 import { InventoryService } from './modules/inventory/inventory.service.js';
+import { realtimeService } from './modules/realtime/websocket.service.js';
 
 async function bootstrap(): Promise<void> {
   const app = createApp();
@@ -82,6 +83,9 @@ async function bootstrap(): Promise<void> {
       '🚀 CartPilot API Server started successfully'
     );
   });
+
+  // Initialize Real-time WebSocket Gateway for live wallet & order events
+  realtimeService.initialize(server);
 
   // Graceful shutdown handling
   async function shutdown(signal: string): Promise<void> {

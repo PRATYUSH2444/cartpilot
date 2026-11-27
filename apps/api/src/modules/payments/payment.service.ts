@@ -191,6 +191,19 @@ export class PaymentService {
     payment.status = 'PAID';
     await payment.save();
 
+    // If paid via CartPilot Wallet, execute real atomic ledger debit
+    if (razorpayPaymentId.startsWith('wallet_')) {
+      const { WalletService } = await import('../wallet/wallet.service.js');
+      const debitIdempotencyKey = `wallet_debit_${order._id}_${order.pricingSnapshot.totalPaise}`;
+      await WalletService.debitForOrder(
+        order.userId.toString(),
+        order.pricingSnapshot.totalPaise,
+        order._id.toString(),
+        debitIdempotencyKey
+      );
+      order.walletAmountPaidPaise = order.pricingSnapshot.totalPaise;
+    }
+
     // 3. Mark Order as PAID & auto-confirm to CONFIRMED
     order.status = 'CONFIRMED';
     order.paymentId = payment._id;

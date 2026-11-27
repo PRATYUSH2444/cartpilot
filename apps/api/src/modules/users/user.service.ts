@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { UserModel, UserGender, INotificationPreferences } from './user.model.js';
 import { AddressModel } from './address.model.js';
+import { WalletService } from '../wallet/wallet.service.js';
 import { NotFoundError, BadRequestError, UnauthorizedError } from '../../common/errors/app-error.js';
 
 export interface UpdateProfileDTO {
@@ -137,16 +138,11 @@ export class UserService {
   }
 
   public static async getWallet(userId: string): Promise<{ balancePaise: number; balanceRupees: number; currency: string }> {
-    const userObjectId = new mongoose.Types.ObjectId(userId);
-    const user = await UserModel.findById(userObjectId);
-    if (!user) {
-      throw new NotFoundError('User not found');
-    }
-    const balancePaise = user.walletBalancePaise ?? 34900;
+    const { wallet } = await WalletService.getOrCreateWallet(userId);
     return {
-      balancePaise,
-      balanceRupees: balancePaise / 100,
-      currency: 'INR',
+      balancePaise: wallet.balancePaise,
+      balanceRupees: wallet.balancePaise / 100,
+      currency: wallet.currency || 'INR',
     };
   }
 
@@ -157,24 +153,20 @@ export class UserService {
     if (!amountPaise || amountPaise <= 0) {
       throw new BadRequestError('Invalid top-up amount');
     }
-    const userObjectId = new mongoose.Types.ObjectId(userId);
-    const user = await UserModel.findById(userObjectId);
-    if (!user) {
-      throw new NotFoundError('User not found');
-    }
-
-    // Limited time offer: Add ₹999 (99900 paise) or more, get ₹100 (10000 paise) instant bonus
-    const bonusPaise = amountPaise >= 99900 ? 10000 : 0;
-    const totalCredit = amountPaise + bonusPaise;
-
-    user.walletBalancePaise = (user.walletBalancePaise || 0) + totalCredit;
-    await user.save();
+    await WalletService.adminAdjust(
+      'SYSTEM',
+      userId,
+      amountPaise,
+      'CREDIT',
+      'Wallet balance top-up'
+    );
+    const { wallet } = await WalletService.getOrCreateWallet(userId);
 
     return {
-      balancePaise: user.walletBalancePaise,
-      balanceRupees: user.walletBalancePaise / 100,
+      balancePaise: wallet.balancePaise,
+      balanceRupees: wallet.balancePaise / 100,
       addedPaise: amountPaise,
-      bonusPaise,
+      bonusPaise: 0,
       currency: 'INR',
     };
   }

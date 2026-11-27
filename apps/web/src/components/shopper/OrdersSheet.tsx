@@ -152,7 +152,7 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-xs text-ink">
+                        <span className="font-mono font-bold text-xs text-stone-900 dark:text-white">
                           {order.orderNumber}
                         </span>
                         <span
@@ -163,32 +163,32 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
                           {order.status}
                         </span>
                       </div>
-                      <span className="text-[11px] text-mut font-mono mt-0.5 block">
+                      <span className="text-[11px] text-stone-500 dark:text-zinc-400 font-mono mt-0.5 block">
                         Placed: {order.placedAt || (order as any).createdAt ? new Date(order.placedAt || (order as any).createdAt).toLocaleString() : 'Recent'}
                       </span>
                     </div>
 
                     <div className="text-right">
-                      <span className="font-display font-black text-sm text-ink block">
+                      <span className="font-display font-black text-sm text-stone-900 dark:text-white block">
                         ₹{totalRupees}
                       </span>
-                      <span className="text-[10px] text-mut font-mono">
+                      <span className="text-[10px] text-stone-500 dark:text-zinc-400 font-mono">
                         {order.items?.length || 0} items
                       </span>
                     </div>
                   </div>
 
                   {/* Items summary */}
-                  <div className="p-2.5 rounded-xl bg-card border border-brd text-xs space-y-1">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 text-xs space-y-1">
                     {order.items?.map((it, idx) => (
                       <div key={idx} className="flex items-center justify-between text-xs py-0.5">
-                        <span className="text-ink truncate mr-2">
+                        <span className="text-stone-900 dark:text-zinc-100 truncate mr-2">
                           {it.name}{' '}
-                          <span className="text-mut font-mono">
+                          <span className="text-stone-500 dark:text-zinc-400 font-mono">
                             ({it.packageSize} {it.packageUnit}) × {it.quantity}
                           </span>
                         </span>
-                        <span className="font-mono text-ink text-[11px] flex-shrink-0">
+                        <span className="font-mono text-stone-900 dark:text-white text-[11px] flex-shrink-0">
                           ₹{(it.subtotalPaise / 100).toFixed(2)}
                         </span>
                       </div>
@@ -216,9 +216,9 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
                     <button
                       onClick={() => handleVerifyProof(order._id)}
                       disabled={verifyingOrderId === order._id}
-                      className="py-2.5 px-3 rounded-xl border border-brd bg-card hover:bg-paper text-ink font-mono text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer min-h-[44px]"
+                      className="py-2.5 px-3 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-stone-50 dark:hover:bg-zinc-700 text-stone-900 dark:text-white font-mono text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer min-h-[44px]"
                     >
-                      <ShieldCheck className="w-3.5 h-3.5 text-acc" />
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                       <span>{verifyingOrderId === order._id ? 'Verifying...' : 'Integrity Receipt'}</span>
                     </button>
                   </div>
@@ -230,10 +230,10 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Order Record Integrity Receipt Verified</span>
                       </div>
-                      <p className="text-[10px] text-mut font-sans pt-0.5">
+                      <p className="text-[10px] text-stone-500 dark:text-zinc-400 font-sans pt-0.5">
                         Verifies order snapshot and audit ledger have not been altered on the server (internal integrity verification).
                       </p>
-                      <div className="text-[10px] text-mut space-y-0.5 pt-1">
+                      <div className="text-[10px] text-stone-500 dark:text-zinc-400 space-y-0.5 pt-1">
                         <div>Verified Events: {proof.totalAuditEventsVerified}</div>
                         <div className="truncate">Snapshot Hash: {proof.canonicalSnapshotHash}</div>
                       </div>

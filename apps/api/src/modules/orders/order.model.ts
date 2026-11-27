@@ -65,6 +65,7 @@ export interface IOrder extends Document {
   approvalSnapshot?: IApprovalSnapshot;
   reservationId?: mongoose.Types.ObjectId;
   paymentId?: mongoose.Types.ObjectId;
+  walletAmountPaidPaise?: number;
   placedAt: Date;
   deliveredAt?: Date;
   createdAt: Date;
@@ -266,6 +267,11 @@ const OrderSchema = new Schema<IOrder>(
     paymentId: {
       type: Schema.Types.ObjectId,
       ref: 'Payment',
+    },
+    walletAmountPaidPaise: {
+      type: Number,
+      min: 0,
+      default: 0,
     },
     placedAt: {
       type: Date,

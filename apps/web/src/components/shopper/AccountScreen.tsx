@@ -67,7 +67,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   user,
   orders,
   selectedAddress,
-  walletBalance = 349.0,
+  walletBalance = 0,
   favoritesCount = 0,
   onOpenOrders,
   onOpenAddresses,
@@ -703,22 +703,22 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                               className={`w-full p-3.5 sm:p-4 flex items-center justify-between text-left text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
                                 isExpanded
                                   ? 'bg-emerald-700 text-white dark:bg-emerald-600 dark:text-white'
-                                  : 'bg-stone-50 text-stone-900 hover:bg-stone-100 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800'
+                                  : 'bg-stone-50 text-stone-900 hover:bg-stone-100 dark:bg-stone-900 dark:text-white dark:hover:bg-stone-850'
                               }`}
                             >
-                              <span className="pr-3 leading-snug">{faq.q}</span>
+                              <span className="pr-3 leading-snug text-stone-900 dark:text-white">{faq.q}</span>
                               <ChevronDown
                                 className={`w-4 h-4 transition-transform duration-200 flex-shrink-0 ${
                                   isExpanded
                                     ? 'rotate-180 text-white'
-                                    : 'text-stone-400 dark:text-zinc-400'
+                                    : 'text-stone-400 dark:text-stone-300'
                                 }`}
                               />
                             </button>
 
                             {/* Answer Body */}
                             {isExpanded && (
-                              <div className="bg-white text-stone-700 dark:bg-zinc-950 dark:text-zinc-300 px-4 py-3.5 text-xs sm:text-sm leading-relaxed border-t border-stone-200/80 dark:border-zinc-800 animate-in fade-in-50 duration-150">
+                              <div className="bg-white text-stone-700 dark:bg-stone-900 dark:text-stone-300 px-4 py-3.5 text-xs sm:text-sm leading-relaxed border-t border-stone-200/80 dark:border-stone-800 animate-in fade-in-50 duration-150">
                                 {faq.a}
                               </div>
                             )}

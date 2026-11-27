@@ -59,6 +59,8 @@ export interface AuthUserDTO {
   mustChangePassword?: boolean;
   isEmailVerified?: boolean;
   isMfaVerified?: boolean;
+  experienceRating?: number;
+  hasSeenTour?: boolean;
 }
 
 export interface AuthResult {
@@ -1220,6 +1222,8 @@ export class AuthService {
       staffPermissions,
       mustChangePassword: user.mustChangePassword,
       isEmailVerified: user.isEmailVerified,
+      experienceRating: user.experienceRating,
+      hasSeenTour: user.hasSeenTour,
     };
   }
 
@@ -1291,6 +1295,8 @@ export class AuthService {
       staffPermissions,
       mustChangePassword: user.mustChangePassword,
       isEmailVerified: user.isEmailVerified,
+      experienceRating: user.experienceRating,
+      hasSeenTour: user.hasSeenTour,
     };
   }
 

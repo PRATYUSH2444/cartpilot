@@ -124,7 +124,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   favorites = [],
   onToggleFavorite,
   userInitial = 'U',
-  walletBalance = 349,
+  walletBalance = 0,
   onOpenWallet,
   onOpenWishlist,
   onOpenNotifications,

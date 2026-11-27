@@ -337,17 +337,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           )}
 
           {isLoading ? (
-            <div className="py-12 flex flex-col items-center justify-center gap-2 text-mut">
-              <Loader2 className="w-6 h-6 animate-spin text-acc" />
+            <div className="py-12 flex flex-col items-center justify-center gap-2 text-stone-400 dark:text-zinc-400">
+              <Loader2 className="w-6 h-6 animate-spin text-emerald-600 dark:text-emerald-400" />
               <span className="text-xs">Loading profile data...</span>
             </div>
           ) : activeTab === 'PROFILE' ? (
             <form onSubmit={handleSaveProfile} className="space-y-4">
               {/* Full Name */}
               <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Full Name</label>
+                <label className="block text-xs font-semibold text-stone-900 dark:text-white mb-1">Full Name</label>
                 <div className="relative">
-                  <User className="w-4 h-4 text-mut absolute left-3 top-2.5" />
+                  <User className="w-4 h-4 text-stone-400 dark:text-zinc-500 absolute left-3 top-2.5" />
                   <input
                     type="text"
                     required
