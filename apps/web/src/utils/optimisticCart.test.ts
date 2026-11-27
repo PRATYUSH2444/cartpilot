@@ -4,7 +4,7 @@ import {
   calculateOptimisticPricing,
   updateCartOptimistically,
 } from './optimisticCart';
-import { CartData, PopulatedCartItem } from '../types';
+import { PopulatedCartItem } from '../types';
 
 describe('Optimistic Cart & Pricing Engine', () => {
   it('correctly formats paise to rupees', () => {
