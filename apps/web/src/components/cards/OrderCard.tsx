@@ -32,7 +32,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const { authFetch } = useAuth();
   // Defensive fallbacks for all order fields to prevent runtime errors
   const orderId = order?._id || (order as any)?.orderId || '';
-  const orderNumber = order?.orderNumber || (orderId ? `ORD-${orderId.slice(-6).toUpperCase()}` : 'ORD-PENDING');
+  const orderNumber = order?.orderNumber || (orderId ? `ORD-${String(orderId).slice(-6).toUpperCase()}` : 'ORD-PENDING');
   const status: string = order?.status || 'CONFIRMED';
   
   const pricing = order?.pricingSnapshot || {

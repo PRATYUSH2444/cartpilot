@@ -26,9 +26,15 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
 }) => {
   if (!isOpen || !order) return null;
 
-  const orderNum = order.orderNumber || `ORD-${order._id.slice(-6).toUpperCase()}`;
-  const totalRupees = ((order.pricingSnapshot?.totalPaise || 0) / 100).toFixed(0);
-  const itemsCount = order.items?.length || 0;
+  const resolvedOrder: any = (order as any)?.order || order;
+  const orderId = resolvedOrder._id || resolvedOrder.id || '';
+  const orderNum =
+    resolvedOrder.orderNumber ||
+    (orderId ? `ORD-${String(orderId).slice(-6).toUpperCase()}` : 'ORD-CONFIRMED');
+  const totalRupees = ((resolvedOrder.pricingSnapshot?.totalPaise || 0) / 100).toFixed(0);
+  const itemsCount = resolvedOrder.items?.length || 0;
+  const deliverySlotDisplay =
+    resolvedOrder.deliverySlot || 'Next-Day Morning Shift (6:00 AM – 9:00 AM)';
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
@@ -43,7 +49,7 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
               </span>
             </h2>
             <p className="text-[10px] text-[--mut] font-medium">
-              Scheduled Slot: {order.deliverySlot || 'Next-Day Morning Shift (6:00 AM – 9:00 AM)'}
+              Scheduled Slot: {deliverySlotDisplay}
             </p>
           </div>
           <div className="flex items-center gap-1">
@@ -101,7 +107,7 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
                 <Store className="w-4 h-4" />
               </div>
               <span className="text-[9px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded-full mt-1">
-                Store
+                Patna Hub
               </span>
             </div>
 
@@ -111,7 +117,7 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
                 <Truck className="w-4 h-4" />
               </div>
               <span className="text-[9px] font-bold text-white bg-[--brand] px-1.5 py-0.2 rounded-full mt-1 shadow-xs">
-                Arjun (Rider)
+                Express Fleet
               </span>
             </div>
 
@@ -121,7 +127,7 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
                 <Home className="w-4 h-4" />
               </div>
               <span className="text-[9px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded-full mt-1">
-                Your Home
+                Your Address
               </span>
             </div>
           </div>
@@ -134,19 +140,19 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
               </div>
               <div>
                 <h4 className="font-heading font-bold text-xs text-[--ink]">
-                  Arriving in 12 min
+                  Scheduled for {deliverySlotDisplay}
                 </h4>
-                <p className="text-[11px] text-[--mut] mt-0.5">Your order is on the way</p>
+                <p className="text-[11px] text-[--mut] mt-0.5">Patna Central Farm Harvest Hub to doorstep</p>
                 <p className="text-[10px] text-[--brand] font-semibold mt-0.5">
-                  Rider: Arjun · KA 05 AB 1234
+                  Dispatch: Patna Central Hub (BR 01)
                 </p>
               </div>
             </div>
 
             <a
-              href="tel:+919876543210"
+              href="tel:+918409826244"
               className="w-10 h-10 rounded-full bg-[--brand] text-white flex items-center justify-center shadow-xs hover:opacity-90 transition-opacity cursor-pointer flex-shrink-0"
-              title="Call Delivery Partner"
+              title="Contact Support"
             >
               <Phone className="w-4 h-4" />
             </a>
@@ -166,7 +172,7 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
                 </div>
                 <div>
                   <h5 className="font-heading font-bold text-xs text-[--ink]">Order Confirmed</h5>
-                  <p className="text-[10px] text-[--mut]">10:12 AM · Merchant acknowledged items</p>
+                  <p className="text-[10px] text-[--mut]">Farm harvested harvest allocated</p>
                 </div>
               </div>
 
@@ -176,8 +182,8 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
                   <Check className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <h5 className="font-heading font-bold text-xs text-[--ink]">Packed at Store</h5>
-                  <p className="text-[10px] text-[--mut]">10:18 AM · Quality and pure veg verified</p>
+                  <h5 className="font-heading font-bold text-xs text-[--ink]">Quality & Veg Verified</h5>
+                  <p className="text-[10px] text-[--mut]">Packed securely at Patna Central Hub</p>
                 </div>
               </div>
 
@@ -188,10 +194,10 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
                 </div>
                 <div>
                   <h5 className="font-heading font-bold text-xs text-[--brand]">
-                    Out for Delivery
+                    Scheduled for Delivery
                   </h5>
                   <p className="text-[10px] text-[--mut]">
-                    10:25 AM · Rider Arjun picked up groceries
+                    Out for delivery on {deliverySlotDisplay}
                   </p>
                 </div>
               </div>
@@ -203,9 +209,9 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
                 </div>
                 <div>
                   <h5 className="font-heading font-semibold text-xs text-[--ink]">
-                    Arriving at Doorstep
+                    Doorstep Delivery
                   </h5>
-                  <p className="text-[10px] text-[--mut]">Estimated at 10:37 AM</p>
+                  <p className="text-[10px] text-[--mut]">Direct handover to your doorstep</p>
                 </div>
               </div>
             </div>

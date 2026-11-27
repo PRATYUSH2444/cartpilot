@@ -214,7 +214,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         await new Promise((r) => setTimeout(r, 600));
 
         // Order placed successfully
-        onOrderSuccess(verifyData.data?.order || verifyData.data || order);
+        const resolvedOrder = verifyData.data?.order || verifyData.data || order;
+        if (resolvedOrder && order) {
+          if (!resolvedOrder.orderNumber && order.orderNumber) {
+            resolvedOrder.orderNumber = order.orderNumber;
+          }
+          if (!resolvedOrder._id && order._id) {
+            resolvedOrder._id = order._id;
+          }
+          if (!resolvedOrder.deliverySlot && fullSlotString) {
+            resolvedOrder.deliverySlot = fullSlotString;
+          }
+        }
+        onOrderSuccess(resolvedOrder);
         setProcessingStep('idle');
         onClose();
       };
@@ -234,7 +246,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               amount: razorpay.amountPaise || Math.round(pricing.total * 100),
               currency: razorpay.currency || 'INR',
               name: 'CartPilot',
-              description: `Order #${order.orderNumber || order._id.slice(-6).toUpperCase()}`,
+              description: `Order #${order?.orderNumber || (order?._id ? String(order._id).slice(-6).toUpperCase() : 'NEW')}`,
               order_id: razorpay.orderId,
               prefill: {
                 name: user?.name || '',

@@ -1226,11 +1226,17 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
-  const handleOrderSuccess = (order: OrderData) => {
-    setOrders((prev) => [order, ...prev]);
-    setTrackedOrder(order);
+  const handleOrderSuccess = (orderPayload: any) => {
+    const rawOrder: OrderData = orderPayload?.order || orderPayload;
+    if (!rawOrder) return;
+
+    setOrders((prev) => [rawOrder, ...prev.filter((o) => o?._id !== rawOrder._id)]);
+    setTrackedOrder(rawOrder);
     setIsLiveTrackingOpen(true);
-    showBanner('success', `Order #${order.orderNumber} placed successfully!`);
+    const orderNum =
+      rawOrder.orderNumber ||
+      (rawOrder._id ? String(rawOrder._id).slice(-6).toUpperCase() : 'CONFIRMED');
+    showBanner('success', `Order #${orderNum} placed successfully!`);
     // Refresh cart
     authFetch(`${API_BASE}/cart`)
       .then((r) => r.json())
