@@ -80,8 +80,8 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex ${
-        isSlideOver ? 'justify-end' : 'items-end sm:items-center justify-center p-0 sm:p-4'
+      className={`fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex ${
+        isSlideOver ? 'justify-end' : 'items-center justify-center p-3 sm:p-4'
       }`}
       onClick={onClose}
       role="dialog"
@@ -93,9 +93,9 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
         className={`w-full ${
           isSlideOver
             ? 'max-w-xl h-full'
-            : 'sm:max-w-2xl max-h-[90dvh] sm:rounded-3xl rounded-t-3xl'
+            : 'max-w-2xl max-h-[88dvh] rounded-3xl'
         } bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 text-stone-900 dark:text-zinc-100 shadow-2xl flex flex-col overflow-hidden animate-in ${
-          isSlideOver ? 'slide-in-from-right' : 'slide-in-from-bottom'
+          isSlideOver ? 'slide-in-from-right' : 'zoom-in-95'
         } duration-200`}
         onClick={(e) => e.stopPropagation()}
       >

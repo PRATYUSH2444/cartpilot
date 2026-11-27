@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE } from '../../config/api';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -50,6 +51,9 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   token,
 }) => {
   const { authFetch, user } = useAuth();
+
+  // Bulletproof body scroll lock for mobile and desktop
+  useScrollLock(isOpen, { onEscape: onClose });
 
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTopup, setSelectedTopup] = useState<number>(100);
@@ -330,9 +334,20 @@ export const WalletModal: React.FC<WalletModalProps> = ({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full sm:max-w-md bg-stone-950 text-stone-100 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-stone-800/80 overflow-hidden flex flex-col max-h-[92dvh] animate-in zoom-in-95 duration-200">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="wallet-modal-title"
+    >
+      <div
+        className="relative w-full max-w-md bg-stone-950 text-stone-100 rounded-3xl shadow-2xl border border-stone-800/80 overflow-hidden flex flex-col max-h-[88dvh] animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* ── Top Header ────────────────────────────────────────────────────── */}
         <div className="px-5 py-4 border-b border-stone-800/80 flex items-center justify-between bg-stone-900/60 backdrop-blur-sm flex-shrink-0">
           <div className="flex items-center gap-2.5">
@@ -341,7 +356,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-extrabold text-base text-white tracking-tight leading-none">
+                <h3 id="wallet-modal-title" className="font-extrabold text-base text-white tracking-tight leading-none">
                   CartPilot Wallet
                 </h3>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800/60">
@@ -377,7 +392,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         </div>
 
         {/* ── Scrollable Body ────────────────────────────────────────────────── */}
-        <div className="p-5 overflow-y-auto space-y-4 flex-1 min-h-0">
+        <div className="p-5 overflow-y-auto space-y-4 flex-1 min-h-0 overscroll-contain">
           {/* Obsidian Black Balance Card (Premium Fintech Aesthetic) */}
           <div className="relative rounded-3xl bg-gradient-to-br from-stone-900 via-stone-900 to-stone-950 border border-stone-800/90 p-5 shadow-xl overflow-hidden">
             {/* Subtle glow accent */}

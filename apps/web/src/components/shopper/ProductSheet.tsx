@@ -49,7 +49,7 @@ export const ProductSheet: React.FC<ProductSheetProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
+      className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -57,7 +57,7 @@ export const ProductSheet: React.FC<ProductSheetProps> = ({
     >
       <div
         data-testid="product-sheet"
-        className="w-full sm:max-w-lg bg-surface border border-line rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] animate-slide-up"
+        className="w-full max-w-lg bg-surface border border-line rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header with Back / Close and Wishlist */}

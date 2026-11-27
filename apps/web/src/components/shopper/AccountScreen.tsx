@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { OrderData, UserAddress } from '../../types';
 import { API_BASE } from '../../config/api';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface AccountScreenProps {
   user: {
@@ -188,6 +189,15 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+
+  // Lock body scroll when any submodal in Account screen is open
+  const isAnyAccountModalOpen = Boolean(
+    isHelpCenterOpen ||
+    isRatingModalOpen ||
+    activeInfoModal ||
+    isEmailModalOpen
+  );
+  useScrollLock(isAnyAccountModalOpen);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -783,7 +793,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
 
       {/* ── Help Center Modal ──────────────────────────────────────────────── */}
       {isHelpCenterOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
           <div className="relative w-full max-w-lg bg-white dark:bg-stone-900 rounded-3xl shadow-2xl border border-stone-200 dark:border-stone-800 p-6 sm:p-7 space-y-5 animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-stone-200 dark:border-stone-800 pb-4">
@@ -978,7 +988,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
 
       {/* ── Rate Experience Modal ──────────────────────────────────────────── */}
       {isRatingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
           <div className="relative w-full max-w-md bg-white dark:bg-stone-900 rounded-3xl shadow-2xl border border-stone-200 dark:border-stone-800 p-7 text-center space-y-5 animate-in zoom-in-95">
             <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-500 mx-auto flex items-center justify-center">
               <Star className="w-8 h-8 fill-amber-500 text-amber-500" />
@@ -1048,7 +1058,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
 
       {/* ── Info Sheet Modal ───────────────────────────────────────────────── */}
       {activeInfoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
           <div className="relative w-full max-w-xl bg-white dark:bg-stone-900 rounded-3xl shadow-2xl border border-stone-200 dark:border-stone-800 p-7 space-y-5 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-stone-200 dark:border-stone-800 pb-4">
               <h3 className="font-extrabold text-lg text-stone-900 dark:text-white">
@@ -1080,7 +1090,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
 
       {/* ── Email Verification Modal ─────────────────────────────────────── */}
       {isEmailModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
           <div className="relative w-full max-w-md bg-white dark:bg-stone-900 rounded-3xl shadow-2xl border border-stone-200 dark:border-stone-800 p-6 sm:p-7 space-y-5 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
               <div className="flex items-center gap-2.5">

@@ -41,6 +41,7 @@ import { WalletModal } from '../../components/shopper/WalletModal';
 import { CouponsModal } from '../../components/shopper/CouponsModal';
 import { validateAndComputeCoupon } from '../../config/couponConfig';
 import { NotificationsModal } from '../../components/shopper/NotificationsModal';
+import { useScrollLock } from '../../hooks/useScrollLock';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { updateCartOptimistically, calculateOptimisticPricing } from '../../utils/optimisticCart';
 
@@ -383,6 +384,31 @@ export const ShopperWorkspace: React.FC = () => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isIntegrationsModalOpen, setIsIntegrationsModalOpen] = useState(false);
   const [isContextPanelCollapsed, setIsContextPanelCollapsed] = useState(false);
+
+  // Global indicator for whether any modal, drawer, or popup surface is currently open
+  const isAnyModalOpen = Boolean(
+    isProductSheetOpen ||
+    isCheckoutModalOpen ||
+    isLiveTrackingOpen ||
+    isGlobalSearchOpen ||
+    isAddressModalOpen ||
+    isWishlistOpen ||
+    isWalletOpen ||
+    isCouponsOpen ||
+    isNotificationsOpen ||
+    isOrdersSheetOpen ||
+    isRulesSheetOpen ||
+    isProfileModalOpen ||
+    isIntegrationsModalOpen ||
+    isConversationDrawerOpen ||
+    isPhoneLoginOpen ||
+    isUnserviceableModalOpen ||
+    isWelcomeSheetOpen ||
+    isTourOpen
+  );
+
+  // Freeze background page scroll completely on mobile touch and desktop wheel
+  useScrollLock(isAnyModalOpen);
 
   // Optimistic Cart & Background Sync state references
   const lastConfirmedCartRef = useRef<CartData | null>(null);
@@ -1746,7 +1772,12 @@ export const ShopperWorkspace: React.FC = () => {
       </div>
 
       {/* ── Static Bottom 5-Destination Navigation Bar (Visible only on mobile/tablet) ────── */}
-      <div className="block lg:hidden fixed bottom-0 left-0 right-0 z-40 w-full bg-white dark:bg-stone-900 border-t border-stone-200/80 dark:border-stone-800">
+      <div
+        className={`block lg:hidden fixed bottom-0 left-0 right-0 z-40 w-full bg-white dark:bg-stone-900 border-t border-stone-200/80 dark:border-stone-800 transition-all duration-200 ease-in-out ${
+          isAnyModalOpen ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'
+        }`}
+        aria-hidden={isAnyModalOpen}
+      >
         <BottomTabBar
           activeTab={activeMobileTab}
           onSelectTab={handleSelectTab}
