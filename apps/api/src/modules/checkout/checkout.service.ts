@@ -1,3 +1,4 @@
+import { AddressModel } from '../users/address.model.js';
 import mongoose from 'mongoose';
 import { CartModel } from '../cart/cart.model.js';
 import { ProductModel, IProduct } from '../catalog/product.model.js';
@@ -27,17 +28,37 @@ export interface CheckoutResult {
 }
 
 export class CheckoutService {
-  public static readonly DEFAULT_ADDRESS = {
-    street: 'Flat 402, Green Glen Layout, Bellandur',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    postalCode: '560103',
-  };
 
   /**
    * Pre-checkout validation, atomic stock reservation, order snapshot freeze,
    * and Razorpay payment order initiation.
    */
+    public static async getQuote(userId: string) {
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const cart = await CartModel.findOne({ userId: userObjectId, status: 'ACTIVE' });
+    if (!cart || cart.items.length === 0) {
+      return PricingService.calculate([]);
+    }
+    const productIds = cart.items.map((i) => i.productId);
+    const products = await ProductModel.find({ _id: { $in: productIds } });
+    const productMap = new Map<string, IProduct>();
+    for (const p of products) {
+      productMap.set(p._id.toString(), p);
+    }
+    const items = cart.items
+      .map((i) => {
+        const p = productMap.get(i.productId.toString());
+        if (!p) return null;
+        return {
+          productId: i.productId.toString(),
+          pricePaise: p.pricePaise,
+          quantity: i.quantity,
+        };
+      })
+      .filter((i): i is { productId: string; pricePaise: number; quantity: number } => i !== null);
+    return PricingService.calculate(items);
+  }
+
   public static async initiateCheckout(
     userId: string,
     input?: InitiateCheckoutInput
@@ -163,7 +184,26 @@ export class CheckoutService {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `CP-${dateStr}-${randomSuffix}`;
 
-    const shippingAddressSnapshot = input?.shippingAddress || this.DEFAULT_ADDRESS;
+    let shippingAddressSnapshot = input?.shippingAddress;
+    if (!shippingAddressSnapshot) {
+      const defaultAddr =
+        (await AddressModel.findOne({ userId: userObjectId, isDefault: true })) ||
+        (await AddressModel.findOne({ userId: userObjectId }));
+      if (defaultAddr) {
+        shippingAddressSnapshot = {
+          street: `${defaultAddr.houseFlat ? defaultAddr.houseFlat + ', ' : ''}${
+            defaultAddr.apartmentStreet || defaultAddr.areaLocality
+          }`,
+          city: defaultAddr.city || 'Bengaluru',
+          state: defaultAddr.state || 'Karnataka',
+          postalCode: defaultAddr.pincode || '560001',
+        };
+      }
+    }
+
+    if (!shippingAddressSnapshot) {
+      throw new BadRequestError('A valid delivery address is required to place your order', 'ADDRESS_REQUIRED');
+    }
 
     // 6. Create Order with immutable snapshots and PENDING_PAYMENT status
     const order = new OrderModel({

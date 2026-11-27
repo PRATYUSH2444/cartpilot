@@ -4,6 +4,23 @@ import { CheckoutService } from './checkout.service.js';
 import { InitiateCheckoutInput } from './checkout.schema.js';
 
 export class CheckoutController {
+  public static async quote(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const quote = await CheckoutService.getQuote(userId);
+      res.status(200).json({
+        success: true,
+        data: quote,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   public static async initiate(
     req: AuthenticatedRequest,
     res: Response,

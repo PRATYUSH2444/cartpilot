@@ -10,6 +10,9 @@ export const InitiateCheckoutSchema = z.object({
     })
     .optional(),
   deliveryNote: z.string().max(500, 'Delivery note cannot exceed 500 characters').optional(),
+  deliverySlot: z.string().max(100).optional(),
+  paymentMethod: z.string().optional(),
+  idempotencyKey: z.string().optional(),
   notes: z.string().max(500).optional(),
 });
 
