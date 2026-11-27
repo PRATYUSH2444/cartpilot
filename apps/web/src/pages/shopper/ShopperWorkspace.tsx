@@ -1453,7 +1453,7 @@ export const ShopperWorkspace: React.FC = () => {
             activeMobileTab === 'chat'
               ? 'min-h-0 overflow-hidden pb-0'
               : activeMobileTab === 'cart'
-                ? 'min-h-0 lg:overflow-hidden pb-20 lg:pb-0'
+                ? 'min-h-0 lg:overflow-hidden pb-16 lg:pb-0'
                 : 'pb-20 lg:pb-0'
           }`}
         >

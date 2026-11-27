@@ -119,71 +119,73 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       `}</style>
 
       {/* ── Main Container: Locked to viewport height on desktop, zero outer scrolling ── */}
-      <div className="max-w-6xl w-full h-full mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex flex-col min-h-0">
+      <div className="max-w-6xl w-full h-full mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex flex-col min-h-0">
         {/* ── 1. Static Title Bar + 3-Step Stepper (Never Cut Off, Always Fixed) ── */}
-        <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
+        <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2">
           {/* Left: Back Button + Title + Clear */}
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={onBack || onExploreProducts}
-              className="p-1.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-850 transition-colors cursor-pointer shadow-2xs"
-              aria-label="Back to store"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-bold text-base sm:text-lg text-stone-900 dark:text-white leading-tight">
-                  Your Cart {pricing.itemCount > 0 && `(${pricing.itemCount} ${pricing.itemCount === 1 ? 'item' : 'items'})`}
-                </h1>
-                {pricing.itemCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={onClearCart}
-                    disabled={isLoading}
-                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:underline px-1 py-0.5 rounded transition-colors cursor-pointer"
-                  >
-                    Clear All
-                  </button>
-                )}
+          <div className="flex items-center justify-between sm:justify-start gap-2.5 w-full sm:w-auto">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <button
+                type="button"
+                onClick={onBack || onExploreProducts}
+                className="p-1.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-850 transition-colors cursor-pointer shadow-2xs flex-shrink-0"
+                aria-label="Back to store"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h1 className="font-bold text-base sm:text-lg text-stone-900 dark:text-white leading-tight truncate">
+                    Your Cart {pricing.itemCount > 0 && `(${pricing.itemCount} ${pricing.itemCount === 1 ? 'item' : 'items'})`}
+                  </h1>
+                </div>
+                <p className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400 truncate">
+                  Review items & choose delivery at checkout
+                </p>
               </div>
-              <p className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400">
-                Review items & choose delivery at checkout
-              </p>
             </div>
+            {pricing.itemCount > 0 && (
+              <button
+                type="button"
+                onClick={onClearCart}
+                disabled={isLoading}
+                className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:underline px-1.5 py-0.5 rounded transition-colors cursor-pointer flex-shrink-0"
+              >
+                Clear All
+              </button>
+            )}
           </div>
 
-          {/* Right: Sleek Monochrome 3-Step Progress Stepper */}
-          <div className="flex items-center gap-2 self-start sm:self-auto bg-white dark:bg-stone-900 px-3 py-1 rounded-xl border border-stone-200/80 dark:border-stone-800 shadow-2xs">
+          {/* Right: Full-Fledged Monochrome 3-Step Progress Stepper */}
+          <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 bg-white dark:bg-stone-900 px-3 sm:px-3 py-1.5 sm:py-1 rounded-xl border border-stone-200/80 dark:border-stone-800 shadow-2xs">
             {/* Step 1: Cart (Active - Obsidian Black) */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <div className="w-4.5 h-4.5 rounded-full bg-stone-900 text-white dark:bg-white dark:text-stone-900 flex items-center justify-center text-[10px] font-bold shadow-2xs">
                 <ShoppingBag className="w-2.5 h-2.5" />
               </div>
               <span className="text-xs font-bold text-stone-900 dark:text-white">Cart</span>
             </div>
 
-            <div className="w-5 sm:w-7 h-0.5 bg-stone-200 dark:bg-stone-800" />
+            <div className="flex-1 sm:w-7 sm:flex-none h-0.5 bg-stone-200 dark:bg-stone-800 mx-1 sm:mx-0" />
 
             {/* Step 2: Delivery (Pending) */}
-            <div className="flex items-center gap-1.5 opacity-40">
+            <div className="flex items-center gap-1.5 opacity-40 flex-shrink-0">
               <div className="w-4.5 h-4.5 rounded-full bg-stone-150 dark:bg-stone-800 text-stone-500 dark:text-stone-400 flex items-center justify-center text-[10px] font-bold">
                 <Truck className="w-2.5 h-2.5" />
               </div>
-              <span className="text-xs font-medium text-stone-500 dark:text-stone-400 hidden xs:inline">
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400">
                 Delivery
               </span>
             </div>
 
-            <div className="w-5 sm:w-7 h-0.5 bg-stone-200 dark:bg-stone-800" />
+            <div className="flex-1 sm:w-7 sm:flex-none h-0.5 bg-stone-200 dark:bg-stone-800 mx-1 sm:mx-0" />
 
             {/* Step 3: Payment (Pending) */}
-            <div className="flex items-center gap-1.5 opacity-40">
+            <div className="flex items-center gap-1.5 opacity-40 flex-shrink-0">
               <div className="w-4.5 h-4.5 rounded-full bg-stone-150 dark:bg-stone-800 text-stone-500 dark:text-stone-400 flex items-center justify-center text-[10px] font-bold">
                 <CreditCard className="w-2.5 h-2.5" />
               </div>
-              <span className="text-xs font-medium text-stone-500 dark:text-stone-400 hidden xs:inline">
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400">
                 Payment
               </span>
             </div>
@@ -541,29 +543,6 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           </div>
         )}
       </div>
-
-      {/* ── Mobile Sticky Bottom Checkout Bar (< 768px only) ─────────────────── */}
-      {pricing.itemCount > 0 && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-t border-stone-200 dark:border-stone-800 p-2.5 z-40 flex items-center justify-between gap-3 shadow-lg">
-          <div>
-            <span className="text-[9px] text-stone-400 uppercase font-bold tracking-wider block">
-              Total Payable
-            </span>
-            <span className="font-mono font-black text-base text-stone-900 dark:text-white">
-              ₹{pricing.total}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={onProceedToCheckout}
-            disabled={isLoading}
-            className="flex-1 max-w-[190px] h-9.5 px-4 rounded-xl bg-stone-900 hover:bg-black text-white dark:bg-white dark:text-stone-900 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
-          >
-            <span>Proceed to Checkout</span>
-            <ArrowRight className="w-3 h-3" />
-          </button>
-        </div>
-      )}
     </div>
   );
 };
