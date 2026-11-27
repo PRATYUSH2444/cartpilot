@@ -33,6 +33,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { OrderData, UserAddress } from '../../types';
+import { API_BASE } from '../../config/api';
 
 interface AccountScreenProps {
   user: {
@@ -88,6 +89,9 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   const [supportCategory, setSupportCategory] = useState('Order & Delivery');
   const [supportMessage, setSupportMessage] = useState('');
   const [supportSubmitted, setSupportSubmitted] = useState(false);
+  const [isSubmittingSupport, setIsSubmittingSupport] = useState(false);
+  const [supportTicketId, setSupportTicketId] = useState<string | null>(null);
+  const [supportError, setSupportError] = useState<string | null>(null);
   const [emailCopied, setEmailCopied] = useState(false);
 
   const adminEmail = (import.meta.env.VITE_ADMIN_SUPPORT_EMAIL as string) || 'prakash.extra20@gmail.com';
@@ -99,8 +103,8 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   const [isFaqOpen, setIsFaqOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
-  // In-context Email Verification state
-  const { sendEmailVerification, verifyEmail: verifyEmailAction } = useAuth();
+  // In-context Email Verification & Auth state
+  const { authFetch, sendEmailVerification, verifyEmail: verifyEmailAction } = useAuth();
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
@@ -756,36 +760,46 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                     </>
                   )}
                 </button>
-
-                <a
-                  href={`mailto:${adminEmail}?subject=Support Inquiry - CartPilot`}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>Send Mail</span>
-                </a>
               </div>
             </div>
 
             {/* Quick Crisp Support Form */}
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                if (!supportMessage.trim()) return;
+                if (!supportMessage.trim() || isSubmittingSupport) return;
 
-                const subject = encodeURIComponent(`[CartPilot Support: ${supportCategory}] from ${user?.name || 'Customer'}`);
-                const body = encodeURIComponent(
-                  `Hello CartPilot Support Team,\n\n` +
-                  `Category: ${supportCategory}\n` +
-                  `Customer Name: ${user?.name || 'Shopper'}\n` +
-                  `Email: ${user?.email || 'Not provided'}\n` +
-                  `Phone: ${user?.phone || displayPhone}\n\n` +
-                  `Inquiry / Question:\n${supportMessage.trim()}\n\n` +
-                  `---\nSent from CartPilot Shopper Portal`
-                );
+                setIsSubmittingSupport(true);
+                setSupportError(null);
+                setSupportSubmitted(false);
 
-                window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`, '_blank');
-                setSupportSubmitted(true);
+                try {
+                  const res = await authFetch(`${API_BASE}/support`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      topic: supportCategory,
+                      message: supportMessage.trim(),
+                      name: user?.name,
+                      email: user?.email,
+                      phone: user?.phone || displayPhone,
+                    }),
+                  });
+
+                  const data = await res.json();
+                  if (!res.ok) {
+                    throw new Error(data?.message || 'Failed to submit support inquiry. Please try again.');
+                  }
+
+                  setSupportTicketId(data?.data?.ticketId || 'TICK-RECEIVED');
+                  setSupportSubmitted(true);
+                  setSupportMessage('');
+                } catch (err: any) {
+                  console.error('Support ticket submission error:', err);
+                  setSupportError(err?.message || 'Network error submitting inquiry. Please try again or copy the email directly.');
+                } finally {
+                  setIsSubmittingSupport(false);
+                }
               }}
               className="space-y-3.5"
             >
@@ -832,20 +846,40 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               </div>
 
               {supportSubmitted && (
-                <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center gap-2 animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>
-                    Your inquiry has been formatted and opened in your email app addressed to <strong>{adminEmail}</strong>.
-                  </span>
+                <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs space-y-1.5 animate-in fade-in">
+                  <div className="flex items-center gap-2 font-bold text-emerald-800 dark:text-emerald-300">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                    <span>Ticket #{supportTicketId} Created Successfully!</span>
+                  </div>
+                  <p className="text-[11.5px] text-emerald-700 dark:text-emerald-300/90 leading-relaxed">
+                    Your inquiry has been recorded and delivered to <strong>{adminEmail}</strong>. Our team will review your ticket and reply directly to <strong>{user?.email || 'your registered email'}</strong>.
+                  </p>
+                </div>
+              )}
+
+              {supportError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2 animate-in fade-in">
+                  <X className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                  <span>{supportError}</span>
                 </div>
               )}
 
               <button
                 type="submit"
-                className="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                disabled={isSubmittingSupport || !supportMessage.trim()}
+                className="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
               >
-                <Send className="w-4 h-4" />
-                <span>Send Mail to Admin</span>
+                {isSubmittingSupport ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Submitting Ticket to Support...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span>Submit Inquiry to Admin</span>
+                  </>
+                )}
               </button>
             </form>
           </div>

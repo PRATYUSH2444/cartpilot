@@ -85,6 +85,24 @@ export const authRateLimiter = createRateLimiter({
 });
 
 /**
+ * Rate Limiter for Customer Support Tickets (/api/v1/support).
+ * Max 5 tickets per hour per user/IP.
+ */
+export const supportRateLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  keyGenerator: (req) => {
+    const authUser = (req as any).user;
+    const userId = authUser?.userId || authUser?.id;
+    if (userId) return `support:user:${userId}`;
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    return `support:ip:${ip}`;
+  },
+  message: 'Support ticket limit reached (5 requests per hour). If urgent, please email us directly.',
+  errorCode: 'SUPPORT_RATE_LIMIT_EXCEEDED',
+});
+
+/**
  * Reset memory store (useful for clean unit and integration testing).
  */
 export function resetRateLimits(): void {

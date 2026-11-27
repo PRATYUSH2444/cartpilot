@@ -12,6 +12,7 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
     CORS_ORIGIN: z.string().default('http://localhost:5173'),
+    CLIENT_ORIGIN: z.string().optional(),
 
     MONGODB_URI: z.string().default('mongodb://127.0.0.1:27017/cartpilot_dev'),
 
@@ -33,6 +34,9 @@ const envSchema = z
 
     RESEND_API_KEY: z.string().optional(),
     RESEND_FROM_EMAIL: z.string().default('CartPilot <onboarding@resend.dev>'),
+    BREVO_API_KEY: z.string().optional(),
+    SUPPORT_TO_EMAIL: z.string().email().default('prakash.extra20@gmail.com'),
+    SUPPORT_FROM_EMAIL: z.string().default('CartPilot Support <onboarding@resend.dev>'),
 
     TWILIO_ACCOUNT_SID: z.string().optional(),
     TWILIO_AUTH_TOKEN: z.string().optional(),

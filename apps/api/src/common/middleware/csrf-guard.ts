@@ -18,8 +18,11 @@ export function isAllowedOrigin(origin: string): boolean {
 
   const cleanOrigin = origin.trim().replace(/\/+$/, '');
 
-  // 1. Check configured CORS_ORIGIN (supports comma-separated list or wildcard)
-  const configuredOrigins = env.CORS_ORIGIN.split(',')
+  // 1. Check configured CORS_ORIGIN and CLIENT_ORIGIN (supports comma-separated list or wildcard)
+  const configuredOrigins = [
+    ...env.CORS_ORIGIN.split(','),
+    ...(env.CLIENT_ORIGIN ? env.CLIENT_ORIGIN.split(',') : []),
+  ]
     .map((o) => o.trim().replace(/\/+$/, ''))
     .filter(Boolean);
   if (configuredOrigins.includes('*') || configuredOrigins.includes(cleanOrigin)) {

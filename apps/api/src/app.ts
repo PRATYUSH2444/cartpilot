@@ -24,6 +24,7 @@ import { addressRouter } from './modules/users/address.routes.js';
 import { userRouter } from './modules/users/user.routes.js';
 import { locationRouter } from './modules/location/location.routes.js';
 import { systemRouter } from './modules/system/system.routes.js';
+import { supportRouter } from './modules/support/support.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -102,6 +103,8 @@ export function createApp(): Express {
   app.use('/api/v1/users', userRouter);
   app.use('/api/v1/location', locationRouter);
   app.use('/api/v1/system', systemRouter);
+  app.use('/api/v1/support', supportRouter);
+  app.use('/api/support', supportRouter);
 
   // 404 Catch-All Handler
   app.use((req: Request, _res: Response, next: NextFunction) => {
