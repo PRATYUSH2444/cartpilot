@@ -20,11 +20,11 @@ export interface IWalletSettings extends Document {
 
 const WalletSettingsSchema = new Schema<IWalletSettings>(
   {
-    minTopupPaise: { type: Number, default: 10000 }, // ₹100
+    minTopupPaise: { type: Number, default: 100 }, // ₹1 (optimized from legacy ₹100)
     maxTopupPaise: { type: Number, default: 1000000 }, // ₹10,000
     maxBalancePaise: { type: Number, default: 2000000 }, // ₹20,000
     dailyTopupLimitPaise: { type: Number, default: 5000000 }, // ₹50,000
-    quickAddChipsRupees: { type: [Number], default: [200, 500, 1000, 2000] },
+    quickAddChipsRupees: { type: [Number], default: [50, 100, 200, 500] },
     welcomeBonusEnabled: { type: Boolean, default: true },
     welcomeBonusAmountPaise: { type: Number, default: 10000 }, // ₹100
     cashbackEnabled: { type: Boolean, default: true },

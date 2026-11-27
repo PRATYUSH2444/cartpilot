@@ -52,7 +52,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   const { authFetch, user } = useAuth();
 
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedTopup, setSelectedTopup] = useState<number>(500);
+  const [selectedTopup, setSelectedTopup] = useState<number>(100);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -61,10 +61,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
   const [liveBalancePaise, setLiveBalancePaise] = useState<number>(Math.round(balance * 100));
   const [limits, setLimits] = useState<WalletLimits>({
-    minTopupPaise: 1000,
+    minTopupPaise: 100, // ₹1 minimum topup (ultra-flexible for testing & production)
     maxTopupPaise: 1000000,
     maxBalancePaise: 5000000,
-    quickAddChipsRupees: [200, 500, 1000],
+    quickAddChipsRupees: [50, 100, 200, 500],
   });
   const [transactions, setTransactions] = useState<WalletTransactionItem[]>([]);
   const [activeTab, setActiveTab] = useState<'topup' | 'history'>('topup');
@@ -98,19 +98,33 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       if (walletRes.ok) {
         const walletData = await walletRes.json();
         if (walletData.data) {
-          const w = walletData.data.wallet;
+          const w = walletData.data.wallet || walletData.data;
           const lim = walletData.data.limits;
           if (w && typeof w.balancePaise === 'number') {
             setLiveBalancePaise(w.balancePaise);
+          } else if (typeof walletData.data.balancePaise === 'number') {
+            setLiveBalancePaise(walletData.data.balancePaise);
           }
           if (lim) {
+            const minPaise =
+              lim.minTopupPaise ??
+              (typeof lim.minTopupRupees === 'number' ? Math.round(lim.minTopupRupees * 100) : 100);
+            const maxPaise =
+              lim.maxTopupPaise ??
+              (typeof lim.maxTopupRupees === 'number' ? Math.round(lim.maxTopupRupees * 100) : 1000000);
+            const maxBal =
+              lim.maxBalancePaise ??
+              (typeof lim.maxBalanceRupees === 'number' ? Math.round(lim.maxBalanceRupees * 100) : 5000000);
+            const chips =
+              (lim.quickAddChipsRupees?.length && lim.quickAddChipsRupees) ||
+              (lim.quickAddChips?.length && lim.quickAddChips) ||
+              [50, 100, 200, 500];
+
             setLimits({
-              minTopupPaise: lim.minTopupPaise ?? 1000,
-              maxTopupPaise: lim.maxTopupPaise ?? 1000000,
-              maxBalancePaise: lim.maxBalancePaise ?? 5000000,
-              quickAddChipsRupees: lim.quickAddChipsRupees?.length
-                ? lim.quickAddChipsRupees
-                : [200, 500, 1000],
+              minTopupPaise: minPaise,
+              maxTopupPaise: maxPaise,
+              maxBalancePaise: maxBal,
+              quickAddChipsRupees: chips,
             });
           }
         }
@@ -451,7 +465,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 </div>
 
                 {/* Dynamic Quick Add Chips from Backend Settings */}
-                <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className={`grid gap-2 mb-3 ${limits.quickAddChipsRupees.length >= 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
                   {limits.quickAddChipsRupees.map((amt) => {
                     const isSelected = selectedTopup === amt && !customAmount;
                     return (
@@ -463,7 +477,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                           setCustomAmount('');
                           setErrorMessage(null);
                         }}
-                        className={`py-2.5 px-3 rounded-2xl font-black text-xs font-mono border transition-all cursor-pointer ${
+                        className={`py-2.5 px-2 rounded-2xl font-black text-xs font-mono border transition-all cursor-pointer ${
                           isSelected
                             ? 'border-emerald-500 bg-emerald-950/60 text-emerald-300 ring-2 ring-emerald-500/30'
                             : 'border-stone-800 bg-stone-900 text-stone-300 hover:bg-stone-850 hover:border-stone-700'
@@ -491,7 +505,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                       setSelectedTopup(0);
                       setErrorMessage(null);
                     }}
-                    placeholder={`Enter custom amount (e.g. 750)`}
+                    placeholder={`Enter custom amount (e.g. 10, 50, 750)`}
                     className="w-full pl-8 pr-4 py-3 rounded-2xl border border-stone-800 bg-stone-900 text-sm font-bold text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-mono"
                   />
                 </div>

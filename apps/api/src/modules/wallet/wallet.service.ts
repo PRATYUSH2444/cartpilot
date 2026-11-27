@@ -19,11 +19,11 @@ export class WalletService {
     let settings = await WalletSettingsModel.findOne();
     if (!settings) {
       settings = await WalletSettingsModel.create({
-        minTopupPaise: 10000, // ₹100
+        minTopupPaise: 100, // ₹1 (ultra-friendly min topup)
         maxTopupPaise: 1000000, // ₹10,000
         maxBalancePaise: 2000000, // ₹20,000
         dailyTopupLimitPaise: 5000000, // ₹50,000
-        quickAddChipsRupees: [200, 500, 1000, 2000],
+        quickAddChipsRupees: [50, 100, 200, 500],
         welcomeBonusEnabled: true,
         welcomeBonusAmountPaise: 10000, // ₹100
         cashbackEnabled: true,
@@ -33,6 +33,11 @@ export class WalletService {
         topupEnabled: true,
         updatedBy: 'SYSTEM',
       });
+    } else if (settings.minTopupPaise > 100) {
+      // Auto-migrate legacy ₹100 limit down to ₹1 for optimal user experience
+      settings.minTopupPaise = 100;
+      settings.quickAddChipsRupees = [50, 100, 200, 500];
+      await settings.save();
     }
     return settings;
   }
@@ -57,10 +62,14 @@ export class WalletService {
     wallet: IWallet;
     settings: IWalletSettings;
     limits: {
+      minTopupPaise: number;
       minTopupRupees: number;
+      maxTopupPaise: number;
       maxTopupRupees: number;
+      maxBalancePaise: number;
       maxBalanceRupees: number;
       quickAddChips: number[];
+      quickAddChipsRupees: number[];
     };
   }> {
     const userObjId = new mongoose.Types.ObjectId(userId);
@@ -92,10 +101,14 @@ export class WalletService {
       wallet,
       settings,
       limits: {
+        minTopupPaise: settings.minTopupPaise,
         minTopupRupees: settings.minTopupPaise / 100,
+        maxTopupPaise: settings.maxTopupPaise,
         maxTopupRupees: settings.maxTopupPaise / 100,
+        maxBalancePaise: settings.maxBalancePaise,
         maxBalanceRupees: settings.maxBalancePaise / 100,
         quickAddChips: settings.quickAddChipsRupees,
+        quickAddChipsRupees: settings.quickAddChipsRupees,
       },
     };
   }

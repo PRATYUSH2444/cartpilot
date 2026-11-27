@@ -20,12 +20,19 @@ export class WalletController {
       res.status(200).json({
         success: true,
         data: {
+          wallet: {
+            balancePaise: data.wallet.balancePaise,
+            balanceRupees: data.wallet.balancePaise / 100,
+            currency: data.wallet.currency,
+            status: data.wallet.status,
+          },
           balancePaise: data.wallet.balancePaise,
           balanceRupees: data.wallet.balancePaise / 100,
           currency: data.wallet.currency,
           status: data.wallet.status,
           limits: data.limits,
           quickAddChips: data.limits.quickAddChips,
+          quickAddChipsRupees: data.limits.quickAddChipsRupees,
           welcomeBonusEnabled: data.settings.welcomeBonusEnabled,
         },
       });
