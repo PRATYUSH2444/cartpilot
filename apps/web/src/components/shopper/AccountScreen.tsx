@@ -91,6 +91,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   const [selectedRating, setSelectedRating] = useState(5);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
+  const [isFaqOpen, setIsFaqOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
   // In-context Email Verification state
@@ -189,8 +190,8 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
       a: 'Your wallet holds funds for instant 1-tap checkout with 0 transaction fees. Refunds, promotional cashbacks, and top-ups reflect immediately in your balance.',
     },
     {
-      q: 'What are autonomous spending mandates?',
-      a: 'Spending rules allow you to set daily and per-order budget limits. When active, our deterministic policy engine auto-approves safe daily groceries within budget while flagging anomalies for your sign-off.',
+      q: 'How do daily spending limits work?',
+      a: 'Daily spending limits allow you to set grocery budget caps. When active, our smart system keeps your daily orders strictly within budget while preventing unexpected spikes.',
     },
   ];
 
@@ -559,39 +560,78 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                   </div>
                 </button>
 
-                {/* FAQs Accordion */}
-                <div className="py-4 space-y-3">
-                  <div className="flex items-center gap-3 text-stone-800 dark:text-stone-200">
-                    <HelpCircle className="w-5 h-5 text-stone-400" />
-                    <span className="font-bold text-sm">Frequently Asked Questions</span>
-                  </div>
-
-                  <div className="space-y-2 pt-1">
-                    {FAQS.map((faq, idx) => (
-                      <div
-                        key={idx}
-                        className="rounded-2xl border border-stone-200 dark:border-stone-800 bg-stone-50/60 dark:bg-stone-850 overflow-hidden"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
-                          className="w-full p-3.5 sm:p-4 flex items-center justify-between text-left text-sm font-semibold text-stone-800 dark:text-stone-200 cursor-pointer"
-                        >
-                          <span>{faq.q}</span>
-                          <ChevronDown
-                            className={`w-4 h-4 text-stone-400 transition-transform ${
-                              openFaqIndex === idx ? 'rotate-180 text-emerald-600' : ''
-                            }`}
-                          />
-                        </button>
-                        {openFaqIndex === idx && (
-                          <div className="px-4 pb-4 text-sm text-stone-600 dark:text-stone-300 leading-relaxed border-t border-stone-200 dark:border-stone-800 pt-3">
-                            {faq.a}
-                          </div>
-                        )}
+                {/* FAQs Parent Accordion */}
+                <div className="py-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsFaqOpen(!isFaqOpen)}
+                    className="w-full py-4 flex items-center justify-between text-left hover:text-emerald-700 transition-colors cursor-pointer group"
+                    aria-expanded={isFaqOpen}
+                  >
+                    <div className="flex items-center gap-3">
+                      <HelpCircle className="w-5 h-5 text-stone-400 group-hover:text-emerald-600 transition-colors" />
+                      <div>
+                        <span className="font-bold text-sm text-stone-800 dark:text-stone-200 group-hover:text-emerald-700 block">
+                          Frequently Asked Questions
+                        </span>
+                        <span className="text-xs text-stone-400 dark:text-stone-500">
+                          Delivery timings, pure vegetarian guarantee & limits
+                        </span>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-stone-600 dark:text-stone-300 bg-stone-100 dark:bg-stone-800 px-2.5 py-0.5 rounded-full">
+                        {FAQS.length} FAQs
+                      </span>
+                      <ChevronDown
+                        className={`w-4 h-4 text-stone-400 group-hover:text-emerald-600 transition-transform duration-200 ${
+                          isFaqOpen ? 'rotate-180 text-emerald-600' : ''
+                        }`}
+                      />
+                    </div>
+                  </button>
+
+                  {/* Nested Question Accordions */}
+                  {isFaqOpen && (
+                    <div className="space-y-2.5 pt-1 pb-3 pl-1 sm:pl-2 animate-in fade-in-50 duration-200">
+                      {FAQS.map((faq, idx) => {
+                        const isExpanded = openFaqIndex === idx;
+                        return (
+                          <div
+                            key={idx}
+                            className="rounded-2xl border border-stone-300/80 dark:border-stone-700 overflow-hidden shadow-2xs transition-all"
+                          >
+                            {/* Question Header: Solid Black in light mode, Solid White in dark mode */}
+                            <button
+                              type="button"
+                              onClick={() => setOpenFaqIndex(isExpanded ? null : idx)}
+                              className={`w-full p-3.5 sm:p-4 flex items-center justify-between text-left text-sm font-semibold transition-colors cursor-pointer ${
+                                isExpanded
+                                  ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-950'
+                                  : 'bg-stone-900 text-white hover:bg-black dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white'
+                              }`}
+                            >
+                              <span className="pr-3 leading-snug">{faq.q}</span>
+                              <ChevronDown
+                                className={`w-4 h-4 transition-transform duration-200 flex-shrink-0 ${
+                                  isExpanded
+                                    ? 'rotate-180 text-emerald-400 dark:text-emerald-600'
+                                    : 'text-stone-400 dark:text-stone-500'
+                                }`}
+                              />
+                            </button>
+
+                            {/* Answer Body: Solid Crisp White in light mode, Solid Deep Black in dark mode */}
+                            {isExpanded && (
+                              <div className="bg-white text-stone-800 dark:bg-stone-950 dark:text-stone-200 px-4 py-3.5 text-sm leading-relaxed border-t border-stone-200 dark:border-stone-800 animate-in fade-in-50 duration-150">
+                                {faq.a}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Rate App */}
