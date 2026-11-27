@@ -52,6 +52,7 @@ export async function register(req: Request, res: Response, next: NextFunction):
       data: {
         user: result.user,
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       },
     });
   } catch (error) {
@@ -70,6 +71,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       data: {
         user: result.user,
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       },
     });
   } catch (error) {
@@ -81,7 +83,8 @@ export async function refresh(req: Request, res: Response, next: NextFunction): 
   try {
     const rawToken =
       (req.cookies && (req.cookies[REFRESH_COOKIE_NAME] as string)) ||
-      (req.body.refreshToken as string);
+      (req.body.refreshToken as string) ||
+      (req.headers['x-refresh-token'] as string);
 
     const context = getClientContext(req);
     const result = await AuthService.refreshAccessToken(rawToken, context);
@@ -92,6 +95,7 @@ export async function refresh(req: Request, res: Response, next: NextFunction): 
       data: {
         user: result.user,
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       },
     });
   } catch (error) {
@@ -382,6 +386,7 @@ export async function loginWithPhoneOtp(
       data: {
         user: result.user,
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       },
     });
   } catch (error) {
@@ -587,6 +592,7 @@ export async function verifyAdminMfa(req: Request, res: Response, next: NextFunc
       data: {
         user: result.user,
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       },
     });
   } catch (error) {

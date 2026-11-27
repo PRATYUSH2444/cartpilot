@@ -283,12 +283,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
+      const storedRefreshToken =
+        typeof window !== 'undefined' ? localStorage.getItem('cartpilot_refresh_token') : null;
+
       try {
         const res = await fetch(`${API_BASE}/auth/refresh`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(storedRefreshToken ? { 'x-refresh-token': storedRefreshToken } : {}),
+          },
           credentials: 'include',
-          body: JSON.stringify({}),
+          body: JSON.stringify({
+            refreshToken: storedRefreshToken || undefined,
+          }),
         });
 
         if (res.ok) {
@@ -315,6 +323,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             localStorage.setItem('cartpilot_has_session', 'true');
             localStorage.setItem('cartpilot_user_role', profile.role);
+            if (data.data.refreshToken) {
+              localStorage.setItem('cartpilot_refresh_token', data.data.refreshToken);
+            }
           } catch {}
 
           return true;
@@ -329,6 +340,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               localStorage.removeItem('cartpilot_has_session');
               localStorage.removeItem('cartpilot_user_role');
               localStorage.removeItem('cartpilot_auth_provider');
+              localStorage.removeItem('cartpilot_refresh_token');
             } catch {}
           }
           return false;
@@ -339,6 +351,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setToken(null);
           setUser(null);
           setAuthStatus('UNAUTHENTICATED');
+          try {
+            localStorage.removeItem('cartpilot_refresh_token');
+          } catch {}
         }
         return false;
       } finally {
@@ -521,6 +536,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           retryHeaders.set('Authorization', `Bearer ${latestTokenRef.current}`);
           reqOptions.headers = retryHeaders;
           response = await fetch(url, reqOptions);
+        } else {
+          latestTokenRef.current = null;
+          setToken(null);
+          setIsSessionExpired(true);
         }
       }
 
@@ -564,6 +583,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem('cartpilot_has_session', 'true');
           localStorage.setItem('cartpilot_user_role', profile.role);
           localStorage.setItem('cartpilot_auth_provider', 'native');
+          if (data.data.refreshToken) {
+            localStorage.setItem('cartpilot_refresh_token', data.data.refreshToken);
+          }
           authChannelRef.current?.postMessage({
             type: 'AUTH_LOGIN',
             role: profile.role,
@@ -806,6 +828,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('cartpilot_has_session');
         localStorage.removeItem('cartpilot_user_role');
         localStorage.removeItem('cartpilot_auth_provider');
+        localStorage.removeItem('cartpilot_refresh_token');
         if (clerkSignOutRef.current) {
           clerkSignOutRef.current().catch(() => {});
         }
@@ -838,6 +861,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('cartpilot_has_session');
         localStorage.removeItem('cartpilot_user_role');
         localStorage.removeItem('cartpilot_auth_provider');
+        localStorage.removeItem('cartpilot_refresh_token');
         if (clerkSignOutRef.current) {
           clerkSignOutRef.current().catch(() => {});
         }

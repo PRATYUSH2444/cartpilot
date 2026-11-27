@@ -514,12 +514,16 @@ export const ShopperWorkspace: React.FC = () => {
 
         // Fetch Wallet balance from real backend
         try {
-          const walletRes = await authFetch(`${API_BASE}/users/wallet`);
+          const walletRes = await authFetch(`${API_BASE}/wallet`);
           if (walletRes.ok) {
             const wData = await walletRes.json();
-            if (wData.data?.balanceRupees !== undefined) {
-              setWalletBalance(wData.data.balanceRupees);
-              localStorage.setItem('cartpilot_wallet_balance', wData.data.balanceRupees.toString());
+            const bal =
+              wData.data?.wallet?.balancePaise !== undefined
+                ? wData.data.wallet.balancePaise / 100
+                : wData.data?.balanceRupees;
+            if (bal !== undefined) {
+              setWalletBalance(bal);
+              localStorage.setItem('cartpilot_wallet_balance', bal.toString());
             }
           }
         } catch (e) {
@@ -1223,29 +1227,12 @@ export const ShopperWorkspace: React.FC = () => {
     });
   };
 
-  const handleAddWalletFunds = async (amount: number) => {
-    try {
-      const res = await authFetch(`${API_BASE}/users/wallet/top-up`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amountPaise: Math.round(amount * 100) }),
-      });
-      if (res.ok) {
-        const d = await res.json();
-        const newBalance = d.data.balanceRupees;
-        setWalletBalance(newBalance);
-        localStorage.setItem('cartpilot_wallet_balance', newBalance.toString());
-        const bonusMsg = d.data.bonusPaise > 0 ? ` (including ₹${(d.data.bonusPaise / 100).toFixed(0)} bonus)` : '';
-        showBanner('success', `Added ₹${amount.toFixed(0)} to CartPilot Wallet${bonusMsg}`);
-        return;
-      }
-    } catch (err) {
-      console.warn('Failed to top up wallet on server, falling back to local state:', err);
-    }
-
+  const handleAddWalletFunds = (amount: number) => {
     setWalletBalance((prev) => {
       const next = prev + amount;
-      localStorage.setItem('cartpilot_wallet_balance', next.toString());
+      try {
+        localStorage.setItem('cartpilot_wallet_balance', next.toString());
+      } catch {}
       showBanner('success', `Added ₹${amount.toFixed(0)} to CartPilot Wallet`);
       return next;
     });
@@ -1466,15 +1453,19 @@ export const ShopperWorkspace: React.FC = () => {
           })
           .catch(() => {});
 
-        authFetch(`${API_BASE}/users/wallet`)
+        authFetch(`${API_BASE}/wallet`)
           .then(async (res) => {
             if (res.ok) {
               const wData = await res.json();
-              if (wData.data?.balanceRupees !== undefined) {
-                setWalletBalance(wData.data.balanceRupees);
+              const bal =
+                wData.data?.wallet?.balancePaise !== undefined
+                  ? wData.data.wallet.balancePaise / 100
+                  : wData.data?.balanceRupees;
+              if (bal !== undefined) {
+                setWalletBalance(bal);
                 localStorage.setItem(
                   'cartpilot_wallet_balance',
-                  wData.data.balanceRupees.toString()
+                  bal.toString()
                 );
               }
             }
