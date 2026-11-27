@@ -39,6 +39,7 @@ import { CouponsModal } from '../../components/shopper/CouponsModal';
 import { NotificationsModal } from '../../components/shopper/NotificationsModal';
 import { PullToRefresh } from '../../components/common/PullToRefresh';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { updateCartOptimistically, calculateOptimisticPricing } from '../../utils/optimisticCart';
 
 interface ServerChatMessage {
   _id: string;
@@ -119,9 +120,19 @@ export const ShopperWorkspace: React.FC = () => {
   const [isIntegrationsModalOpen, setIsIntegrationsModalOpen] = useState(false);
   const [isContextPanelCollapsed, setIsContextPanelCollapsed] = useState(false);
 
+  // Optimistic Cart & Background Sync state references
+  const lastConfirmedCartRef = useRef<CartData | null>(null);
+  const pendingQuantitiesRef = useRef<Map<string, number>>(new Map());
+  const debounceTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const syncQueueRef = useRef<Map<string, Promise<void>>>(new Map());
+
   const [feedbackBanner, setFeedbackBanner] = useState<{
     type: 'success' | 'error';
     message: string;
+    action?: {
+      label: string;
+      onClick: () => void;
+    };
   } | null>(null);
 
   // Sync theme
@@ -133,9 +144,15 @@ export const ShopperWorkspace: React.FC = () => {
     }
   }, [isDark]);
 
-  const showBanner = (type: 'success' | 'error', message: string) => {
-    setFeedbackBanner({ type, message });
-    setTimeout(() => setFeedbackBanner(null), 4000);
+  const showBanner = (
+    type: 'success' | 'error',
+    message: string,
+    action?: { label: string; onClick: () => void }
+  ) => {
+    setFeedbackBanner({ type, message, action });
+    setTimeout(() => {
+      setFeedbackBanner((curr) => (curr?.message === message ? null : curr));
+    }, 4500);
   };
 
   // Policy derivation
@@ -202,6 +219,7 @@ export const ShopperWorkspace: React.FC = () => {
 
         if (cartRes.ok) {
           const d = await cartRes.json();
+          lastConfirmedCartRef.current = d.data;
           setCart(d.data);
         }
         if (mandateRes.ok) {
@@ -417,92 +435,286 @@ export const ShopperWorkspace: React.FC = () => {
     }
   };
 
-  // Cart operations
-  const handleAddToCart = async (productId: string, quantity: number) => {
-    setIsLoading(true);
-    try {
-      const res = await authFetch(`${API_BASE}/cart/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, quantity }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCart(data.data);
-        await evaluatePolicy();
-        showBanner('success', 'Added to cart');
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        showBanner('error', errData.error?.message || 'Failed to add item');
-      }
-    } catch {
-      showBanner('error', 'Network error adding item');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // ── Rollback Single Item on Network Failure with Retry ─────────────────────
+  const handleRollback = useCallback(
+    (productId: string, failedQty: number, errorMsg: string) => {
+      // 1. Get confirmed item quantity from lastConfirmedCartRef
+      const confirmedItem = lastConfirmedCartRef.current?.items?.find(
+        (i) => i.productId === productId
+      );
+      const confirmedQty = confirmedItem?.quantity || 0;
 
-  const handleUpdateQuantity = async (productId: string, quantity: number) => {
-    setIsLoading(true);
-    try {
-      if (quantity <= 0) {
-        await handleRemoveItem(productId);
+      // 2. Clear pending quantity for this item
+      pendingQuantitiesRef.current.delete(productId);
+
+      // 3. Roll back ONLY this item to its last confirmed quantity
+      const prod =
+        products.find((p) => p._id === productId) ||
+        confirmedItem || { _id: productId, pricePaise: 0 };
+      setCart((prev) =>
+        updateCartOptimistically(prev, prod, confirmedQty, user?.id || 'shopper')
+      );
+
+      // 4. Non-blocking banner with Retry option
+      showBanner('error', `${errorMsg}. Restored previous quantity.`, {
+        label: 'Retry',
+        onClick: () => {
+          handleUpdateQuantity(productId, failedQty);
+        },
+      });
+    },
+    [products, user?.id]
+  );
+
+  // ── Background Network Synchronization with Debounce & Serialization ──────
+  const executeBackgroundSync = useCallback(
+    (productId: string) => {
+      // Chain onto existing promise for this productId to guarantee serialization
+      const currentChain = syncQueueRef.current.get(productId) || Promise.resolve();
+
+      const nextPromise = currentChain.then(async () => {
+        const desiredQty = pendingQuantitiesRef.current.get(productId);
+        if (desiredQty === undefined) return;
+
+        // Is item already confirmed in the server cart?
+        const confirmedItem = lastConfirmedCartRef.current?.items?.find(
+          (i) => i.productId === productId
+        );
+        const isConfirmedInCart = Boolean(confirmedItem);
+        const confirmedQty = confirmedItem?.quantity || 0;
+
+        // If desired quantity equals confirmed server quantity, no call needed
+        if (desiredQty === confirmedQty) {
+          pendingQuantitiesRef.current.delete(productId);
+          return;
+        }
+
+        // Guest handling: if no token, persist in localStorage and return
+        if (!token) {
+          pendingQuantitiesRef.current.delete(productId);
+          return;
+        }
+
+        try {
+          let res: Response;
+          if (desiredQty <= 0) {
+            if (isConfirmedInCart) {
+              res = await authFetch(`${API_BASE}/cart/items/${productId}`, {
+                method: 'DELETE',
+              });
+            } else {
+              pendingQuantitiesRef.current.delete(productId);
+              return;
+            }
+          } else if (isConfirmedInCart) {
+            // Update quantity via PATCH
+            res = await authFetch(`${API_BASE}/cart/items/${productId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ quantity: desiredQty }),
+            });
+          } else {
+            // Add new item via POST
+            res = await authFetch(`${API_BASE}/cart/items`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ productId, quantity: desiredQty }),
+            });
+          }
+
+          if (res.ok) {
+            const data = await res.json();
+            const serverCart: CartData = data.data;
+            lastConfirmedCartRef.current = serverCart;
+
+            // Reconcile: only replace client cart if user didn't tap again mid-request
+            const currentDesired = pendingQuantitiesRef.current.get(productId);
+            if (currentDesired === undefined || currentDesired === desiredQty) {
+              setCart(serverCart);
+              pendingQuantitiesRef.current.delete(productId);
+            }
+
+            evaluatePolicy().catch(() => {});
+          } else {
+            const errData = await res.json().catch(() => ({}));
+
+            // Handle live stock limits (INSUFFICIENT_STOCK 409)
+            if (res.status === 409 || errData.error?.code === 'INSUFFICIENT_STOCK') {
+              const availableStock =
+                errData.error?.details?.availableStock ??
+                products.find((p) => p._id === productId)?.availableStock ??
+                0;
+              const cappedQty = Math.max(0, availableStock);
+
+              showBanner('error', `Only ${cappedQty} units left in stock. Adjusted quantity.`);
+
+              pendingQuantitiesRef.current.set(productId, cappedQty);
+              const prod =
+                products.find((p) => p._id === productId) ||
+                lastConfirmedCartRef.current?.items?.find((i) => i.productId === productId);
+              setCart((prev) =>
+                updateCartOptimistically(prev, prod || { _id: productId }, cappedQty, user?.id || 'shopper')
+              );
+
+              // If capped quantity > 0, sync the clamped quantity to the server
+              if (cappedQty > 0) {
+                executeBackgroundSync(productId);
+              }
+            } else {
+              handleRollback(productId, desiredQty, errData.error?.message || 'Failed to update item');
+            }
+          }
+        } catch {
+          handleRollback(productId, desiredQty, 'Network error updating item');
+        }
+      });
+
+      syncQueueRef.current.set(productId, nextPromise);
+    },
+    [token, user?.id, products, evaluatePolicy, authFetch, handleRollback]
+  );
+
+  // ── Synchronous Instant Optimistic Actions ────────────────────────────────
+  const handleAddToCart = useCallback(
+    (productId: string, quantity: number = 1) => {
+      const prod =
+        products.find((p) => p._id === productId) ||
+        cart?.items?.find((i) => i.productId === productId);
+      const currentQty =
+        pendingQuantitiesRef.current.get(productId) ??
+        cart?.items?.find((i) => i.productId === productId)?.quantity ??
+        0;
+
+      const stock = prod?.availableStock ?? 999;
+      if (stock <= 0) {
+        showBanner('error', `${prod?.name || 'Item'} is out of stock`);
         return;
       }
-      const res = await authFetch(`${API_BASE}/cart/items/${productId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCart(data.data);
-        await evaluatePolicy();
-      }
-    } catch {
-      showBanner('error', 'Network error updating quantity');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleRemoveItem = async (productId: string) => {
-    setIsLoading(true);
-    try {
-      const res = await authFetch(`${API_BASE}/cart/items/${productId}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCart(data.data);
-        await evaluatePolicy();
-        showBanner('success', 'Item removed');
+      let targetQty = currentQty + quantity;
+      if (targetQty > stock) {
+        targetQty = stock;
+        showBanner('error', `Only ${stock} units available in stock`);
       }
-    } catch {
-      showBanner('error', 'Failed to remove item');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleClearCart = async () => {
-    setIsLoading(true);
+      // 1. Synchronous optimistic state update (client-side first, 0ms latency)
+      pendingQuantitiesRef.current.set(productId, targetQty);
+      setCart((prev) =>
+        updateCartOptimistically(prev, prod || { _id: productId }, targetQty, user?.id || 'shopper')
+      );
+
+      // 2. Debounce background synchronization (300ms)
+      const existingTimer = debounceTimersRef.current.get(productId);
+      if (existingTimer) clearTimeout(existingTimer);
+
+      const timer = setTimeout(() => {
+        debounceTimersRef.current.delete(productId);
+        executeBackgroundSync(productId);
+      }, 300);
+      debounceTimersRef.current.set(productId, timer);
+    },
+    [products, cart?.items, user?.id, executeBackgroundSync]
+  );
+
+  const handleUpdateQuantity = useCallback(
+    (productId: string, quantity: number) => {
+      const prod =
+        products.find((p) => p._id === productId) ||
+        cart?.items?.find((i) => i.productId === productId);
+
+      const stock = prod?.availableStock ?? 999;
+      let targetQty = Math.max(0, quantity);
+
+      if (targetQty > stock) {
+        targetQty = stock;
+        showBanner('error', `Only ${stock} units available in stock`);
+      }
+
+      // 1. Synchronous optimistic state update (client-side first, 0ms latency)
+      pendingQuantitiesRef.current.set(productId, targetQty);
+      setCart((prev) =>
+        updateCartOptimistically(prev, prod || { _id: productId }, targetQty, user?.id || 'shopper')
+      );
+
+      // 2. Debounce background synchronization (300ms)
+      const existingTimer = debounceTimersRef.current.get(productId);
+      if (existingTimer) clearTimeout(existingTimer);
+
+      const timer = setTimeout(() => {
+        debounceTimersRef.current.delete(productId);
+        executeBackgroundSync(productId);
+      }, 300);
+      debounceTimersRef.current.set(productId, timer);
+    },
+    [products, cart?.items, user?.id, executeBackgroundSync]
+  );
+
+  const handleRemoveItem = useCallback(
+    (productId: string) => {
+      const prod =
+        products.find((p) => p._id === productId) ||
+        cart?.items?.find((i) => i.productId === productId);
+
+      // 1. Synchronous optimistic removal
+      pendingQuantitiesRef.current.set(productId, 0);
+      setCart((prev) =>
+        updateCartOptimistically(prev, prod || { _id: productId }, 0, user?.id || 'shopper')
+      );
+
+      // 2. Debounce background synchronization (300ms)
+      const existingTimer = debounceTimersRef.current.get(productId);
+      if (existingTimer) clearTimeout(existingTimer);
+
+      const timer = setTimeout(() => {
+        debounceTimersRef.current.delete(productId);
+        executeBackgroundSync(productId);
+      }, 300);
+      debounceTimersRef.current.set(productId, timer);
+    },
+    [products, cart?.items, user?.id, executeBackgroundSync]
+  );
+
+  const handleClearCart = useCallback(async () => {
+    // Clear all pending debounce timers
+    debounceTimersRef.current.forEach((t) => clearTimeout(t));
+    debounceTimersRef.current.clear();
+    pendingQuantitiesRef.current.clear();
+
+    // 1. Synchronous optimistic clear
+    setCart((prev) =>
+      prev
+        ? {
+            ...prev,
+            items: [],
+            itemCount: 0,
+            pricing: calculateOptimisticPricing([]),
+          }
+        : null
+    );
+
+    // 2. Background sync
+    if (!token) return;
     try {
       const res = await authFetch(`${API_BASE}/cart`, {
         method: 'DELETE',
       });
       if (res.ok) {
         const data = await res.json();
+        lastConfirmedCartRef.current = data.data;
         setCart(data.data);
-        await evaluatePolicy();
+        evaluatePolicy().catch(() => {});
         showBanner('success', 'Cart cleared');
+      } else {
+        // Rollback
+        setCart(lastConfirmedCartRef.current);
+        showBanner('error', 'Failed to clear cart on server');
       }
     } catch {
-      showBanner('error', 'Failed to clear cart');
-    } finally {
-      setIsLoading(false);
+      // Rollback
+      setCart(lastConfirmedCartRef.current);
+      showBanner('error', 'Network error clearing cart');
     }
-  };
+  }, [token, authFetch, evaluatePolicy]);
 
   const handleAddProposedItems = async (items: Array<{ productId: string; quantity: number }>) => {
     if (items.length === 0) return;
@@ -927,6 +1139,7 @@ export const ShopperWorkspace: React.FC = () => {
         authFetch(`${API_BASE}/cart`).then(async (res) => {
           if (res.ok) {
             const d = await res.json();
+            lastConfirmedCartRef.current = d.data;
             setCart(d.data);
           }
         }),
@@ -1353,18 +1566,32 @@ export const ShopperWorkspace: React.FC = () => {
       {/* ── Feedback Banner ───────────────────────────────────────────────── */}
       {feedbackBanner && (
         <div
-          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 shadow-card backdrop-blur-md transition-all ${
+          role="status"
+          aria-live="polite"
+          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2.5 shadow-lg backdrop-blur-md transition-all animate-in fade-in duration-150 ${
             feedbackBanner.type === 'success'
               ? 'bg-[--brand-soft] border-[--go]/30 text-[--go]'
               : 'bg-red-50 dark:bg-red-900/20 border-[--stop]/30 text-[--stop]'
           }`}
         >
           {feedbackBanner.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4" />
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
           ) : (
-            <AlertCircle className="w-4 h-4" />
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
           )}
-          <span>{feedbackBanner.message}</span>
+          <span className="flex-1">{feedbackBanner.message}</span>
+          {feedbackBanner.action && (
+            <button
+              type="button"
+              onClick={() => {
+                feedbackBanner.action?.onClick();
+                setFeedbackBanner(null);
+              }}
+              className="ml-1 px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-[11px] font-bold cursor-pointer transition-all shadow-2xs"
+            >
+              {feedbackBanner.action.label}
+            </button>
+          )}
         </div>
       )}
     </div>

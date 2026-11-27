@@ -217,7 +217,6 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                   <div className="flex items-center border border-brd rounded-lg bg-card overflow-hidden">
                     <button
                       onClick={() => onUpdateQuantity(item.productId, item.quantity - 1)}
-                      disabled={isLoading}
                       className="p-1 hover:bg-paper text-mut hover:text-ink transition-colors cursor-pointer"
                       aria-label="Decrease quantity"
                     >
@@ -228,7 +227,6 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                     </span>
                     <button
                       onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
-                      disabled={isLoading}
                       className="p-1 hover:bg-paper text-mut hover:text-ink transition-colors cursor-pointer"
                       aria-label="Increase quantity"
                     >
@@ -238,7 +236,6 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
 
                   <button
                     onClick={() => onRemoveItem(item.productId)}
-                    disabled={isLoading}
                     className="p-1.5 text-mut hover:text-rose-500 rounded-md transition-colors cursor-pointer"
                     aria-label="Remove item"
                   >
