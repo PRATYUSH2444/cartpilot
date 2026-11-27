@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { ChatSessionModel, IChatSession } from './chat-session.model.js';
 import { ChatMessageModel, IChatMessage } from './chat-message.model.js';
 import { AgentService, AgentTurnResult } from '../agent/agent.service.js';
+import { ChatRouterService } from './chat-router.service.js';
 import { MandateModel } from '../mandates/mandate.model.js';
 import { OrderModel } from '../orders/order.model.js';
 import { PaymentModel } from '../payments/payment.model.js';
@@ -280,24 +281,55 @@ export class ChatService {
       content: m.content,
     }));
 
-    // 4. Run AI Agent multi-turn turn
-    logger.info({ sessionId, userId, prompt: content }, 'Running AI Agent turn');
-    const agentResult: AgentTurnResult = await AgentService.runTurn(
-      userId,
-      content,
-      historyContext
-    );
+    // Find active dish and active servings from prior messages for context continuity
+    let activeDish: string | undefined;
+    let activeServings: number | undefined;
+    for (let i = previousMessages.length - 1; i >= 0; i--) {
+      const pm: any = previousMessages[i];
+      if (pm.cardType === 'items' && pm.cardData?.dishName) {
+        activeDish = pm.cardData.dishName;
+        activeServings = pm.cardData.servings;
+        break;
+      }
+    }
 
-    // 5. Save Agent Message
-    const agentMessage = await ChatMessageModel.create({
-      sessionId: session._id,
-      userId: userObjectId,
-      sender: 'AGENT',
-      content: agentResult.content,
-      toolCalls: agentResult.toolCalls.length > 0 ? agentResult.toolCalls : undefined,
-      cardType: agentResult.cardType,
-      cardData: agentResult.cardData,
+    // 4. Deterministic Router pass (Resolves greetings, thanks, non-veg notice, servings & cached recipes with 0 LLM calls)
+    const routerResult = await ChatRouterService.route(userId, content, {
+      activeDish,
+      activeServings,
     });
+
+    let agentMessage: IChatMessage;
+
+    if (routerResult.handled) {
+      logger.info({ sessionId, userId, prompt: content, cardType: routerResult.cardType }, '⚡ Turn resolved via Deterministic Router');
+      agentMessage = await ChatMessageModel.create({
+        sessionId: session._id,
+        userId: userObjectId,
+        sender: 'AGENT',
+        content: routerResult.content,
+        cardType: routerResult.cardType,
+        cardData: routerResult.cardData,
+      });
+    } else {
+      // 5. Fallback: Run AI Agent multi-turn turn for open-ended queries
+      logger.info({ sessionId, userId, prompt: content }, 'Running AI Agent turn');
+      const agentResult: AgentTurnResult = await AgentService.runTurn(
+        userId,
+        content,
+        historyContext
+      );
+
+      agentMessage = await ChatMessageModel.create({
+        sessionId: session._id,
+        userId: userObjectId,
+        sender: 'AGENT',
+        content: agentResult.content,
+        toolCalls: agentResult.toolCalls.length > 0 ? agentResult.toolCalls : undefined,
+        cardType: agentResult.cardType,
+        cardData: agentResult.cardData,
+      });
+    }
 
     return {
       userMessage,

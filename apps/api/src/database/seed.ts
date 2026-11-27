@@ -6,12 +6,59 @@ import { MerchantModel } from '../modules/merchants/merchant.model.js';
 import { MerchantUserModel } from '../modules/merchants/merchant-user.model.js';
 import { ProductModel } from '../modules/catalog/product.model.js';
 import { OrderModel } from '../modules/orders/order.model.js';
+import { RecipePlanModel } from '../modules/recipe/recipe-plan.model.js';
+import { SEED_RECIPES } from '../modules/recipe/recipe-seed.data.js';
 import {
   SEED_MERCHANTS,
   SEED_PRODUCTS_FRESH_GREENS,
   SEED_PRODUCTS_DESI_KIRANA,
 } from './seed-data.js';
 import { logger } from '../common/logging/logger.js';
+
+function inferIngredientKeys(name: string, aliases: string[] = []): string[] {
+  const combined = [name, ...aliases].join(' ').toLowerCase();
+  const keys = new Set<string>();
+
+  if (combined.includes('paneer') || combined.includes('cottage cheese') || combined.includes('chenna')) keys.add('paneer');
+  if (combined.includes('butter') || combined.includes('makhan')) keys.add('butter');
+  if (combined.includes('tomato') || combined.includes('tamatar')) keys.add('tomato');
+  if (combined.includes('onion') || combined.includes('pyaz') || combined.includes('kanda')) keys.add('onion');
+  if (combined.includes('potato') || combined.includes('aloo') || combined.includes('alu')) keys.add('potato');
+  if (combined.includes('peas') || combined.includes('matar') || combined.includes('mutter')) keys.add('green_peas');
+  if (combined.includes('rice') || combined.includes('chawal') || combined.includes('basmati')) keys.add('basmati_rice');
+  if (combined.includes('ghee')) keys.add('ghee');
+  if (combined.includes('cumin') || combined.includes('jeera')) keys.add('jeera');
+  if (combined.includes('garam masala')) keys.add('garam_masala');
+  if (combined.includes('ginger') || combined.includes('adrak')) keys.add('ginger');
+  if (combined.includes('garlic') || combined.includes('lahsun')) keys.add('garlic');
+  if (combined.includes('turmeric') || combined.includes('haldi')) keys.add('turmeric');
+  if (combined.includes('chilli') || combined.includes('mirch')) keys.add('green_chilli');
+  if (combined.includes('chilli powder') || combined.includes('lal mirch')) keys.add('chilli_powder');
+  if (combined.includes('coriander') || combined.includes('dhania')) keys.add('coriander');
+  if (combined.includes('salt') || combined.includes('namak')) keys.add('salt');
+  if (combined.includes('curd') || combined.includes('dahi') || combined.includes('yogurt')) keys.add('curd');
+  if (combined.includes('milk') || combined.includes('doodh')) keys.add('milk');
+  if (combined.includes('cream') || combined.includes('malai')) keys.add('cream');
+  if (combined.includes('cashew') || combined.includes('kaju')) keys.add('cashew');
+  if (combined.includes('atta') || combined.includes('wheat') || combined.includes('gehu')) keys.add('atta');
+  if (combined.includes('toor') || combined.includes('arhar')) keys.add('toor_dal');
+  if (combined.includes('moong')) keys.add('moong_dal');
+  if (combined.includes('urad')) keys.add('urad_dal');
+  if (combined.includes('chana') || combined.includes('chole') || combined.includes('chickpeas')) keys.add('chickpeas');
+  if (combined.includes('rajma') || combined.includes('kidney beans')) keys.add('rajma');
+  if (combined.includes('spinach') || combined.includes('palak')) keys.add('spinach');
+  if (combined.includes('cauliflower') || combined.includes('gobi')) keys.add('cauliflower');
+  if (combined.includes('oil') || combined.includes('tel')) keys.add('oil');
+  if (combined.includes('sugar') || combined.includes('cheeni')) keys.add('sugar');
+  if (combined.includes('capsicum') || combined.includes('shimla')) keys.add('capsicum');
+  if (combined.includes('kasuri methi') || combined.includes('fenugreek')) keys.add('kasuri_methi');
+
+  if (keys.size === 0) {
+    keys.add(name.toLowerCase().replace(/[^\w]/g, '_'));
+  }
+
+  return Array.from(keys);
+}
 
 export async function runSeed(dropExisting = false): Promise<void> {
   logger.info({ dropExisting }, '🌱 Starting CartPilot Database Seeding Process...');
@@ -158,11 +205,13 @@ export async function runSeed(dropExisting = false): Promise<void> {
   // 4. Seed Products for Merchant A (Fresh Greens Organics)
   let freshGreensProductCount = 0;
   for (const productData of SEED_PRODUCTS_FRESH_GREENS) {
+    const keys = inferIngredientKeys(productData.name, productData.aliases);
     await ProductModel.findOneAndUpdate(
       { merchantId: freshGreensId, slug: productData.slug },
       {
         ...productData,
         merchantId: freshGreensId,
+        ingredientKeys: keys,
         isVegetarian: true,
         isActive: true,
       },
@@ -175,11 +224,13 @@ export async function runSeed(dropExisting = false): Promise<void> {
   const desiKiranaId = createdMerchants['desi-kirana-spices'];
   let desiKiranaProductCount = 0;
   for (const productData of SEED_PRODUCTS_DESI_KIRANA) {
+    const keys = inferIngredientKeys(productData.name, productData.aliases);
     await ProductModel.findOneAndUpdate(
       { merchantId: desiKiranaId, slug: productData.slug },
       {
         ...productData,
         merchantId: desiKiranaId,
+        ingredientKeys: keys,
         isVegetarian: true,
         isActive: true,
       },
@@ -194,8 +245,29 @@ export async function runSeed(dropExisting = false): Promise<void> {
       desiKiranaCount: desiKiranaProductCount,
       total: freshGreensProductCount + desiKiranaProductCount,
     },
-    '✅ Seeded Strictly Vegetarian Catalog Products with Aliases'
+    '✅ Seeded Strictly Vegetarian Catalog Products with Aliases and Canonical IngredientKeys'
   );
+
+  // 5.1 Seed Authentic Indian Vegetarian Recipes into recipe_plans Cache
+  let recipeSeedCount = 0;
+  for (const recipe of SEED_RECIPES) {
+    await RecipePlanModel.findOneAndUpdate(
+      { dishKey: recipe.dishKey },
+      {
+        dishKey: recipe.dishKey,
+        dishName: recipe.dishName,
+        cuisine: recipe.cuisine,
+        diet: 'VEGETARIAN',
+        servingsBase: recipe.servingsBase,
+        ingredients: recipe.ingredients,
+        sourceModel: 'seed',
+        hits: 10,
+      },
+      { upsert: true, new: true }
+    );
+    recipeSeedCount++;
+  }
+  logger.info({ recipeSeedCount }, '✅ Seeded Authentic Indian Recipes into recipe_plans Cache (0-token cache hits ready)');
 
   // 6. Seed Realistic Operational Orders for Fresh Greens Organics
   const orderUser = customerUserSecondary || customerUserPrimary;

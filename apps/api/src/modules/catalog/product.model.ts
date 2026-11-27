@@ -36,6 +36,7 @@ export interface IProduct extends Document {
   availableStock: number;
   reservedStock: number;
   aliases: string[]; // Normalized aliases: ["pyaz", "kanda", "onion"]
+  ingredientKeys: string[]; // Canonical lowercase ingredient keys: ["onion", "paneer"]
   isVegetarian: boolean; // Strictly vegetarian
   isActive: boolean;
   imageUrl?: string;
@@ -133,6 +134,11 @@ const ProductSchema = new Schema<IProduct>(
       },
     },
     aliases: {
+      type: [String],
+      default: [],
+      index: true,
+    },
+    ingredientKeys: {
       type: [String],
       default: [],
       index: true,

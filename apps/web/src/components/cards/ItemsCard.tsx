@@ -1,13 +1,30 @@
-import React, { useState } from 'react';
-import { Plus, Minus, Check, ShoppingCart, Sparkles, CheckCircle2 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Minus, Check, ShoppingCart, CheckCircle2, XCircle, Info } from 'lucide-react';
 import { PopulatedCartItem } from '../../types';
 
-export interface IngredientItemModel {
+export interface IngredientLineItem {
+  ingredientKey?: string;
   ingredientName: string;
+  name?: string;
+  role?: 'core' | 'optional' | 'pantry';
+  isPantry?: boolean;
   requiredAmount?: number;
   requiredUnit?: string;
-  status: 'AVAILABLE' | 'PARTIALLY_AVAILABLE' | 'OUT_OF_STOCK' | 'NOT_LISTED' | 'ALTERNATIVE_AVAILABLE';
-  isMandatory?: boolean;
+  status: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'NOT_IN_CATALOG' | 'AVAILABLE' | 'PARTIALLY_AVAILABLE' | 'NOT_LISTED' | 'ALTERNATIVE_AVAILABLE';
+  statusLabel?: string;
+  packCount?: number;
+  subtotalPaise?: number;
+  product?: {
+    id: string;
+    name: string;
+    slug?: string;
+    category?: string;
+    packageSize: number;
+    packageUnit: string;
+    unitPricePaise: number;
+    availableStock: number;
+    imageUrl?: string;
+  };
   matchedProduct?: {
     id: string;
     name: string;
@@ -15,62 +32,56 @@ export interface IngredientItemModel {
     packageSize: number;
     packageUnit: string;
     unitPricePaise: number;
-    formattedUnitPrice: string;
+    formattedUnitPrice?: string;
     availableStock: number;
   };
-  // Fallbacks for direct catalog proposals
-  productId?: string;
-  name?: string;
-  packageSize?: number;
-  packageUnit?: string;
-  unitPricePaise?: number;
-  pricePaise?: number;
-  formattedUnitPrice?: string;
-  availableStock?: number;
-  quantity?: number;
-  packCount?: number;
-  subtotalPaise?: number;
-  formattedSubtotal?: string;
-  surplusNote?: string;
+  alternatives?: Array<{
+    id: string;
+    name: string;
+    packageSize: number;
+    packageUnit: string;
+    unitPricePaise: number;
+    availableStock: number;
+  }>;
   alternativeSuggestion?: {
     name: string;
-    reason: string;
+    reason?: string;
     availableProduct?: {
       id: string;
       name: string;
       packageSize: number;
       packageUnit: string;
       pricePaise: number;
-      formattedPrice: string;
+      formattedPrice?: string;
       availableStock: number;
     };
   };
+  // Fallbacks for direct catalog proposals
+  productId?: string;
+  unitPricePaise?: number;
+  pricePaise?: number;
+  availableStock?: number;
+  quantity?: number;
+  surplusNote?: string;
 }
 
 export interface DynamicRecipeCardPayload {
-  status?: string;
+  dishKey?: string;
   dishName?: string;
+  dish?: string;
   servings?: number;
   cuisine?: string;
   instructions?: string[];
   totalIngredientsCount?: number;
   availableCount?: number;
   missingCount?: number;
-  items?: IngredientItemModel[];
-  availableItems?: IngredientItemModel[];
-  missingItems?: IngredientItemModel[];
-  pricing?: {
-    subtotalPaise?: number;
-    gstPaise?: number;
-    deliveryFeePaise?: number;
-    totalPaise?: number;
-    formatted?: {
-      subtotal?: string;
-      gst?: string;
-      delivery?: string;
-      total?: string;
-    };
-  };
+  lines?: IngredientLineItem[];
+  items?: IngredientLineItem[];
+  availableItems?: IngredientLineItem[];
+  missingItems?: IngredientLineItem[];
+  unmatchedKeys?: string[];
+  totalAvailablePaise?: number;
+  coreTotalPaise?: number;
 }
 
 interface ItemsCardProps {
@@ -87,284 +98,393 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
   onAddToCart,
   onAddAllToCart,
   cartItems,
-  onUpdateQuantity,
-  title = 'Recipe & Ingredient Intelligence',
 }) => {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [isAddingAll, setIsAddingAll] = useState(false);
 
   // Normalize card payload
   const payload: DynamicRecipeCardPayload = cardData || {};
-  const rawItems: IngredientItemModel[] =
-    payload.items || (Array.isArray(cardData) ? cardData : []);
+  const initialServings = Number(payload.servings) || 4;
+  const [servings, setServings] = useState<number>(initialServings);
 
-  // Standardize items into a unified text-first model
-  const standardizedItems = rawItems.map((item) => {
-    const isDirectCatalog = Boolean(item.productId && !item.matchedProduct);
-    const prodId = item.matchedProduct?.id || item.productId || '';
-    const prodName = item.matchedProduct?.name || item.name || item.ingredientName;
-    const pkgSize = item.matchedProduct?.packageSize || item.packageSize || 100;
-    const pkgUnit = item.matchedProduct?.packageUnit || item.packageUnit || 'G';
-    const unitPrice =
-      (item.matchedProduct?.unitPricePaise || item.unitPricePaise || item.pricePaise || 0) / 100;
-    const reqAmount = item.requiredAmount || pkgSize;
-    const reqUnit = item.requiredUnit || pkgUnit;
-    const packs = item.packCount || item.quantity || 1;
-    const stock = item.matchedProduct?.availableStock ?? item.availableStock ?? 0;
-    const status = item.status || (isDirectCatalog ? 'AVAILABLE' : 'AVAILABLE');
+  const rawLines: IngredientLineItem[] = useMemo(() => {
+    if (Array.isArray(payload.lines) && payload.lines.length > 0) return payload.lines;
+    if (Array.isArray(payload.items) && payload.items.length > 0) return payload.items;
+    if (Array.isArray(cardData)) return cardData;
+    return [];
+  }, [payload.lines, payload.items, cardData]);
 
-    return {
-      raw: item,
-      productId: prodId,
-      ingredientName: item.ingredientName || prodName,
-      productName: prodName,
-      requiredAmount: reqAmount,
-      requiredUnit: reqUnit,
-      packageSize: pkgSize,
-      packageUnit: pkgUnit,
-      unitPrice,
-      packCount: packs,
-      availableStock: stock,
-      status,
-      surplusNote: item.surplusNote,
-      alternativeSuggestion: item.alternativeSuggestion,
-      isAvailable: status === 'AVAILABLE' && Boolean(prodId),
-    };
+  // Dish metadata
+  const dishName = payload.dishName || payload.dish || 'Curated Recipe Ingredients';
+
+  // Servings scale ratio
+  const scaleRatio = initialServings > 0 ? servings / initialServings : 1;
+
+  // Normalized items with active scaling
+  const normalizedItems = useMemo(() => {
+    return rawLines.map((item, idx) => {
+      const name = item.ingredientName || item.name || `Ingredient #${idx + 1}`;
+      const prod = item.product || item.matchedProduct || null;
+      const prodId = prod?.id || item.productId || '';
+      const unitPricePaise = prod?.unitPricePaise || item.unitPricePaise || item.pricePaise || 0;
+      const stock = prod?.availableStock ?? item.availableStock ?? 10;
+      const rawPackCount = item.packCount || item.quantity || 1;
+      const scaledPackCount = Math.max(1, Math.round(rawPackCount * scaleRatio));
+      const requiredAmount = item.requiredAmount ? Math.round(item.requiredAmount * scaleRatio) : undefined;
+      const requiredUnit = item.requiredUnit || '';
+
+      const isPantry = Boolean(item.isPantry || item.role === 'pantry');
+
+      // Canonical status normalize
+      let status: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'NOT_IN_CATALOG' = 'IN_STOCK';
+      const rawStatus = (item.status || '').toUpperCase();
+
+      if (rawStatus === 'NOT_IN_CATALOG' || rawStatus === 'NOT_LISTED' || !prodId) {
+        status = 'NOT_IN_CATALOG';
+      } else if (rawStatus === 'OUT_OF_STOCK' || stock <= 0) {
+        status = 'OUT_OF_STOCK';
+      } else if (rawStatus === 'LOW_STOCK' || stock <= 5) {
+        status = 'LOW_STOCK';
+      } else {
+        status = 'IN_STOCK';
+      }
+
+      const subtotalPaise = unitPricePaise * scaledPackCount;
+
+      return {
+        id: prodId || `unmatched-${idx}`,
+        productId: prodId,
+        name,
+        productName: prod?.name || name,
+        category: prod?.category,
+        packageSize: prod?.packageSize,
+        packageUnit: prod?.packageUnit,
+        unitPricePaise,
+        stock,
+        packCount: scaledPackCount,
+        requiredAmount,
+        requiredUnit,
+        isPantry,
+        role: item.role || (isPantry ? 'pantry' : 'core'),
+        status,
+        subtotalPaise,
+        imageUrl: (prod as any)?.imageUrl,
+        alternatives: item.alternatives || [],
+        altSuggestion: item.alternativeSuggestion,
+      };
+    });
+  }, [rawLines, scaleRatio]);
+
+  // Selected items checkboxes (Pantry items start unticked as "I already have it", all other available items start ticked)
+  const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>(() => {
+    const initialMap: Record<string, boolean> = {};
+    for (const item of rawLines) {
+      const prod = item.product || item.matchedProduct;
+      const prodId = prod?.id || item.productId;
+      if (prodId) {
+        const isPantry = item.isPantry || item.role === 'pantry';
+        // Non-pantry available items default to TRUE, pantry items default to FALSE
+        initialMap[prodId] = !isPantry;
+      }
+    }
+    return initialMap;
   });
 
-  const availableItemsList = standardizedItems.filter((i) => i.isAvailable);
-  const missingItemsList = standardizedItems.filter((i) => !i.isAvailable);
-
-  const totalPaise = payload.pricing?.totalPaise ||
-    availableItemsList.reduce((acc, i) => acc + Math.round(i.unitPrice * 100) * i.packCount, 0);
-  const formattedTotal = payload.pricing?.formatted?.total || `₹${(totalPaise / 100).toFixed(2)}`;
-
-  const handleAddSingle = async (productId: string, qty: number) => {
-    if (!productId) return;
-    setAddingId(productId);
-    await onAddToCart(productId, qty);
-    setTimeout(() => setAddingId(null), 500);
+  const toggleSelect = (productId: string) => {
+    setSelectedIds((prev) => ({
+      ...prev,
+      [productId]: !prev[productId],
+    }));
   };
 
-  const handleAddAll = async () => {
-    if (!onAddAllToCart || availableItemsList.length === 0) return;
+  // Split items into available and not-in-catalog
+  const { availableItems, unavailableItems } = useMemo(() => {
+    const avail: typeof normalizedItems = [];
+    const unavail: typeof normalizedItems = [];
+
+    for (const it of normalizedItems) {
+      if (it.status === 'NOT_IN_CATALOG') {
+        unavail.push(it);
+      } else {
+        avail.push(it);
+      }
+    }
+    return { availableItems: avail, unavailableItems: unavail };
+  }, [normalizedItems]);
+
+  // Calculate dynamic total of currently selected in-stock / low-stock items
+  const { selectedCount, totalSelectedPaise, itemsToBulkAdd } = useMemo(() => {
+    let count = 0;
+    let totalPaise = 0;
+    const toAdd: Array<{ productId: string; quantity: number }> = [];
+
+    for (const it of availableItems) {
+      if (it.status !== 'OUT_OF_STOCK' && it.productId && selectedIds[it.productId]) {
+        count++;
+        totalPaise += it.subtotalPaise;
+        toAdd.push({ productId: it.productId, quantity: it.packCount });
+      }
+    }
+    return { selectedCount: count, totalSelectedPaise: totalPaise, itemsToBulkAdd: toAdd };
+  }, [availableItems, selectedIds]);
+
+  // Check if item is already in user's active cart
+  const getCartQuantity = (productId: string): number => {
+    if (!cartItems || !productId) return 0;
+    const match = cartItems.find(
+      (ci) => (ci as any).product?._id === productId || (ci as any).productId === productId || ci.productId === productId
+    );
+    return match ? match.quantity : 0;
+  };
+
+  // Add individual item to cart
+  const handleSingleAdd = async (productId: string, qty: number) => {
+    if (!productId || addingId) return;
+    setAddingId(productId);
+    try {
+      await onAddToCart(productId, qty);
+    } finally {
+      setAddingId(null);
+    }
+  };
+
+  // Bulk add all selected items
+  const handleBulkAdd = async () => {
+    if (itemsToBulkAdd.length === 0 || isAddingAll) return;
     setIsAddingAll(true);
-    const itemsToAdd = availableItemsList.map((i) => ({
-      productId: i.productId,
-      quantity: i.packCount,
-    }));
-    await onAddAllToCart(itemsToAdd);
-    setTimeout(() => setIsAddingAll(false), 700);
+    try {
+      if (onAddAllToCart) {
+        await onAddAllToCart(itemsToBulkAdd);
+      } else {
+        for (const item of itemsToBulkAdd) {
+          await onAddToCart(item.productId, item.quantity);
+        }
+      }
+    } finally {
+      setIsAddingAll(false);
+    }
   };
 
   return (
-    <div className="w-full rounded-2xl border border-[--line] bg-[--surface] p-4.5 sm:p-5 shadow-sm space-y-4 font-sans text-[--ink]">
-      {/* ── Card Header ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[--line]">
-        <div className="space-y-0.5">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <Sparkles className="w-3.5 h-3.5" />
-            </span>
-            <h3 className="text-sm font-bold tracking-tight">
-              {payload.dishName ? `${payload.dishName}` : title}
+    <div className="w-full max-w-xl mx-auto rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 shadow-xl overflow-hidden my-3 transition-all">
+      {/* ── Card Header: Dish title, Servings Stepper, Strict Veg badge ──────── */}
+      <div className="p-4 sm:p-5 bg-stone-50 dark:bg-stone-850/80 border-b border-stone-200/80 dark:border-stone-800">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300/40 dark:border-emerald-700/50">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                100% Pure Vegetarian
+              </span>
+              <span className="text-[11px] font-semibold text-stone-500 dark:text-stone-400">
+                Direct Catalog Match
+              </span>
+            </div>
+            <h3 className="text-base sm:text-lg font-black text-stone-900 dark:text-white tracking-tight">
+              {dishName}
             </h3>
-            {payload.servings && (
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[--surface-2] text-[--mut]">
-                {payload.servings} servings
-              </span>
-            )}
-            {payload.cuisine && (
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium">
-                {payload.cuisine}
-              </span>
-            )}
           </div>
-          <p className="text-xs text-[--mut] font-mono pl-7">
-            Estimated Total: <span className="font-bold text-[--ink]">{formattedTotal}</span>
-          </p>
-        </div>
 
-        {/* Status Counts Pill */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/20 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" />
-            {availableItemsList.length} of {standardizedItems.length} available
-          </span>
-          {missingItemsList.length > 0 && (
-            <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold border border-amber-500/20">
-              {missingItemsList.length} missing
+          {/* Servings Stepper */}
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">
+              Servings
             </span>
-          )}
+            <div className="inline-flex items-center rounded-xl bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 p-0.5 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setServings((s) => Math.max(1, s - 1))}
+                disabled={servings <= 1}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                title="Decrease servings"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+              <span className="w-8 text-center text-xs font-black text-stone-900 dark:text-white font-mono">
+                {servings}
+              </span>
+              <button
+                type="button"
+                onClick={() => setServings((s) => Math.min(20, s + 1))}
+                disabled={servings >= 20}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                title="Increase servings"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ── Text-First Ingredient Grid (No Image Thumbnails) ────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-        {standardizedItems.map((item, idx) => {
-          const cartItem = cartItems?.find((c) => c.productId === item.productId);
-          const inCartQty = cartItem?.quantity ?? 0;
-          const isAdding = addingId === item.productId;
+      {/* ── Ingredients List ──────────────────────────────────────────────── */}
+      <div className="p-3 sm:p-4 space-y-2.5 max-h-[460px] overflow-y-auto overscroll-contain">
+        {availableItems.map((item) => {
+          const inCartQty = getCartQuantity(item.productId);
+          const isSelected = Boolean(selectedIds[item.productId]);
+          const isOOS = item.status === 'OUT_OF_STOCK';
+          const isLow = item.status === 'LOW_STOCK';
 
           return (
             <div
-              key={item.productId || `item-${idx}`}
-              className={`p-3 rounded-xl border transition-all text-xs flex flex-col justify-between ${
-                item.isAvailable
-                  ? 'bg-[--surface-2]/60 border-[--line] hover:border-[--brand]/40'
-                  : 'bg-amber-500/5 border-amber-500/20'
+              key={item.id}
+              className={`p-3 rounded-2xl border transition-all ${
+                isOOS
+                  ? 'bg-stone-50/70 dark:bg-stone-900/40 border-stone-200/50 dark:border-stone-800/40 opacity-70'
+                  : isSelected
+                  ? 'bg-white dark:bg-stone-850 border-emerald-500/40 dark:border-emerald-500/30 shadow-xs'
+                  : 'bg-white dark:bg-stone-900 border-stone-200/80 dark:border-stone-800'
               }`}
             >
-              {/* Ingredient & Product Meta */}
-              <div className="space-y-1.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-0.5">
-                    <span className="text-[11px] font-semibold text-[--ink] block leading-snug">
-                      {item.ingredientName}
-                    </span>
-                    <span className="text-[10px] text-[--mut] font-mono block">
-                      Required: {item.requiredAmount} {item.requiredUnit}
-                    </span>
-                  </div>
-
-                  {/* Status Badge */}
-                  {item.status === 'AVAILABLE' && (
-                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
-                      Available
-                    </span>
-                  )}
-                  {item.status === 'OUT_OF_STOCK' && (
-                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 font-bold border border-rose-500/20">
-                      Out of stock
-                    </span>
-                  )}
-                  {item.status === 'NOT_LISTED' && (
-                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-bold border border-amber-500/20">
-                      Missing from store
-                    </span>
-                  )}
-                  {item.status === 'ALTERNATIVE_AVAILABLE' && (
-                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 font-bold border border-purple-500/20">
-                      Alternative offered
-                    </span>
-                  )}
-                </div>
-
-                {/* Available Product Details */}
-                {item.isAvailable ? (
-                  <div className="pt-1.5 border-t border-[--line]/60 grid grid-cols-2 gap-1 text-[10px] font-mono text-[--mut]">
-                    <div>
-                      <span className="text-[--ink] font-medium block truncate" title={item.productName}>
-                        {item.productName}
-                      </span>
-                      <span>Pack: {item.packageSize} {item.packageUnit}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-[--ink] text-[11px] block">
-                        ₹{item.unitPrice.toFixed(2)}
-                      </span>
-                      <span>Stock: {item.availableStock}</span>
-                    </div>
-                  </div>
+              <div className="flex items-center gap-3">
+                {/* Checkbox (Ticked for items to add, unticked for pantry items) */}
+                {!isOOS ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleSelect(item.productId)}
+                    className={`w-5 h-5 rounded-md flex items-center justify-center transition-all flex-shrink-0 cursor-pointer ${
+                      isSelected
+                        ? 'bg-emerald-600 text-white'
+                        : 'border-2 border-stone-300 dark:border-stone-600 bg-transparent'
+                    }`}
+                  >
+                    {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  </button>
                 ) : (
-                  <div className="pt-1.5 border-t border-amber-500/20 text-[10px] text-amber-700 dark:text-amber-300 font-mono space-y-0.5">
-                    <p>Not sold in current store catalogue.</p>
-                    {item.alternativeSuggestion && (
-                      <p className="text-purple-600 dark:text-purple-400">
-                        💡 Suggestion: {item.alternativeSuggestion.name} ({item.alternativeSuggestion.reason})
-                      </p>
-                    )}
+                  <div className="w-5 h-5 rounded-md flex items-center justify-center text-stone-400 dark:text-stone-600 flex-shrink-0">
+                    <XCircle className="w-4 h-4" />
                   </div>
                 )}
-              </div>
 
-              {/* Action Bar (Quantity + Add to Cart) */}
-              {item.isAvailable && (
-                <div className="mt-3 pt-2 border-t border-[--line]/60 flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-[--mut]">
-                    Pack count: {item.packCount}
-                  </span>
+                {/* Product / Ingredient Details */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-bold text-xs sm:text-sm text-stone-900 dark:text-white truncate">
+                      {item.productName}
+                    </span>
 
-                  {inCartQty > 0 && onUpdateQuantity ? (
-                    <div className="flex items-center border border-[--line] rounded-lg bg-[--surface] overflow-hidden">
-                      <button
-                        onClick={() => onUpdateQuantity(item.productId, inCartQty - 1)}
-                        className="px-2 py-0.5 hover:bg-[--surface-2] text-[--mut] hover:text-[--ink] transition-colors cursor-pointer"
-                        aria-label="Decrease quantity"
-                      >
-                        <Minus className="w-3 h-3" />
-                      </button>
-                      <span className="w-6 text-center font-mono text-xs font-bold text-[--ink]">
-                        {inCartQty}
+                    {/* Pantry chip */}
+                    {item.isPantry && (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-medium">
+                        Pantry staple
                       </span>
-                      <button
-                        onClick={() => onUpdateQuantity(item.productId, inCartQty + 1)}
-                        disabled={inCartQty >= item.availableStock}
-                        className="px-2 py-0.5 hover:bg-[--surface-2] text-[--mut] hover:text-[--ink] transition-colors disabled:opacity-40 cursor-pointer"
-                        aria-label="Increase quantity"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
+                    )}
+
+                    {/* Stock status indicator */}
+                    {isLow && (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 font-bold">
+                        Only {item.stock} left
+                      </span>
+                    )}
+                    {isOOS && (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400 font-bold">
+                        Out of stock
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Quantity & Pack Spec */}
+                  <div className="flex items-center gap-2 mt-0.5 text-[11px] text-stone-500 dark:text-stone-400">
+                    {item.packageSize && (
+                      <span>
+                        {item.packageSize} {item.packageUnit} pack
+                      </span>
+                    )}
+                    {item.requiredAmount && (
+                      <span>
+                        • Needed: {item.requiredAmount} {item.requiredUnit}
+                      </span>
+                    )}
+                    <span>• {item.packCount} {item.packCount > 1 ? 'packs' : 'pack'}</span>
+                  </div>
+
+                  {/* Out of stock alternative suggestions */}
+                  {isOOS && (item.alternatives.length > 0 || item.altSuggestion) && (
+                    <div className="mt-2 p-2 rounded-xl bg-stone-100 dark:bg-stone-800/60 text-[11px] text-stone-600 dark:text-stone-300">
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">Suggested alternative: </span>
+                      {item.alternatives[0]?.name || item.altSuggestion?.name} (₹{((item.alternatives[0]?.unitPricePaise || item.altSuggestion?.availableProduct?.pricePaise || 0) / 100).toFixed(2)})
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => handleAddSingle(item.productId, item.packCount)}
-                      disabled={isAdding || item.availableStock < item.packCount}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                        isAdding
-                          ? 'bg-emerald-600 text-white'
-                          : item.availableStock < item.packCount
-                            ? 'bg-[--line] text-[--mut] cursor-not-allowed'
-                            : 'bg-[--surface] border border-[--line] hover:border-[--brand] hover:text-[--brand] text-[--ink] shadow-xs'
-                      }`}
-                    >
-                      {isAdding ? (
-                        <>
-                          <Check className="w-3 h-3" /> Added
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3 h-3" /> Add to Cart
-                        </>
-                      )}
-                    </button>
                   )}
                 </div>
-              )}
+
+                {/* Price and individual Add button */}
+                <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                  <span className="font-mono font-black text-xs sm:text-sm text-stone-900 dark:text-white">
+                    ₹{(item.subtotalPaise / 100).toFixed(2)}
+                  </span>
+
+                  {!isOOS && (
+                    <>
+                      {inCartQty > 0 ? (
+                        <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 text-[10px] font-bold">
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>{inCartQty} in cart</span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSingleAdd(item.productId, item.packCount)}
+                          disabled={addingId === item.productId}
+                          className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 text-xs font-bold transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {addingId === item.productId ? 'Adding...' : 'Add'}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           );
         })}
+
+        {/* ── Items Not In Catalogue ───────────────────────────────────────── */}
+        {unavailableItems.length > 0 && (
+          <div className="mt-3 p-3 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-dashed border-stone-300 dark:border-stone-700">
+            <div className="flex items-center gap-1.5 text-stone-500 dark:text-stone-400 text-xs font-semibold mb-2">
+              <Info className="w-3.5 h-3.5 text-stone-400" />
+              <span>Not in catalogue (source from your pantry / local store):</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {unavailableItems.map((u, i) => (
+                <span
+                  key={i}
+                  className="px-2.5 py-1 rounded-lg bg-stone-200/80 dark:bg-stone-800 text-[11px] font-medium text-stone-600 dark:text-stone-300"
+                >
+                  {u.name} {u.requiredAmount ? `(${u.requiredAmount} ${u.requiredUnit})` : ''}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ── Summary & One-Click "Add All Available" ─────────────────────────── */}
-      {availableItemsList.length > 0 && onAddAllToCart && (
-        <div className="mt-3 pt-3 border-t border-[--line] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[--surface-2]/40 -mx-4.5 -mb-4.5 p-3.5 rounded-b-2xl">
-          <div className="text-xs text-[--mut] font-mono space-y-0.5">
-            <p>
-              Subtotal: <span className="font-bold text-[--ink]">{formattedTotal}</span> (5% GST included)
-            </p>
-            <p className="text-[10px]">
-              {availableItemsList.length} items ready to order
-            </p>
+      {/* ── Footer Action: "Add all available items · ₹X" ─────────────────── */}
+      <div className="p-4 bg-stone-50 dark:bg-stone-850/80 border-t border-stone-200/80 dark:border-stone-800">
+        <button
+          type="button"
+          onClick={handleBulkAdd}
+          disabled={isAddingAll || selectedCount === 0}
+          className="w-full py-3.5 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-sm sm:text-base shadow-lg shadow-emerald-600/20 transition-all cursor-pointer flex items-center justify-between disabled:opacity-50 disabled:pointer-events-none"
+        >
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="w-5 h-5" />
+            <span>
+              {isAddingAll
+                ? 'Adding items to cart...'
+                : `Add all available items (${selectedCount})`}
+            </span>
           </div>
 
-          <button
-            onClick={handleAddAll}
-            disabled={isAddingAll}
-            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[--brand] hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
-          >
-            {isAddingAll ? (
-              <>
-                <Check className="w-3.5 h-3.5" /> Added All to Cart
-              </>
-            ) : (
-              <>
-                <ShoppingCart className="w-3.5 h-3.5" /> Add All {availableItemsList.length} Available Items
-              </>
-            )}
-          </button>
-        </div>
-      )}
+          <span className="font-mono text-base font-black">
+            ₹{(totalSelectedPaise / 100).toFixed(2)}
+          </span>
+        </button>
+
+        <p className="text-center text-[11px] text-stone-400 dark:text-stone-500 mt-2">
+          Pantry items are unselected by default. Tap checkboxes to toggle.
+        </p>
+      </div>
     </div>
   );
 };
