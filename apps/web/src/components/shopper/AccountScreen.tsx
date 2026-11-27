@@ -217,43 +217,43 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
       </div>
 
       {/* ── Main Proportional Desktop Viewport Container ─────────────────────── */}
-      <div className="page-container pt-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+      <div className="page-container pt-4 sm:pt-6 pb-24">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 items-start">
           {/* ── Left Column: Identity, Wallet & Spending Security (4-5 Cols) ─── */}
-          <div className="lg:col-span-5 xl:col-span-4 space-y-6">
+          <div className="lg:col-span-5 xl:col-span-4 space-y-3.5 sm:space-y-4">
             {/* User Profile Card */}
-            <div className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-6 sm:p-7 shadow-xs space-y-5">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4 min-w-0">
+            <div className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-4 sm:p-5 shadow-xs">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <div className="relative flex-shrink-0">
-                    <div className="w-20 h-20 rounded-full border-3 border-emerald-600 dark:border-emerald-500 p-1 flex items-center justify-center">
-                      <div className="w-full h-full rounded-full bg-emerald-700 text-white font-extrabold text-3xl flex items-center justify-center shadow-inner">
+                    <div className="w-14 h-14 rounded-full border-2 border-emerald-600 dark:border-emerald-500 p-0.5 flex items-center justify-center">
+                      <div className="w-full h-full rounded-full bg-emerald-700 text-white font-extrabold text-2xl flex items-center justify-center shadow-inner">
                         {userInitial}
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={onOpenProfileModal}
-                      className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-emerald-600 text-white border-2 border-white dark:border-stone-900 flex items-center justify-center shadow-xs cursor-pointer hover:scale-110 transition-transform"
+                      className="absolute -bottom-0.5 -right-0.5 w-5.5 h-5.5 rounded-full bg-emerald-600 text-white border border-white dark:border-stone-900 flex items-center justify-center shadow-xs cursor-pointer hover:scale-110 transition-transform"
                       title="Update Avatar"
                     >
-                      <Camera className="w-3.5 h-3.5" />
+                      <Camera className="w-3 h-3" />
                     </button>
                   </div>
 
-                  <div className="min-w-0 space-y-1">
-                    <h2 className="font-extrabold text-lg sm:text-xl text-stone-900 dark:text-white truncate">
+                  <div className="min-w-0 space-y-0.5">
+                    <h2 className="font-extrabold text-base sm:text-lg text-stone-900 dark:text-white truncate">
                       {displayName}
                     </h2>
-                    <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400 font-medium truncate">
-                      <Smartphone className="w-4 h-4 flex-shrink-0 text-stone-400" />
+                    <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 font-medium truncate">
+                      <Smartphone className="w-3.5 h-3.5 flex-shrink-0 text-stone-400" />
                       <span className="truncate">{displayPhone}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400 font-medium truncate">
-                      <Mail className="w-4 h-4 flex-shrink-0 text-stone-400" />
+                    <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 font-medium truncate">
+                      <Mail className="w-3.5 h-3.5 flex-shrink-0 text-stone-400" />
                       <span className="truncate">{user?.email || 'shopper@cartpilot.local'}</span>
                       {user?.isEmailVerified ? (
-                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700">
+                        <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.2 rounded-full border border-emerald-300 dark:border-emerald-700">
                           Verified
                         </span>
                       ) : (
@@ -263,14 +263,14 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                             setIsEmailModalOpen(true);
                             handleSendEmailCode();
                           }}
-                          className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-700 hover:underline cursor-pointer"
+                          className="text-[9px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-1.5 py-0.2 rounded-full border border-amber-300 dark:border-amber-700 hover:underline cursor-pointer"
                         >
-                          Verify Now
+                          Verify
                         </button>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400 font-medium truncate">
-                      <MapPin className="w-4 h-4 flex-shrink-0 text-stone-400" />
+                    <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 font-medium truncate">
+                      <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-stone-400" />
                       <span className="truncate">{displayLocality}</span>
                     </div>
                   </div>
@@ -279,117 +279,109 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 <button
                   type="button"
                   onClick={onOpenProfileModal}
-                  className="w-11 h-11 rounded-2xl border border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 hover:border-emerald-500 hover:text-emerald-600 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0 shadow-2xs"
+                  className="w-9 h-9 rounded-xl border border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 hover:border-emerald-500 hover:text-emerald-600 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0 shadow-2xs"
                   title="Edit Profile"
                 >
-                  <Edit2 className="w-5 h-5 text-emerald-600" />
+                  <Edit2 className="w-4 h-4 text-emerald-600" />
                 </button>
-              </div>
-
-              <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between text-xs text-stone-500">
-                <span>Account Status</span>
-                <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Active · Farm Fresh Assurance
-                </span>
               </div>
             </div>
 
             {/* CartPilot Wallet Card */}
-            <div className="rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-800 to-emerald-950 text-white p-6 sm:p-7 shadow-lg shadow-emerald-900/20 space-y-4">
+            <div className="rounded-2xl bg-gradient-to-br from-emerald-700 via-emerald-800 to-emerald-950 text-white p-4 sm:p-5 shadow-md shadow-emerald-900/15 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center">
-                    <Wallet className="w-6 h-6 text-white" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center">
+                    <Wallet className="w-4.5 h-4.5 text-white" />
                   </div>
                   <div>
-                    <span className="text-xs uppercase font-extrabold tracking-wider text-emerald-200 block">
+                    <span className="text-[11px] uppercase font-extrabold tracking-wider text-emerald-200 block">
                       CartPilot Wallet
                     </span>
-                    <span className="text-xs text-emerald-100/80">Instant 1-Tap Checkout</span>
+                    <span className="text-[11px] text-emerald-100/80">Instant 1-Tap Checkout</span>
                   </div>
                 </div>
 
-                <span className="text-xs font-bold bg-white/20 px-3 py-1 rounded-full backdrop-blur-md">
+                <span className="text-[10px] font-bold bg-white/20 px-2.5 py-0.5 rounded-full backdrop-blur-md">
                   Active
                 </span>
               </div>
 
-              <div className="space-y-1">
-                <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight block">
+              <div className="space-y-0.5">
+                <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight block">
                   ₹{walletBalance.toFixed(2)}
                 </span>
-                <p className="text-xs text-emerald-100/80">
+                <p className="text-[11px] text-emerald-100/80">
                   Zero transaction fees on daily farm harvest orders.
                 </p>
               </div>
 
-              <div className="pt-2">
+              <div className="pt-1">
                 <button
                   type="button"
                   onClick={onOpenWallet}
-                  className="w-full py-3 px-5 rounded-2xl bg-white hover:bg-stone-50 text-emerald-950 font-extrabold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-stone-50 text-emerald-950 font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <Wallet className="w-4 h-4 text-emerald-700" />
+                  <Wallet className="w-3.5 h-3.5 text-emerald-700" />
                   <span>+ Add Money / View Passbook</span>
                 </button>
               </div>
             </div>
 
-            {/* Spending Rules & Mandate Card */}
+            {/* Daily Spending Limits Card (Friendly non-technical naming) */}
             <div
               onClick={onOpenRules}
-              className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-5 sm:p-6 shadow-xs flex items-center justify-between cursor-pointer hover:border-purple-500/50 hover:shadow-md transition-all group"
+              className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3.5 sm:p-4 shadow-xs flex items-center justify-between cursor-pointer hover:border-purple-500/50 hover:shadow-xs transition-all group"
             >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Shield className="w-6 h-6 text-purple-600" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Shield className="w-5 h-5 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-base text-stone-900 dark:text-white group-hover:text-purple-600 transition-colors">
-                    Spending Rules & Mandates
+                  <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-white group-hover:text-purple-600 transition-colors">
+                    Daily Spending Limits
                   </h3>
-                  <p className="text-sm text-stone-500 dark:text-stone-400">
-                    Auto-approve ceiling, daily budget caps & anomaly guards
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                    Set daily grocery budget and auto-order limits
                   </p>
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-stone-400 group-hover:text-purple-600 transition-colors flex-shrink-0" />
+              <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-purple-600 transition-colors flex-shrink-0" />
             </div>
 
             {/* Sign Out Card */}
             <button
               type="button"
               onClick={onLogout}
-              className="w-full py-4 px-6 rounded-2xl bg-white dark:bg-stone-900 border border-rose-200 dark:border-rose-900/60 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 font-extrabold text-sm flex items-center justify-center gap-2.5 shadow-xs transition-colors cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-xl bg-white dark:bg-stone-900 border border-rose-200 dark:border-rose-900/60 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-colors cursor-pointer"
             >
-              <LogOut className="w-4.5 h-4.5" />
+              <LogOut className="w-4 h-4" />
               <span>Log Out of CartPilot</span>
             </button>
           </div>
 
           {/* ── Right Column: Interactive Grid, Coupons & Support (7-8 Cols) ─── */}
-          <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+          <div className="lg:col-span-7 xl:col-span-8 space-y-4 sm:space-y-5">
             {/* 3-Card Primary Actions Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
               {/* Orders */}
               <button
                 type="button"
                 onClick={onOpenOrders}
-                className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-6 shadow-xs flex flex-col items-start justify-between text-left hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group relative min-h-[160px]"
+                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-4 sm:p-5 shadow-xs flex flex-col items-start justify-between text-left hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group relative min-h-[125px]"
               >
                 {activeOrdersCount > 0 && (
-                  <span className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
-                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping" />
+                  <span className="absolute top-3.5 right-3.5 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
                     <span>Active</span>
                   </span>
                 )}
-                <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                  <ShoppingBag className="w-7 h-7 fill-emerald-600 text-emerald-600" />
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                  <ShoppingBag className="w-5 h-5 fill-emerald-600 text-emerald-600" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-lg text-stone-900 dark:text-white">Orders</h3>
-                  <p className="text-sm text-stone-500 dark:text-stone-400 mt-0.5">
+                  <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-white">Orders</h3>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
                     {orders.length} placed orders & live tracking
                   </p>
                 </div>
@@ -399,16 +391,16 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               <button
                 type="button"
                 onClick={onOpenAddresses}
-                className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-6 shadow-xs flex flex-col items-start justify-between text-left hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group min-h-[160px]"
+                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-4 sm:p-5 shadow-xs flex flex-col items-start justify-between text-left hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group min-h-[125px]"
               >
-                <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                  <MapPin className="w-7 h-7 fill-blue-500 text-blue-500" />
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                  <MapPin className="w-5 h-5 fill-blue-500 text-blue-500" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-lg text-stone-900 dark:text-white">
+                  <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-white">
                     Saved Addresses
                   </h3>
-                  <p className="text-sm text-stone-500 dark:text-stone-400 mt-0.5">
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
                     Manage home & work delivery points
                   </p>
                 </div>
@@ -418,16 +410,16 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               <button
                 type="button"
                 onClick={onOpenWishlist}
-                className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-6 shadow-xs flex flex-col items-start justify-between text-left hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group min-h-[160px]"
+                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-4 sm:p-5 shadow-xs flex flex-col items-start justify-between text-left hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group min-h-[125px]"
               >
-                <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-500 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                  <Heart className="w-7 h-7 fill-rose-500 text-rose-500" />
+                <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-500 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                  <Heart className="w-5 h-5 fill-rose-500 text-rose-500" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-lg text-stone-900 dark:text-white">
+                  <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-white">
                     Wishlist & Favorites
                   </h3>
-                  <p className="text-sm text-stone-500 dark:text-stone-400 mt-0.5">
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
                     Quick 1-tap reordering bookmarks
                   </p>
                 </div>
@@ -435,21 +427,21 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
             </div>
 
             {/* 2-Card Secondary Actions Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
               {/* Coupons */}
               <button
                 type="button"
                 onClick={onOpenCoupons}
-                className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-6 shadow-xs flex items-center gap-4 hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group text-left"
+                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3.5 sm:p-4 shadow-xs flex items-center gap-3 hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group text-left"
               >
-                <div className="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Ticket className="w-7 h-7 fill-purple-600 text-purple-600" />
+                <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Ticket className="w-5 h-5 fill-purple-600 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-base sm:text-lg text-stone-900 dark:text-white group-hover:text-emerald-700 transition-colors">
+                  <h3 className="font-bold text-sm text-stone-900 dark:text-white group-hover:text-emerald-700 transition-colors">
                     Coupons & Offers
                   </h3>
-                  <p className="text-sm text-stone-500 dark:text-stone-400">
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
                     Apply promo codes & save up to ₹100
                   </p>
                 </div>
@@ -459,16 +451,16 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsHelpCenterOpen(true)}
-                className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-6 shadow-xs flex items-center gap-4 hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group text-left"
+                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3.5 sm:p-4 shadow-xs flex items-center gap-3 hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group text-left"
               >
-                <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Headphones className="w-7 h-7 text-emerald-700 dark:text-emerald-400" />
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Headphones className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-base sm:text-lg text-stone-900 dark:text-white group-hover:text-emerald-700 transition-colors">
+                  <h3 className="font-bold text-sm text-stone-900 dark:text-white group-hover:text-emerald-700 transition-colors">
                     Help & Support
                   </h3>
-                  <p className="text-sm text-stone-500 dark:text-stone-400">
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
                     Direct email assistance & quick inquiry form
                   </p>
                 </div>
@@ -476,7 +468,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
             </div>
 
             {/* Transparency, Policy & Information Center */}
-            <div className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-6 shadow-xs space-y-4">
+            <div className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-4 sm:p-5 shadow-xs space-y-3">
               <h3 className="font-extrabold text-xs text-stone-400 uppercase tracking-wider">
                 Support, Transparency & Legal
               </h3>
