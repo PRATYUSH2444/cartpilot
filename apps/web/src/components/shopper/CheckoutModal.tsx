@@ -240,7 +240,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <button
                 type="button"
                 onClick={onOpenAddressSelector}
-                className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer text-xs"
+                className="text-stone-900 dark:text-white font-bold hover:underline cursor-pointer text-xs"
               >
                 {selectedAddress ? 'Change' : 'Select Address'}
               </button>
@@ -258,7 +258,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <button
                   type="button"
                   onClick={onOpenAddressSelector}
-                  className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800 transition-colors cursor-pointer shadow-xs"
+                  className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-stone-900 hover:bg-black text-white dark:bg-white dark:text-stone-900 text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                 >
                   <MapPin className="w-3.5 h-3.5" />
                   <span>Choose Address</span>
@@ -290,8 +290,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     onClick={() => setDeliverySlot(slot.id)}
                     className={`flex items-start gap-2.5 p-3 rounded-xl border transition-all cursor-pointer ${
                       isSelected
-                        ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 ring-1 ring-emerald-600/30'
-                        : 'border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-white hover:border-stone-300'
+                        ? 'border-stone-900 bg-stone-100 dark:border-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-2xs'
+                        : 'border-stone-200 dark:border-stone-750 bg-white dark:bg-stone-900 text-stone-900 dark:text-white hover:border-stone-300'
                     }`}
                   >
                     <input
@@ -299,7 +299,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       name="deliverySlot"
                       checked={isSelected}
                       onChange={() => setDeliverySlot(slot.id)}
-                      className="mt-0.5 accent-emerald-600 cursor-pointer"
+                      className="mt-0.5 accent-stone-900 dark:accent-white cursor-pointer"
                     />
                     <div className="text-left min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -363,20 +363,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               onClick={() => setSelectedMethod('WALLET')}
               className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
                 selectedMethod === 'WALLET'
-                  ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 ring-1 ring-emerald-600/30'
+                  ? 'border-stone-900 bg-stone-100 dark:border-white dark:bg-stone-800'
                   : 'border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-850/60 hover:bg-stone-100'
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-xs">
-                  <Wallet className="w-5 h-5 fill-white" />
+                <div className="w-8 h-8 rounded-xl bg-stone-900 text-white dark:bg-white dark:text-stone-900 flex items-center justify-center shadow-xs">
+                  <Wallet className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-xs text-stone-900 dark:text-white block">
+                    <span className="font-bold text-xs text-stone-900 dark:text-white block">
                       CartPilot Wallet
                     </span>
-                    <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-white dark:bg-stone-900 px-1.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700">
+                    <span className="text-[10px] font-bold text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-900 px-1.5 py-0.5 rounded border border-stone-300 dark:border-stone-700">
                       1-Tap
                     </span>
                   </div>
@@ -390,7 +390,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 name="paymentMethod"
                 checked={selectedMethod === 'WALLET'}
                 onChange={() => setSelectedMethod('WALLET')}
-                className="accent-emerald-600 w-4 h-4 cursor-pointer"
+                className="accent-stone-900 dark:accent-white w-4 h-4 cursor-pointer"
               />
             </label>
 
@@ -399,16 +399,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               onClick={() => setSelectedMethod('RAZORPAY')}
               className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
                 selectedMethod === 'RAZORPAY'
-                  ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 ring-1 ring-emerald-600/30'
+                  ? 'border-stone-900 bg-stone-100 dark:border-white dark:bg-stone-800'
                   : 'border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-850/60 hover:bg-stone-100'
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <span className="font-extrabold text-xs text-stone-900 dark:text-white block">
+                  <span className="font-bold text-xs text-stone-900 dark:text-white block">
                     Razorpay (UPI, Cards, NetBanking)
                   </span>
                   <span className="text-[10px] text-stone-500 dark:text-stone-400">Instant secured payment gateway</span>
@@ -419,7 +419,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 name="paymentMethod"
                 checked={selectedMethod === 'RAZORPAY'}
                 onChange={() => setSelectedMethod('RAZORPAY')}
-                className="accent-emerald-600 w-4 h-4 cursor-pointer"
+                className="accent-stone-900 dark:accent-white w-4 h-4 cursor-pointer"
               />
             </label>
 
@@ -428,16 +428,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               onClick={() => setSelectedMethod('COD')}
               className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
                 selectedMethod === 'COD'
-                  ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 ring-1 ring-emerald-600/30'
+                  ? 'border-stone-900 bg-stone-100 dark:border-white dark:bg-stone-800'
                   : 'border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-850/60 hover:bg-stone-100'
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-600 text-white font-bold text-xs flex items-center justify-center">
-                  <Banknote className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 rounded-xl bg-stone-700 text-white font-bold text-xs flex items-center justify-center">
+                  <Banknote className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <span className="font-extrabold text-xs text-stone-900 dark:text-white block">
+                  <span className="font-bold text-xs text-stone-900 dark:text-white block">
                     Cash on Delivery (COD)
                   </span>
                   <span className="text-[10px] text-stone-500 dark:text-stone-400">Pay upon arrival</span>
@@ -448,7 +448,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 name="paymentMethod"
                 checked={selectedMethod === 'COD'}
                 onChange={() => setSelectedMethod('COD')}
-                className="accent-emerald-600 w-4 h-4 cursor-pointer"
+                className="accent-stone-900 dark:accent-white w-4 h-4 cursor-pointer"
               />
             </label>
           </div>
@@ -507,9 +507,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <span className="font-mono">-₹{pricing.couponDiscount}</span>
                 </div>
               )}
-              <div className="pt-2 border-t border-stone-200 dark:border-stone-700 flex justify-between font-black text-sm text-stone-900 dark:text-white">
+              <div className="pt-2 border-t border-stone-200 dark:border-stone-700 flex justify-between font-bold text-sm text-stone-900 dark:text-white">
                 <span>Total Payable</span>
-                <span className="text-base text-emerald-700 dark:text-emerald-400 font-mono">
+                <span className="text-base text-stone-900 dark:text-white font-mono tabular-nums font-black">
                   ₹{pricing.total}
                 </span>
               </div>
@@ -523,7 +523,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             type="button"
             onClick={handlePlaceOrder}
             disabled={isProcessing || !selectedAddress || (selectedMethod === 'WALLET' && !isWalletSufficient)}
-            className="w-full py-3.5 px-4 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white disabled:opacity-50 transition-all cursor-pointer shadow-md min-h-[48px]"
+            className="w-full py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-stone-900 hover:bg-black text-white dark:bg-white dark:text-stone-900 dark:hover:bg-stone-100 disabled:opacity-50 transition-all cursor-pointer shadow-sm min-h-[46px]"
           >
             {isProcessing ? (
               <>
