@@ -100,6 +100,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           {/* Location Selector Pill */}
           <button
             type="button"
+            data-tour="delivery-location"
             onClick={onOpenAddressModal}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200/80 dark:hover:bg-stone-700 border border-stone-200 dark:border-stone-700 text-xs font-semibold text-stone-800 dark:text-stone-200 transition-colors cursor-pointer max-w-[160px] xl:max-w-[220px]"
             title="Change Delivery Location"
@@ -121,6 +122,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
         <div className="flex-1 max-w-xl min-w-0 flex items-center gap-2">
           {/* Search Input Box */}
           <div
+            data-tour="search"
             onClick={onOpenSearchModal}
             className="flex-1 min-w-0 flex items-center gap-2 px-3.5 h-10 rounded-full bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 hover:border-emerald-500/50 shadow-2xs cursor-pointer transition-all"
             role="search"
@@ -135,6 +137,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           {/* Dedicated Standalone AI Assistant Button (Distinct, never overlapping search) */}
           <button
             type="button"
+            data-tour="ai-assistant"
             onClick={() => onSelectTab('chat')}
             className={`h-10 px-3.5 rounded-full text-xs lg:text-sm font-bold flex items-center gap-1.5 shadow-xs whitespace-nowrap flex-shrink-0 cursor-pointer active:scale-95 transition-all ${
               activeTab === 'chat'
@@ -222,6 +225,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           {/* Wallet Balance Chip (Always visible on Desktop) */}
           <button
             type="button"
+            data-tour="wallet"
             onClick={onOpenWallet}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-extrabold transition-colors cursor-pointer whitespace-nowrap"
             title="CartPilot Wallet"
@@ -233,6 +237,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           {/* Cart Button with Count Badge (Always visible on Desktop) */}
           <button
             type="button"
+            data-tour="cart"
             onClick={() => onSelectTab('cart')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer relative whitespace-nowrap ${
               activeTab === 'cart'
@@ -277,6 +282,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           <div className="relative">
             <button
               type="button"
+              data-tour="account"
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
               className="w-9 h-9 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shadow-2xs cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition-all"
               title={userName}

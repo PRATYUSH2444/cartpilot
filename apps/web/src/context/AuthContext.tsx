@@ -54,6 +54,7 @@ export interface UserProfile {
   staffPermissions?: string[];
   mustChangePassword?: boolean;
   isEmailVerified?: boolean;
+  hasSeenTour?: boolean;
 }
 
 export interface AuthContextType {

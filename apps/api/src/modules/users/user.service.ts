@@ -12,6 +12,7 @@ export interface UpdateProfileDTO {
   gender?: UserGender;
   dietaryPreferences?: string[];
   notificationPreferences?: Partial<INotificationPreferences>;
+  hasSeenTour?: boolean;
 }
 
 export class UserService {
@@ -47,6 +48,7 @@ export class UserService {
       },
       isEmailVerified: user.isEmailVerified,
       isPhoneVerified: user.isPhoneVerified,
+      hasSeenTour: Boolean(user.hasSeenTour),
       defaultAddress,
       createdAt: user.createdAt,
     };
@@ -90,6 +92,10 @@ export class UserService {
         ...user.notificationPreferences,
         ...input.notificationPreferences,
       };
+    }
+
+    if (input.hasSeenTour !== undefined) {
+      user.hasSeenTour = Boolean(input.hasSeenTour);
     }
 
     await user.save();

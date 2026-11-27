@@ -95,6 +95,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
         <button
           type="button"
           role="tab"
+          data-tour="ai-assistant"
           aria-selected={activeTab === 'chat'}
           data-testid="tab-chat"
           aria-label="AI Assistant"
@@ -125,6 +126,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
         <button
           type="button"
           role="tab"
+          data-tour="cart"
           aria-selected={activeTab === 'cart'}
           data-testid="tab-cart"
           aria-label="Cart"
@@ -164,6 +166,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
         <button
           type="button"
           role="tab"
+          data-tour="account"
           aria-selected={activeTab === 'account'}
           data-testid="tab-account"
           aria-label="Account"

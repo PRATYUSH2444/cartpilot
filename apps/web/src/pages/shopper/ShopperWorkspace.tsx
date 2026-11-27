@@ -23,6 +23,8 @@ import { CheckoutModal } from '../../components/shopper/CheckoutModal';
 import { LiveTrackingModal } from '../../components/shopper/LiveTrackingModal';
 import { GlobalSearchModal } from '../../components/shopper/GlobalSearchModal';
 import { SplashScreen } from '../../components/shopper/SplashScreen';
+import { WelcomeSheet } from '../../components/shopper/WelcomeSheet';
+import { GuidedTour } from '../../components/shopper/GuidedTour';
 import { PhoneLoginModal } from '../../components/shopper/PhoneLoginModal';
 import { ProductSheet } from '../../components/shopper/ProductSheet';
 import { AddressModal } from '../../components/shopper/AddressModal';
@@ -51,11 +53,30 @@ interface ServerChatMessage {
 }
 
 export const ShopperWorkspace: React.FC = () => {
-  const { token, user, logout, authFetch } = useAuth();
+  const { token, user, logout, authFetch, setUserProfile } = useAuth();
 
-  const [isDark, setIsDark] = useState<boolean>(() =>
-    document.documentElement.classList.contains('dark')
-  );
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('cartpilot_theme');
+      if (saved) return saved === 'dark';
+    } catch {}
+    return false; // Default = Light, regardless of system
+  });
+
+  const toggleTheme = useCallback(() => {
+    setIsDark((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('cartpilot_theme', next ? 'dark' : 'light');
+      } catch {}
+      if (next) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      return next;
+    });
+  }, []);
 
   // Active navigation tab
   const [activeMobileTab, setActiveMobileTab] = useState<TabKey>('home');
@@ -85,7 +106,86 @@ export const ShopperWorkspace: React.FC = () => {
   const [isLiveTrackingOpen, setIsLiveTrackingOpen] = useState(false);
   const [trackedOrder, setTrackedOrder] = useState<OrderData | null>(null);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
-  const [isSplashScreenOpen, setIsSplashScreenOpen] = useState(false);
+  // Premium First-Run Flow State (Splash -> Welcome Sheet -> Guided Tour)
+  const [isSplashActive, setIsSplashActive] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('cartpilot_session_splash_seen') !== 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isWelcomeSheetOpen, setIsWelcomeSheetOpen] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState(false);
+
+  const checkAndTriggerTour = useCallback(() => {
+    try {
+      const localTourDone = localStorage.getItem('cartpilot_tour_completed') === 'true';
+      const serverTourDone = Boolean(user?.hasSeenTour);
+      if (!localTourDone && !serverTourDone) {
+        setTimeout(() => {
+          setIsTourOpen(true);
+        }, 300);
+      }
+    } catch {
+      // Ignore
+    }
+  }, [user]);
+
+  const handleSplashComplete = useCallback(() => {
+    setIsSplashActive(false);
+    try {
+      const welcomeSeen = localStorage.getItem('cartpilot_welcome_sheet_seen') === 'true';
+      if (!welcomeSeen) {
+        setIsWelcomeSheetOpen(true);
+        return;
+      }
+    } catch {}
+
+    checkAndTriggerTour();
+  }, [checkAndTriggerTour]);
+
+  const handleWelcomeComplete = useCallback(() => {
+    setIsWelcomeSheetOpen(false);
+    checkAndTriggerTour();
+  }, [checkAndTriggerTour]);
+
+  const handleTourComplete = useCallback(async () => {
+    setIsTourOpen(false);
+    try {
+      localStorage.setItem('cartpilot_tour_completed', 'true');
+      if (token && user) {
+        await authFetch(`${API_BASE}/users/profile`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hasSeenTour: true }),
+        });
+        setUserProfile({ ...user, hasSeenTour: true });
+      }
+    } catch (err) {
+      console.warn('Could not persist tour completion to server:', err);
+    }
+  }, [token, user, authFetch, setUserProfile]);
+
+  const handleReplayTour = useCallback(() => {
+    setActiveMobileTab('home');
+    setTimeout(() => {
+      setIsTourOpen(true);
+    }, 200);
+  }, []);
+
+  useEffect(() => {
+    if (!isSplashActive) {
+      try {
+        const welcomeSeen = localStorage.getItem('cartpilot_welcome_sheet_seen') === 'true';
+        if (!welcomeSeen) {
+          setIsWelcomeSheetOpen(true);
+        } else {
+          checkAndTriggerTour();
+        }
+      } catch {}
+    }
+  }, [isSplashActive, checkAndTriggerTour]);
+
   const [isPhoneLoginOpen, setIsPhoneLoginOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
@@ -1224,7 +1324,7 @@ export const ShopperWorkspace: React.FC = () => {
         walletBalance={walletBalance}
         favoritesCount={favorites.length}
         isDark={isDark}
-        onToggleTheme={() => setIsDark((d) => !d)}
+        onToggleTheme={toggleTheme}
       />
 
       {/* ── Main Screen Viewport Switching ──────────────────────────────────── */}
@@ -1245,6 +1345,7 @@ export const ShopperWorkspace: React.FC = () => {
               onOpenCoupons={() => handleOpenCoupons('view')}
               onOpenWishlist={() => setIsWishlistOpen(true)}
               onOpenNotifications={() => setIsNotificationsOpen(true)}
+              onOpenRules={() => setIsRulesSheetOpen(true)}
               onSelectProduct={(p) => {
                 setSelectedProduct(p);
                 setIsProductSheetOpen(true);
@@ -1335,7 +1436,8 @@ export const ShopperWorkspace: React.FC = () => {
               onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
               onLogout={() => logout()}
               isDark={isDark}
-              onToggleTheme={() => setIsDark((d) => !d)}
+              onToggleTheme={toggleTheme}
+              onReplayTour={handleReplayTour}
             />
           )}
         </main>
@@ -1559,15 +1661,17 @@ export const ShopperWorkspace: React.FC = () => {
         onLogout={() => logout()}
       />
 
-      {/* ── Splash Screen (Screen 1) ───────────────────────────────────────── */}
-      <SplashScreen
-        isOpen={isSplashScreenOpen}
-        onGetStarted={() => setIsSplashScreenOpen(false)}
-        onSignIn={() => {
-          setIsSplashScreenOpen(false);
-          setIsPhoneLoginOpen(true);
-        }}
-        onClose={() => setIsSplashScreenOpen(false)}
+      {/* ── Premium First-Run Flow: Splash -> Welcome Sheet -> Guided Tour ── */}
+      <SplashScreen onComplete={handleSplashComplete} />
+
+      <WelcomeSheet
+        isOpen={isWelcomeSheetOpen}
+        onComplete={handleWelcomeComplete}
+      />
+
+      <GuidedTour
+        isOpen={isTourOpen}
+        onComplete={handleTourComplete}
       />
 
       {/* ── Phone Login Modal ──────────────────────────────────────────────── */}

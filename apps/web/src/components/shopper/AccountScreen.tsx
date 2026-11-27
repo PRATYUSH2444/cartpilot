@@ -30,6 +30,7 @@ import {
   ChevronDown,
   Loader2,
   KeyRound,
+  Sparkles,
 } from 'lucide-react';
 import { OrderData, UserAddress } from '../../types';
 
@@ -57,6 +58,7 @@ interface AccountScreenProps {
   onLogout: () => void;
   isDark: boolean;
   onToggleTheme: () => void;
+  onReplayTour?: () => void;
 }
 
 export const AccountScreen: React.FC<AccountScreenProps> = ({
@@ -75,6 +77,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   onLogout,
   isDark,
   onToggleTheme,
+  onReplayTour,
 }) => {
   const [activeInfoModal, setActiveInfoModal] = useState<{
     title: string;
@@ -480,6 +483,28 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               </h3>
 
               <div className="divide-y divide-stone-100 dark:divide-stone-800">
+                {/* Replay Guided Tour */}
+                {onReplayTour && (
+                  <button
+                    type="button"
+                    onClick={onReplayTour}
+                    className="w-full py-4 flex items-center justify-between text-left hover:text-emerald-700 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform" />
+                      <div>
+                        <span className="font-bold text-sm text-stone-800 dark:text-stone-200 group-hover:text-emerald-700 block">
+                          Replay Guided Tour
+                        </span>
+                        <span className="text-xs text-stone-400 block">
+                          Refresher on search, AI shopping & spend rules
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-600 transition-colors" />
+                  </button>
+                )}
+
                 {/* Privacy Policy */}
                 <button
                   type="button"

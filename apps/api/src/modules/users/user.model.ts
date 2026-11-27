@@ -44,6 +44,7 @@ export interface IUser extends Document {
   lastMfaVerifiedAt?: Date | null;
   walletBalancePaise: number;
   themePreference?: 'LIGHT' | 'DARK';
+  hasSeenTour?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -198,6 +199,10 @@ const UserSchema = new Schema<IUser>(
       type: String,
       enum: ['LIGHT', 'DARK'],
       default: 'LIGHT',
+    },
+    hasSeenTour: {
+      type: Boolean,
+      default: false,
     },
   },
   {
