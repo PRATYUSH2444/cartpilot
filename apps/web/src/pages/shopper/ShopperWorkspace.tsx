@@ -1072,7 +1072,7 @@ export const ShopperWorkspace: React.FC = () => {
       </div>
 
       {/* ── Fixed Bottom 5-Destination Navigation Bar (Visible only on mobile/tablet) ────── */}
-      <div className="block lg:hidden flex-shrink-0 z-40 bg-white/95 dark:bg-stone-900/95 border-t border-stone-200/80 dark:border-stone-800 safe-area-inset-bottom shadow-lg">
+      <div className="block lg:hidden flex-shrink-0 z-40 px-3 pt-3.5 pb-2 safe-area-inset-bottom bg-[#0a0b0e] border-t border-white/5 shadow-2xl">
         <BottomTabBar
           activeTab={activeMobileTab}
           onSelectTab={handleSelectTab}
