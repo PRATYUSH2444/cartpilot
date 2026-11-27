@@ -254,26 +254,26 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="profile-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
     >
-      <div className="bg-paper dark:bg-card border border-brd rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col text-stone-900 dark:text-zinc-100">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-brd bg-card-top/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-zinc-800 bg-stone-50/80 dark:bg-zinc-900/80">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-acc/10 text-acc flex items-center justify-center font-bold text-sm">
+            <div className="w-9 h-9 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
               {profile?.name ? profile.name[0].toUpperCase() : 'U'}
             </div>
             <div>
-              <h2 id="profile-modal-title" className="text-sm font-semibold text-ink">
+              <h2 id="profile-modal-title" className="text-sm font-bold text-stone-900 dark:text-white">
                 {profile?.name || 'Customer Account'}
               </h2>
-              <p className="text-[11px] text-mut">{profile?.email || 'Logged in shopper'}</p>
+              <p className="text-[11px] text-stone-500 dark:text-zinc-400">{profile?.email || 'Logged in shopper'}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-mut hover:text-ink hover:bg-paper transition-colors"
+            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
             title="Close modal"
           >
             <X className="w-5 h-5" />
@@ -281,14 +281,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-brd px-6 bg-card-top/20 gap-6">
+        <div className="flex border-b border-stone-200 dark:border-zinc-800 px-6 bg-stone-50/40 dark:bg-zinc-900/40 gap-6">
           <button
             type="button"
             onClick={() => { setActiveTab('PROFILE'); setStatusMessage(null); }}
-            className={`py-3 text-xs font-semibold border-b-2 transition-all ${
+            className={`py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
               activeTab === 'PROFILE'
-                ? 'border-acc text-acc'
-                : 'border-transparent text-mut hover:text-ink'
+                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400'
+                : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-white'
             }`}
           >
             Personal Details
@@ -296,10 +296,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <button
             type="button"
             onClick={() => { setActiveTab('PREFERENCES'); setStatusMessage(null); }}
-            className={`py-3 text-xs font-semibold border-b-2 transition-all ${
+            className={`py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
               activeTab === 'PREFERENCES'
-                ? 'border-acc text-acc'
-                : 'border-transparent text-mut hover:text-ink'
+                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400'
+                : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-white'
             }`}
           >
             Preferences & Diet
@@ -307,10 +307,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <button
             type="button"
             onClick={() => { setActiveTab('SECURITY'); setStatusMessage(null); }}
-            className={`py-3 text-xs font-semibold border-b-2 transition-all ${
+            className={`py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
               activeTab === 'SECURITY'
-                ? 'border-acc text-acc'
-                : 'border-transparent text-mut hover:text-ink'
+                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400'
+                : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-white'
             }`}
           >
             Security & Login
@@ -354,7 +354,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter your name"
-                    className="w-full pl-9 pr-3 py-2 bg-card border border-brd rounded-xl text-xs text-ink placeholder:text-mut focus:outline-hidden focus:border-acc"
+                    className="w-full pl-9 pr-3 py-2 bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-xl text-xs text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:outline-hidden focus:border-emerald-500 dark:focus:border-emerald-400"
                   />
                 </div>
               </div>
@@ -362,18 +362,18 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               {/* Email (Readonly) */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-ink">Email Address</label>
-                  <span className="text-[10px] text-mut uppercase tracking-wider font-semibold">
+                  <label className="text-xs font-semibold text-stone-900 dark:text-white">Email Address</label>
+                  <span className="text-[10px] text-stone-400 dark:text-zinc-500 uppercase tracking-wider font-semibold">
                     Primary Identifier
                   </span>
                 </div>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-mut absolute left-3 top-2.5" />
+                  <Mail className="w-4 h-4 text-stone-400 dark:text-zinc-500 absolute left-3 top-2.5" />
                   <input
                     type="email"
                     disabled
                     value={profile?.email || ''}
-                    className="w-full pl-9 pr-3 py-2 bg-card-top/30 border border-brd/60 rounded-xl text-xs text-mut cursor-not-allowed"
+                    className="w-full pl-9 pr-3 py-2 bg-stone-100 dark:bg-zinc-900/60 border border-stone-200/60 dark:border-zinc-800/60 rounded-xl text-xs text-stone-500 dark:text-zinc-400 cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -381,7 +381,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               {/* Phone with Verification */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-ink">Phone Number</label>
+                  <label className="text-xs font-semibold text-stone-900 dark:text-white">Phone Number</label>
                   {isPhoneVerified ? (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                       <CheckCircle2 className="w-3.5 h-3.5" /> Verified
@@ -391,7 +391,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       type="button"
                       onClick={handleSendOtp}
                       disabled={isSendingOtp}
-                      className="text-[11px] font-semibold text-acc hover:underline flex items-center gap-1 disabled:opacity-50"
+                      className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 disabled:opacity-50 cursor-pointer"
                     >
                       {isSendingOtp && <Loader2 className="w-3 h-3 animate-spin" />}
                       Verify via OTP
@@ -399,7 +399,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   ) : null}
                 </div>
                 <div className="relative">
-                  <Phone className="w-4 h-4 text-mut absolute left-3 top-2.5" />
+                  <Phone className="w-4 h-4 text-stone-400 dark:text-zinc-500 absolute left-3 top-2.5" />
                   <input
                     type="tel"
                     value={phone}
@@ -410,13 +410,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       }
                     }}
                     placeholder="+91 98765 43210"
-                    className="w-full pl-9 pr-3 py-2 bg-card border border-brd rounded-xl text-xs text-ink placeholder:text-mut focus:outline-hidden focus:border-acc"
+                    className="w-full pl-9 pr-3 py-2 bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-xl text-xs text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:outline-hidden focus:border-emerald-500 dark:focus:border-emerald-400"
                   />
                 </div>
 
                 {showOtpInput && (
-                  <div className="mt-2.5 p-3 rounded-xl bg-paper/80 border border-brd space-y-2">
-                    <div className="text-[11px] text-mut">Enter 6-digit verification code sent to {phone}:</div>
+                  <div className="mt-2.5 p-3 rounded-xl bg-stone-50 dark:bg-zinc-900/80 border border-stone-200 dark:border-zinc-800 space-y-2">
+                    <div className="text-[11px] text-stone-500 dark:text-zinc-400">Enter 6-digit verification code sent to {phone}:</div>
                     <div className="flex items-center gap-2">
                       <input
                         type="text"
@@ -424,13 +424,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         value={otpCode}
                         onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                         placeholder="123456"
-                        className="w-32 px-3 py-1.5 text-center font-mono tracking-widest text-sm bg-card border border-brd rounded-lg text-ink focus:outline-none focus:border-acc"
+                        className="w-32 px-3 py-1.5 text-center font-mono tracking-widest text-sm bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-lg text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
                       />
                       <button
                         type="button"
                         onClick={handleVerifyOtp}
                         disabled={isVerifyingOtp || otpCode.length < 6}
-                        className="px-3.5 py-1.5 rounded-lg bg-acc text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center gap-1.5"
+                        className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:opacity-50 transition-opacity flex items-center gap-1.5 cursor-pointer"
                       >
                         {isVerifyingOtp && <Loader2 className="w-3 h-3 animate-spin" />}
                         Verify
@@ -438,7 +438,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setShowOtpInput(false)}
-                        className="text-xs text-mut hover:text-ink px-2 py-1"
+                        className="text-xs text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-white px-2 py-1 cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -459,11 +459,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               {/* Gender and Date of Birth */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-ink mb-1">Gender</label>
+                  <label className="block text-xs font-semibold text-stone-900 dark:text-white mb-1">Gender</label>
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value as UserGender)}
-                    className="w-full px-3 py-2 bg-card border border-brd rounded-xl text-xs text-ink focus:outline-hidden focus:border-acc"
+                    className="w-full px-3 py-2 bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-xl text-xs text-stone-900 dark:text-white focus:outline-hidden focus:border-emerald-500 dark:focus:border-emerald-400"
                   >
                     <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
                     <option value="FEMALE">Female</option>
@@ -472,24 +472,24 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-ink mb-1">Date of Birth</label>
+                  <label className="block text-xs font-semibold text-stone-900 dark:text-white mb-1">Date of Birth</label>
                   <div className="relative">
-                    <Calendar className="w-4 h-4 text-mut absolute left-3 top-2.5" />
+                    <Calendar className="w-4 h-4 text-stone-400 dark:text-zinc-500 absolute left-3 top-2.5" />
                     <input
                       type="date"
                       value={dateOfBirth}
                       onChange={(e) => setDateOfBirth(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 bg-card border border-brd rounded-xl text-xs text-ink focus:outline-hidden focus:border-acc"
+                      className="w-full pl-9 pr-3 py-2 bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-xl text-xs text-stone-900 dark:text-white focus:outline-hidden focus:border-emerald-500 dark:focus:border-emerald-400"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-brd flex justify-end">
+              <div className="pt-3 border-t border-stone-200 dark:border-zinc-800 flex justify-end">
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-acc hover:opacity-90 text-white transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
                 >
                   {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                   Save Personal Details
@@ -500,8 +500,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             <form onSubmit={handleSaveProfile} className="space-y-6">
               {/* Dietary Invariant Display */}
               <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Dietary Preference</label>
-                <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/30 rounded-xl flex items-start gap-2.5">
+                <label className="block text-xs font-semibold text-stone-900 dark:text-white mb-1">Dietary Preference</label>
+                <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-500/30 rounded-xl flex items-start gap-2.5">
                   <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
                   <div className="text-xs">
                     <span className="font-semibold text-emerald-900 dark:text-emerald-200">
@@ -526,10 +526,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                             active ? prev.filter((p) => p !== tag) : [...prev, tag]
                           );
                         }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
                           active
-                            ? 'bg-acc/10 border-acc text-acc'
-                            : 'bg-card border-brd text-mut hover:text-ink'
+                            ? 'bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-bold'
+                            : 'bg-stone-50 dark:bg-zinc-900 border-stone-200 dark:border-zinc-800 text-stone-600 dark:text-zinc-300 hover:text-stone-900 dark:hover:text-white'
                         }`}
                       >
                         {tag === 'VEGETARIAN' ? '🌱 100% Vegetarian (Mandatory)' : tag ? tag.replace(/_/g, ' ') : ''}
@@ -540,57 +540,57 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </div>
 
               {/* Notification Preferences */}
-              <div className="pt-4 border-t border-brd space-y-3">
+              <div className="pt-4 border-t border-stone-200 dark:border-zinc-800 space-y-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <Bell className="w-4 h-4 text-acc" />
-                  <h4 className="text-xs font-semibold text-ink">Order & Assistant Notifications</h4>
+                  <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <h4 className="text-xs font-semibold text-stone-900 dark:text-white">Order & Assistant Notifications</h4>
                 </div>
 
-                <label className="flex items-center justify-between p-2.5 rounded-xl border border-brd hover:bg-card-top/20 cursor-pointer">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 hover:bg-stone-50 dark:hover:bg-zinc-900/60 cursor-pointer">
                   <div>
-                    <div className="text-xs font-medium text-ink">Email Notifications</div>
-                    <div className="text-[11px] text-mut">Order invoices, dispatch updates & policy audit reports</div>
+                    <div className="text-xs font-medium text-stone-900 dark:text-white">Email Notifications</div>
+                    <div className="text-[11px] text-stone-500 dark:text-zinc-400">Order invoices, dispatch updates & policy audit reports</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={notifications.email}
                     onChange={(e) => setNotifications({ ...notifications, email: e.target.checked })}
-                    className="w-4 h-4 accent-acc rounded"
+                    className="w-4 h-4 accent-emerald-600 rounded"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-2.5 rounded-xl border border-brd hover:bg-card-top/20 cursor-pointer">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 hover:bg-stone-50 dark:hover:bg-zinc-900/60 cursor-pointer">
                   <div>
-                    <div className="text-xs font-medium text-ink">SMS Alerts</div>
-                    <div className="text-[11px] text-mut">Express delivery dispatch and driver arrival OTPs</div>
+                    <div className="text-xs font-medium text-stone-900 dark:text-white">SMS Alerts</div>
+                    <div className="text-[11px] text-stone-500 dark:text-zinc-400">Express delivery dispatch and driver arrival OTPs</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={notifications.sms}
                     onChange={(e) => setNotifications({ ...notifications, sms: e.target.checked })}
-                    className="w-4 h-4 accent-acc rounded"
+                    className="w-4 h-4 accent-emerald-600 rounded"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-2.5 rounded-xl border border-brd hover:bg-card-top/20 cursor-pointer">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 hover:bg-stone-50 dark:hover:bg-zinc-900/60 cursor-pointer">
                   <div>
-                    <div className="text-xs font-medium text-ink">Push Notifications</div>
-                    <div className="text-[11px] text-mut">Autonomous assistant approval requests and cart alerts</div>
+                    <div className="text-xs font-medium text-stone-900 dark:text-white">Push Notifications</div>
+                    <div className="text-[11px] text-stone-500 dark:text-zinc-400">Autonomous assistant approval requests and cart alerts</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={notifications.push}
                     onChange={(e) => setNotifications({ ...notifications, push: e.target.checked })}
-                    className="w-4 h-4 accent-acc rounded"
+                    className="w-4 h-4 accent-emerald-600 rounded"
                   />
                 </label>
               </div>
 
-              <div className="pt-3 border-t border-brd flex justify-end">
+              <div className="pt-3 border-t border-stone-200 dark:border-zinc-800 flex justify-end">
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-acc hover:opacity-90 text-white transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
                 >
                   {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                   Save Preferences
@@ -607,55 +607,55 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Current Password</label>
+                <label className="block text-xs font-semibold text-stone-900 dark:text-white mb-1">Current Password</label>
                 <div className="relative">
-                  <Key className="w-4 h-4 text-mut absolute left-3 top-2.5" />
+                  <Key className="w-4 h-4 text-stone-400 dark:text-zinc-500 absolute left-3 top-2.5" />
                   <input
                     type="password"
                     required
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="Enter current account password"
-                    className="w-full pl-9 pr-3 py-2 bg-card border border-brd rounded-xl text-xs text-ink placeholder:text-mut focus:outline-hidden focus:border-acc"
+                    className="w-full pl-9 pr-3 py-2 bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-xl text-xs text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:outline-hidden focus:border-emerald-500 dark:focus:border-emerald-400"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-ink mb-1">New Password</label>
+                <label className="block text-xs font-semibold text-stone-900 dark:text-white mb-1">New Password</label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-mut absolute left-3 top-2.5" />
+                  <Lock className="w-4 h-4 text-stone-400 dark:text-zinc-500 absolute left-3 top-2.5" />
                   <input
                     type="password"
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Minimum 8 characters"
-                    className="w-full pl-9 pr-3 py-2 bg-card border border-brd rounded-xl text-xs text-ink placeholder:text-mut focus:outline-hidden focus:border-acc"
+                    className="w-full pl-9 pr-3 py-2 bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-xl text-xs text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:outline-hidden focus:border-emerald-500 dark:focus:border-emerald-400"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Confirm New Password</label>
+                <label className="block text-xs font-semibold text-stone-900 dark:text-white mb-1">Confirm New Password</label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-mut absolute left-3 top-2.5" />
+                  <Lock className="w-4 h-4 text-stone-400 dark:text-zinc-500 absolute left-3 top-2.5" />
                   <input
                     type="password"
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-type new password"
-                    className="w-full pl-9 pr-3 py-2 bg-card border border-brd rounded-xl text-xs text-ink placeholder:text-mut focus:outline-hidden focus:border-acc"
+                    className="w-full pl-9 pr-3 py-2 bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-xl text-xs text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:outline-hidden focus:border-emerald-500 dark:focus:border-emerald-400"
                   />
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-brd flex justify-end">
+              <div className="pt-3 border-t border-stone-200 dark:border-zinc-800 flex justify-end">
                 <button
                   type="submit"
                   disabled={isChangingPassword}
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
                 >
                   {isChangingPassword ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                   Change Password & Revoke Old Sessions
@@ -665,8 +665,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           )}
 
           {/* Quick Account Navigation Links */}
-          <div className="pt-4 mt-6 border-t border-brd">
-            <h4 className="text-[11px] font-semibold text-mut uppercase tracking-wider mb-2">
+          <div className="pt-4 mt-6 border-t border-stone-200 dark:border-zinc-800">
+            <h4 className="text-[11px] font-bold text-stone-400 dark:text-zinc-500 uppercase tracking-wider mb-2">
               Account Shortcuts
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -674,9 +674,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <button
                   type="button"
                   onClick={() => { onClose(); onOpenAddresses(); }}
-                  className="p-2.5 rounded-xl border border-brd hover:border-acc/40 hover:bg-acc/5 text-left flex items-center gap-2 text-xs text-ink transition-colors"
+                  className="p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 hover:border-emerald-500/50 hover:bg-emerald-50/50 dark:hover:bg-zinc-900 text-left flex items-center gap-2 text-xs text-stone-800 dark:text-zinc-200 transition-colors cursor-pointer"
                 >
-                  <MapPin className="w-4 h-4 text-acc" />
+                  <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Addresses</span>
                 </button>
               )}
@@ -684,9 +684,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <button
                   type="button"
                   onClick={() => { onClose(); onOpenOrders(); }}
-                  className="p-2.5 rounded-xl border border-brd hover:border-acc/40 hover:bg-acc/5 text-left flex items-center gap-2 text-xs text-ink transition-colors"
+                  className="p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 hover:border-emerald-500/50 hover:bg-emerald-50/50 dark:hover:bg-zinc-900 text-left flex items-center gap-2 text-xs text-stone-800 dark:text-zinc-200 transition-colors cursor-pointer"
                 >
-                  <FileText className="w-4 h-4 text-emerald-600" />
+                  <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Past Orders</span>
                 </button>
               )}
@@ -694,20 +694,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <button
                   type="button"
                   onClick={() => { onClose(); onOpenRules(); }}
-                  className="p-2.5 rounded-xl border border-brd hover:border-acc/40 hover:bg-acc/5 text-left flex items-center gap-2 text-xs text-ink transition-colors"
+                  className="p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 hover:border-purple-500/50 hover:bg-purple-50/50 dark:hover:bg-zinc-900 text-left flex items-center gap-2 text-xs text-stone-800 dark:text-zinc-200 transition-colors cursor-pointer"
                 >
-                  <Shield className="w-4 h-4 text-purple-600" />
+                  <Shield className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                   <span>Rules</span>
                 </button>
               )}
             </div>
 
             {onLogout && (
-              <div className="mt-4 pt-3 border-t border-brd/50 flex justify-end">
+              <div className="mt-4 pt-3 border-t border-stone-200/60 dark:border-zinc-800/60 flex justify-end">
                 <button
                   type="button"
                   onClick={() => { onClose(); onLogout(); }}
-                  className="text-xs text-rose-600 hover:text-rose-700 font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors"
+                  className="text-xs text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   Sign Out of CartPilot

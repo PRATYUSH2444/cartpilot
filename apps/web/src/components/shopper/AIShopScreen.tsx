@@ -290,13 +290,13 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
   const visiblePromptChips = PROMPT_CHIPS.filter((q) => !usedChips.includes(q));
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 bg-stone-50/60 dark:bg-stone-950 relative overflow-hidden">
+    <div className="flex-1 flex flex-col h-full min-h-0 bg-stone-50/60 dark:bg-zinc-950 relative overflow-hidden">
       {/* ── Top Bar ────────────────────────────────────────────────────────── */}
-      <div className="h-13.5 sm:h-14 flex items-center justify-between px-3.5 sm:px-4 border-b border-stone-200/80 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md flex-shrink-0 z-20">
+      <div className="h-13.5 sm:h-14 flex items-center justify-between px-3.5 sm:px-4 border-b border-stone-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md flex-shrink-0 z-20">
         <div className="flex items-center gap-2.5 sm:gap-3">
           <button
             onClick={onOpenDrawer}
-            className="p-1.5 -ml-1 rounded-xl text-stone-500 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
+            className="p-1.5 -ml-1 rounded-xl text-stone-500 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
             aria-label="Open sessions drawer"
           >
             <Menu className="w-5 h-5" />
@@ -309,14 +309,14 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
               <h2 className="font-heading font-bold text-sm text-stone-900 dark:text-white leading-tight">
                 CartPilot AI
               </h2>
-              <p className="text-[10px] text-stone-500 dark:text-stone-400">Your agentic grocery assistant</p>
+              <p className="text-[10px] text-stone-500 dark:text-zinc-400">Your agentic grocery assistant</p>
             </div>
           </div>
         </div>
 
         <button
           onClick={onNewChat}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-750 text-stone-800 dark:text-stone-200 border border-stone-200/80 dark:border-stone-700 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 hover:bg-stone-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-stone-800 dark:text-zinc-200 border border-stone-200/80 dark:border-zinc-800 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
         >
           <Plus className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">New Chat</span>
@@ -421,7 +421,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
       )}
 
       {/* ── Composer Bar ───────────────────────────────────────────────────── */}
-      <div className="bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-t border-stone-200/80 dark:border-stone-800 px-3 sm:px-4 py-2 sm:py-2.5 flex-shrink-0 z-20 shadow-2xs">
+      <div className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-stone-200/80 dark:border-zinc-800 px-3 sm:px-4 py-2 sm:py-2.5 flex-shrink-0 z-20 shadow-2xs">
         <div className="max-w-[760px] mx-auto space-y-2">
           {/* Quick suggestion prompt chips (hide on click) */}
           {visiblePromptChips.length > 0 && (
@@ -433,7 +433,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
                 <button
                   key={q}
                   onClick={() => handleChipClick(q)}
-                  className="flex-shrink-0 px-3 py-1 rounded-full bg-white dark:bg-stone-850 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200/80 dark:border-stone-750 text-xs font-medium transition-all cursor-pointer shadow-2xs active:scale-95"
+                  className="flex-shrink-0 px-3 py-1 rounded-full bg-stone-100 dark:bg-zinc-900 hover:bg-stone-200 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-200 border border-stone-200/80 dark:border-zinc-800 text-xs font-medium transition-all cursor-pointer shadow-2xs active:scale-95"
                 >
                   {q}
                 </button>
@@ -449,13 +449,13 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
               onChange={(e) => setComposerText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask for groceries, recipes, or meals…"
-              className="flex-1 resize-none rounded-2xl bg-stone-100/90 dark:bg-stone-850 border border-stone-200/90 dark:border-stone-750 px-4 py-3 text-[14px] text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400/30 focus:border-stone-400 dark:focus:ring-stone-600/40 min-h-[48px] max-h-32 leading-[22px] font-sans box-border transition-all"
+              className="flex-1 resize-none rounded-2xl bg-stone-100/90 dark:bg-zinc-900 border border-stone-200/90 dark:border-zinc-800 px-4 py-3 text-[14px] text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 dark:focus:ring-emerald-500/30 min-h-[48px] max-h-32 leading-[22px] font-sans box-border transition-all"
             />
 
             {isLoading ? (
               <button
                 onClick={onStopGeneration}
-                className="w-12 h-12 rounded-2xl bg-stone-900 hover:bg-black text-white dark:bg-white dark:text-stone-900 flex items-center justify-center transition-all cursor-pointer flex-shrink-0 shadow-sm active:scale-95"
+                className="w-12 h-12 rounded-2xl bg-stone-900 hover:bg-black text-white dark:bg-zinc-100 dark:text-zinc-900 flex items-center justify-center transition-all cursor-pointer flex-shrink-0 shadow-sm active:scale-95"
                 title="Stop generation"
                 aria-label="Stop generation"
               >
@@ -474,8 +474,8 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
                 disabled={!composerText.trim()}
                 className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 flex-shrink-0 cursor-pointer shadow-sm active:scale-95 ${
                   composerText.trim()
-                    ? 'bg-stone-900 hover:bg-black text-white dark:bg-white dark:text-stone-950 shadow-stone-900/20'
-                    : 'bg-stone-200/80 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed opacity-60'
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30 ring-2 ring-emerald-500/30'
+                    : 'bg-stone-200/80 dark:bg-zinc-800 text-stone-400 dark:text-zinc-600 cursor-not-allowed opacity-60'
                 }`}
                 title="Send message"
                 aria-label="Send message"

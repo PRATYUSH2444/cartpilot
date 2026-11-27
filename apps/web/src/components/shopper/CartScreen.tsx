@@ -267,7 +267,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     >
                       <div className="flex items-start gap-2.5 sm:gap-3">
                         {/* Compact Product Thumbnail */}
-                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 dark:border-stone-750 flex items-center justify-center overflow-hidden flex-shrink-0 p-1 shadow-2xs mt-0.5">
+                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200/90 dark:border-zinc-800 flex items-center justify-center overflow-hidden flex-shrink-0 p-1 shadow-2xs mt-0.5">
                           {item.imageUrl ? (
                             <img
                               src={item.imageUrl}
@@ -283,7 +283,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         <div className="flex-1 min-w-0">
                           {/* Row 1: Full Product Title + Line Total Price */}
                           <div className="flex items-start justify-between gap-2">
-                            <h3 className="font-bold text-xs sm:text-sm text-stone-900 dark:text-white leading-snug line-clamp-2 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                            <h3 className="font-bold text-xs sm:text-sm text-stone-900 dark:text-white leading-snug line-clamp-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                               {item.name}
                             </h3>
                             <span className="font-mono font-black text-xs sm:text-sm text-stone-900 dark:text-white tabular-nums flex-shrink-0 ml-2">
@@ -294,18 +294,18 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                           {/* Row 2: Package Size / Unit Price + Quantity Stepper + Trash */}
                           <div className="flex items-center justify-between gap-2 mt-2">
                             <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                              <span className="text-[11px] text-stone-500 dark:text-stone-400 font-medium">
+                              <span className="text-[11px] text-stone-500 dark:text-zinc-400 font-medium">
                                 {item.packageSize} {item.packageUnit}
                               </span>
-                              <span className="text-[10px] text-stone-300 dark:text-stone-600">•</span>
-                              <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-800 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-200/60 dark:border-emerald-800/50">
+                              <span className="text-[10px] text-stone-300 dark:text-zinc-600">•</span>
+                              <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-200/60 dark:border-emerald-800/50">
                                 ₹{linePriceRupees} each
                               </span>
                             </div>
 
                             {/* Stepper + Delete Action */}
                             <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                              <div className="flex items-center gap-0.5 sm:gap-1 bg-stone-100 dark:bg-stone-800 text-stone-900 dark:text-stone-100 p-0.5 rounded-lg text-xs font-semibold border border-stone-200/80 dark:border-stone-700/80 shadow-2xs">
+                              <div className="flex items-center gap-0.5 sm:gap-1 bg-stone-100 dark:bg-zinc-900 text-stone-900 dark:text-zinc-100 p-0.5 rounded-lg text-xs font-semibold border border-stone-200/80 dark:border-zinc-800 shadow-2xs">
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -315,7 +315,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                                       onUpdateQuantity(item.productId, item.quantity - 1);
                                     }
                                   }}
-                                  className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-md bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-950 flex items-center justify-center font-bold active:scale-90 transition-all cursor-pointer shadow-2xs"
+                                  className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-md bg-white dark:bg-zinc-800 text-stone-700 dark:text-zinc-200 hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-zinc-700 flex items-center justify-center font-bold active:scale-90 transition-all cursor-pointer shadow-2xs"
                                   aria-label="Decrease quantity"
                                 >
                                   <Minus className="w-3 h-3 stroke-[2.4px]" />
@@ -327,7 +327,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                                   type="button"
                                   disabled={item.quantity >= PRICING_CONFIG.maxQtyPerItem}
                                   onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
-                                  className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-md bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-950 flex items-center justify-center font-bold active:scale-90 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-2xs"
+                                  className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-md bg-white dark:bg-zinc-800 text-stone-700 dark:text-zinc-200 hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-zinc-700 flex items-center justify-center font-bold active:scale-90 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-2xs"
                                   aria-label="Increase quantity"
                                 >
                                   <Plus className="w-3 h-3 stroke-[2.4px]" />
@@ -471,7 +471,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         setLocalCouponCode(e.target.value.toUpperCase());
                         setLocalCouponError(null);
                       }}
-                      className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-750 text-xs text-stone-900 dark:text-white placeholder:text-stone-400 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-semibold"
+                      className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-xs text-stone-900 dark:text-white placeholder:text-stone-400 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-semibold"
                     />
                     <button
                       type="submit"

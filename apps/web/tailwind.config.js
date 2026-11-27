@@ -32,6 +32,10 @@ export default {
           soft: 'var(--ai-soft)',
           border: 'var(--ai-border)',
         },
+        stone: {
+          850: '#18181B',
+          750: '#27272A',
+        },
       },
       fontFamily: {
         heading: ['Bricolage Grotesque', 'system-ui', 'sans-serif'],

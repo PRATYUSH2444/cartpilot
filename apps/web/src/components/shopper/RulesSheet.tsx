@@ -113,32 +113,34 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
           isSlideOver
             ? 'max-w-xl h-full'
             : 'sm:max-w-lg max-h-[90dvh] sm:rounded-3xl rounded-t-3xl'
-        } bg-card dark:bg-card-top border border-brd shadow-2xl flex flex-col overflow-hidden animate-in ${
+        } bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 text-stone-900 dark:text-zinc-100 shadow-2xl flex flex-col overflow-hidden animate-in ${
           isSlideOver ? 'slide-in-from-right' : 'slide-in-from-bottom'
         } duration-200`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Mobile Drag Handle */}
         {!isSlideOver && (
-          <div className="w-12 h-1.5 bg-brd rounded-full mx-auto mt-3 mb-1 sm:hidden flex-shrink-0" />
+          <div className="w-12 h-1.5 bg-stone-300 dark:bg-zinc-700 rounded-full mx-auto mt-3 mb-1 sm:hidden flex-shrink-0" />
         )}
 
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-brd flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <Sliders className="w-5 h-5 text-acc" />
+        <div className="p-4 sm:p-5 border-b border-stone-200 dark:border-zinc-800 bg-stone-50/70 dark:bg-zinc-900/60 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
+              <Sliders className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </div>
             <div>
-              <h2 id="rules-sheet-title" className="text-base sm:text-lg font-display font-bold text-ink">
+              <h2 id="rules-sheet-title" className="text-base sm:text-lg font-bold text-stone-900 dark:text-white">
                 Spending Rules &amp; Mandate
               </h2>
-              <p className="text-xs text-mut font-mono">
+              <p className="text-xs text-stone-500 dark:text-zinc-400 font-mono">
                 All 3 canonical policy caps with integer paise precision
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-full text-mut hover:text-ink hover:bg-paper transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+            className="p-2 rounded-full text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-zinc-900 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
             aria-label="Close rules sheet"
           >
             <X className="w-5 h-5" />
@@ -189,13 +191,13 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
                     className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between min-h-[90px] ${
                       isSelected
                         ? 'border-emerald-600 bg-emerald-500/10 shadow-xs'
-                        : 'border-brd bg-paper/50 hover:border-acc/40'
+                        : 'border-stone-200 dark:border-zinc-800 bg-stone-50/70 dark:bg-zinc-900/60 hover:border-emerald-500/40'
                     }`}
                   >
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-xs text-ink flex items-center gap-1 font-display">
-                          <Icon className="w-3.5 h-3.5 text-acc" /> {p.name}
+                        <span className="font-bold text-xs text-stone-900 dark:text-white flex items-center gap-1 font-display">
+                          <Icon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> {p.name}
                         </span>
                         {isSelected && (
                           <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center">
@@ -203,11 +205,11 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-acc font-mono font-bold block">
+                      <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-mono font-bold block">
                         {p.tagline}
                       </span>
                     </div>
-                    <span className="text-[10px] text-mut mt-1 leading-tight line-clamp-2">
+                    <span className="text-[10px] text-stone-500 dark:text-zinc-400 mt-1 leading-tight line-clamp-2">
                       {p.desc}
                     </span>
                   </button>
@@ -217,12 +219,12 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
           </div>
 
           {/* Custom Caps Sliders / Inputs */}
-          <div className="space-y-3.5 p-4 rounded-2xl border border-brd bg-paper/40">
+          <div className="space-y-3.5 p-4 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-stone-50/70 dark:bg-zinc-900/60">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-ink uppercase tracking-wider font-mono">
+              <label className="text-xs font-bold text-stone-900 dark:text-white uppercase tracking-wider font-mono">
                 2. Fine-Tune Canonical Limits
               </label>
-              <span className="text-[10px] font-mono text-emerald-800 dark:text-emerald-300 font-bold">
+              <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
                 Deterministic Policy
               </span>
             </div>
@@ -230,8 +232,8 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
             {/* Cap 1: Auto-Approve Up To */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
-                <span className="text-ink font-medium">Auto-Approve Up To:</span>
-                <span className="font-mono font-bold text-acc">₹{autoApproveInput.toFixed(0)}</span>
+                <span className="text-stone-800 dark:text-zinc-200 font-medium">Auto-Approve Up To:</span>
+                <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">₹{autoApproveInput.toFixed(0)}</span>
               </div>
               <input
                 type="range"
@@ -243,7 +245,7 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
                 onChange={(e) => setAutoApproveInput(Number(e.target.value))}
                 className="w-full accent-emerald-600 cursor-pointer"
               />
-              <span className="text-[10px] text-mut">
+              <span className="text-[10px] text-stone-500 dark:text-zinc-400">
                 Baskets below this total order without an explicit approval card.
               </span>
             </div>
@@ -251,8 +253,8 @@ export const RulesSheet: React.FC<RulesSheetProps> = ({
             {/* Cap 2: Per-Order Cap */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
-                <span className="text-ink font-medium">Per-Order Hard Cap:</span>
-                <span className="font-mono font-bold text-acc">₹{perOrderInput.toFixed(0)}</span>
+                <span className="text-stone-800 dark:text-zinc-200 font-medium">Per-Order Hard Cap:</span>
+                <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">₹{perOrderInput.toFixed(0)}</span>
               </div>
               <input
                 type="range"

@@ -1501,7 +1501,7 @@ export const ShopperWorkspace: React.FC = () => {
         <main
           className={`flex-1 flex flex-col min-w-0 w-full ${
             activeMobileTab === 'chat'
-              ? 'min-h-0 overflow-hidden pb-[80px] sm:pb-[84px] lg:pb-0'
+              ? 'min-h-0 overflow-hidden pb-[96px] sm:pb-[100px] lg:pb-0'
               : activeMobileTab === 'cart'
                 ? 'min-h-0 lg:overflow-hidden pb-16 lg:pb-0'
                 : activeMobileTab === 'account'

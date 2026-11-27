@@ -34,20 +34,20 @@
 }
 
 .dark {
-  --bg: #0E1411;
-  --surface: #17201B;
-  --surface-2: #1F2A24;
-  --ink: #EAF1EC;
-  --mut: #9AAAA0;
-  --line: #2A372F;
-  --brand: #43C07D;
-  --brand-hover: #5AD695;
-  --brand-soft: #173826;
-  --go: #43C07D;
-  --ask: #F0B94E;
-  --stop: #FF7B73;
+  --bg: #09090B;
+  --surface: #121215;
+  --surface-2: #18181B;
+  --ink: #F4F4F5;
+  --mut: #A1A1AA;
+  --line: #27272A;
+  --brand: #10B981;
+  --brand-hover: #34D399;
+  --brand-soft: #064E3B;
+  --go: #10B981;
+  --ask: #F59E0B;
+  --stop: #EF4444;
 
-  --ai-accent: #A78BFA;
+  --ai-accent: #8B5CF6;
   --ai-soft: #2E1065;
   --ai-border: #4C1D95;
 }

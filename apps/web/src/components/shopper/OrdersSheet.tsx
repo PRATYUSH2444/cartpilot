@@ -94,32 +94,34 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
           isSlideOver
             ? 'max-w-xl h-full'
             : 'sm:max-w-2xl max-h-[90dvh] sm:rounded-3xl rounded-t-3xl'
-        } bg-card dark:bg-card-top border border-brd shadow-2xl flex flex-col overflow-hidden animate-in ${
+        } bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 text-stone-900 dark:text-zinc-100 shadow-2xl flex flex-col overflow-hidden animate-in ${
           isSlideOver ? 'slide-in-from-right' : 'slide-in-from-bottom'
         } duration-200`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Mobile Drag Handle */}
         {!isSlideOver && (
-          <div className="w-12 h-1.5 bg-brd rounded-full mx-auto mt-3 mb-1 sm:hidden flex-shrink-0" />
+          <div className="w-12 h-1.5 bg-stone-300 dark:bg-zinc-700 rounded-full mx-auto mt-3 mb-1 sm:hidden flex-shrink-0" />
         )}
 
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-brd flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-acc" />
+        <div className="p-4 sm:p-5 border-b border-stone-200 dark:border-zinc-800 bg-stone-50/70 dark:bg-zinc-900/60 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+              <Package className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
             <div>
-              <h2 id="orders-sheet-title" className="text-base sm:text-lg font-display font-bold text-ink">
+              <h2 id="orders-sheet-title" className="text-base sm:text-lg font-bold text-stone-900 dark:text-white">
                 Your Orders &amp; Delivery Tracking
               </h2>
-              <p className="text-xs text-mut font-mono">
+              <p className="text-xs text-stone-500 dark:text-zinc-400 font-mono">
                 {orders.length} {orders.length === 1 ? 'order' : 'orders'} placed
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-full text-mut hover:text-ink hover:bg-paper transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+            className="p-2 rounded-full text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-zinc-900 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
             aria-label="Close orders sheet"
           >
             <X className="w-5 h-5" />
@@ -129,10 +131,10 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
         {/* Orders list */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           {orders.length === 0 ? (
-            <div className="py-16 text-center space-y-2">
-              <Package className="w-12 h-12 text-mut/40 mx-auto" />
-              <h3 className="text-sm font-bold text-ink font-display">No orders yet</h3>
-              <p className="text-xs text-mut max-w-sm mx-auto">
+            <div className="py-16 text-center space-y-2.5">
+              <Package className="w-12 h-12 text-stone-300 dark:text-zinc-700 mx-auto" />
+              <h3 className="text-base font-bold text-stone-900 dark:text-white">No orders yet</h3>
+              <p className="text-xs text-stone-500 dark:text-zinc-400 max-w-sm mx-auto">
                 When you place quick-commerce grocery orders, they will appear here with live tracking.
               </p>
             </div>
@@ -144,7 +146,7 @@ export const OrdersSheet: React.FC<OrdersSheetProps> = ({
               return (
                 <div
                   key={order._id}
-                  className="p-4 rounded-2xl border border-brd bg-paper/50 space-y-3 transition-all"
+                  className="p-4 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-stone-50/70 dark:bg-zinc-900/70 space-y-3 transition-all"
                 >
                   {/* Top Bar */}
                   <div className="flex items-start justify-between gap-2">

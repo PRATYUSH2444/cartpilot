@@ -530,16 +530,16 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsHelpCenterOpen(true)}
-                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3 sm:p-3.5 shadow-xs flex items-center gap-2.5 sm:gap-3 hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group text-left active:scale-98"
+                className="rounded-2xl bg-white dark:bg-zinc-900 border border-stone-200/80 dark:border-zinc-800 p-3 sm:p-3.5 shadow-xs flex items-center gap-2.5 sm:gap-3 hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group text-left active:scale-98"
               >
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Headphones className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-emerald-700 dark:text-emerald-400" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/15 dark:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Headphones className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-300" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-xs sm:text-sm text-stone-900 dark:text-white group-hover:text-emerald-700 transition-colors truncate">
+                  <h3 className="font-bold text-xs sm:text-sm text-stone-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
                     Help & Support
                   </h3>
-                  <p className="text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 truncate">
+                  <p className="text-[10px] sm:text-xs text-stone-500 dark:text-zinc-400 truncate">
                     Direct assistance
                   </p>
                 </div>
@@ -702,23 +702,23 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                               onClick={() => setOpenFaqIndex(isExpanded ? null : idx)}
                               className={`w-full p-3.5 sm:p-4 flex items-center justify-between text-left text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
                                 isExpanded
-                                  ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-950'
-                                  : 'bg-stone-50 text-stone-800 hover:bg-stone-100 dark:bg-stone-850 dark:text-stone-200 dark:hover:bg-stone-800'
+                                  ? 'bg-emerald-700 text-white dark:bg-emerald-600 dark:text-white'
+                                  : 'bg-stone-50 text-stone-900 hover:bg-stone-100 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800'
                               }`}
                             >
                               <span className="pr-3 leading-snug">{faq.q}</span>
                               <ChevronDown
                                 className={`w-4 h-4 transition-transform duration-200 flex-shrink-0 ${
                                   isExpanded
-                                    ? 'rotate-180 text-white dark:text-stone-950'
-                                    : 'text-stone-400 dark:text-stone-500'
+                                    ? 'rotate-180 text-white'
+                                    : 'text-stone-400 dark:text-zinc-400'
                                 }`}
                               />
                             </button>
 
                             {/* Answer Body */}
                             {isExpanded && (
-                              <div className="bg-white text-stone-700 dark:bg-stone-900 dark:text-stone-300 px-4 py-3.5 text-xs sm:text-sm leading-relaxed border-t border-stone-200/80 dark:border-stone-800 animate-in fade-in-50 duration-150">
+                              <div className="bg-white text-stone-700 dark:bg-zinc-950 dark:text-zinc-300 px-4 py-3.5 text-xs sm:text-sm leading-relaxed border-t border-stone-200/80 dark:border-zinc-800 animate-in fade-in-50 duration-150">
                                 {faq.a}
                               </div>
                             )}
@@ -957,7 +957,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               <button
                 type="submit"
                 disabled={isSubmittingSupport || !supportMessage.trim()}
-                className="w-full py-3 px-4 rounded-xl bg-stone-900 hover:bg-black dark:bg-white dark:text-stone-950 dark:hover:bg-stone-100 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm shadow-emerald-950/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-98"
               >
                 {isSubmittingSupport ? (
                   <>
