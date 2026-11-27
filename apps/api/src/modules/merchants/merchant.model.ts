@@ -121,8 +121,8 @@ const MerchantSchema = new Schema<IMerchant>(
     },
     address: {
       street: { type: String, default: '' },
-      city: { type: String, default: 'Bengaluru' },
-      state: { type: String, default: 'Karnataka' },
+      city: { type: String, default: 'Patna' },
+      state: { type: String, default: 'Bihar' },
       postalCode: { type: String, default: '560001' },
     },
     deliverySettings: {

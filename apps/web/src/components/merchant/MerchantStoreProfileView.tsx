@@ -47,12 +47,12 @@ export const MerchantStoreProfileView: React.FC<StoreProfileViewProps> = ({
 
   // Address
   const [street, setStreet] = useState('');
-  const [city, setCity] = useState('Bengaluru');
-  const [state, setState] = useState('Karnataka');
-  const [postalCode, setPostalCode] = useState('560038');
+  const [city, setCity] = useState('Patna');
+  const [state, setState] = useState('Bihar');
+  const [postalCode, setPostalCode] = useState('800001');
 
   // Delivery
-  const [servicePincodes, setServicePincodes] = useState<string[]>(['560001', '560034', '560102', '560103']);
+  const [servicePincodes, setServicePincodes] = useState<string[]>(['800001', '800013', '800020', '800028']);
   const [newPincodeInput, setNewPincodeInput] = useState('');
 
   // Bank
@@ -388,7 +388,7 @@ export const MerchantStoreProfileView: React.FC<StoreProfileViewProps> = ({
                   maxLength={6}
                   value={newPincodeInput}
                   onChange={(e) => setNewPincodeInput(e.target.value)}
-                  placeholder="Enter 6-digit Bengaluru pincode"
+                  placeholder="Enter 6-digit Patna pincode"
                   className="flex-1 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono"
                 />
                 <button

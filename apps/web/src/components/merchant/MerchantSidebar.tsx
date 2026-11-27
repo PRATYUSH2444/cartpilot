@@ -130,7 +130,7 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
                   {store?.businessName || 'Fresh Greens Organics'}
                 </div>
                 <div className="text-[10px] text-slate-400 truncate">
-                  {store?.address?.city ? `${store.address.city}` : 'Indiranagar, Bengaluru'}
+                  {store?.address?.city ? `${store.address.city}` : 'Boring Road, Patna'}
                 </div>
               </div>
             </div>

@@ -26,10 +26,10 @@ export const BecomeMerchantPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState('');
   const [street, setStreet] = useState('');
-  const [city, setCity] = useState('Bengaluru');
-  const [state, setState] = useState('Karnataka');
+  const [city, setCity] = useState('Patna');
+  const [state, setState] = useState('Bihar');
   const [postalCode, setPostalCode] = useState('');
-  const [pincodesInput, setPincodesInput] = useState('560001, 560034');
+  const [pincodesInput, setPincodesInput] = useState('800001, 800013');
   const [vegetarianDeclaration, setVegetarianDeclaration] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -277,7 +277,7 @@ export const BecomeMerchantPage: React.FC = () => {
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                placeholder="Bengaluru"
+                placeholder="Patna"
                 required
                 className="w-full px-3 py-2 rounded-xl border border-brd bg-paper/60 text-xs text-ink placeholder:text-mut focus:outline-none focus:ring-2 focus:ring-acc/20 focus:border-acc transition-all"
               />
@@ -288,7 +288,7 @@ export const BecomeMerchantPage: React.FC = () => {
                 type="text"
                 value={state}
                 onChange={(e) => setState(e.target.value)}
-                placeholder="Karnataka"
+                placeholder="Bihar"
                 required
                 className="w-full px-3 py-2 rounded-xl border border-brd bg-paper/60 text-xs text-ink placeholder:text-mut focus:outline-none focus:ring-2 focus:ring-acc/20 focus:border-acc transition-all"
               />
@@ -299,7 +299,7 @@ export const BecomeMerchantPage: React.FC = () => {
                 type="text"
                 value={postalCode}
                 onChange={(e) => setPostalCode(e.target.value)}
-                placeholder="560034"
+                placeholder="800001"
                 maxLength={6}
                 required
                 className="w-full px-3 py-2 rounded-xl border border-brd bg-paper/60 text-xs text-ink placeholder:text-mut focus:outline-none focus:ring-2 focus:ring-acc/20 focus:border-acc transition-all"
@@ -317,7 +317,7 @@ export const BecomeMerchantPage: React.FC = () => {
                 type="text"
                 value={pincodesInput}
                 onChange={(e) => setPincodesInput(e.target.value)}
-                placeholder="560001, 560034, 560095"
+                placeholder="800001, 800013, 800020"
                 required
                 className="w-full pl-10 pr-4 py-2 rounded-xl border border-brd bg-paper/60 text-xs text-ink placeholder:text-mut focus:outline-none focus:ring-2 focus:ring-acc/20 focus:border-acc transition-all"
               />

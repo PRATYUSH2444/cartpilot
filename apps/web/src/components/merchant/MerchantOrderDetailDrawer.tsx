@@ -83,7 +83,7 @@ export const MerchantOrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({
   const customerPhone = addr.phone || 'Phone upon dispatch';
   const customerEmail = addr.email || 'customer@cartpilot.com';
   const streetAddress = addr.street || addr.houseFlat || 'Store Pickup / Delivery Address';
-  const cityState = `${addr.city || 'Bengaluru'}${addr.postalCode || addr.pincode ? ` - ${addr.postalCode || addr.pincode}` : ''}, ${addr.state || 'Karnataka'}`;
+  const cityState = `${addr.city || 'Patna'}${addr.postalCode || addr.pincode ? ` - ${addr.postalCode || addr.pincode}` : ''}, ${addr.state || 'Bihar'}`;
   const deliveryInstructions = order.deliveryNote || addr.instructions || 'Standard door delivery.';
 
   return (

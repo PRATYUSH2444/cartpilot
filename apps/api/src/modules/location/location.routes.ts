@@ -104,12 +104,20 @@ locationRouter.get('/config', (_req: Request, res: Response) => {
     success: true,
     data: {
       defaultCenter: {
-        latitude: 12.9716,
-        longitude: 77.5946,
-        city: 'Bengaluru',
-        state: 'Karnataka',
+        latitude: 25.5941,
+        longitude: 85.1376,
+        city: 'Patna',
+        state: 'Bihar',
+        locality: 'Boring Road',
+        pincode: '800001',
       },
-      standardDeliveryRadiusKm: 15,
+      standardDeliveryRadiusKm: 30,
+      activeRegion: 'Patna, Bihar',
+      deliveryModel: 'NEXT_DAY_SLOT',
+      slots: [
+        { id: 'morning', label: 'Morning Slot (7:00 AM - 10:00 AM)' },
+        { id: 'evening', label: 'Evening Slot (5:00 PM - 9:00 PM)' },
+      ],
       hasGoogleMaps: Boolean(process.env.GOOGLE_MAPS_API_KEY && process.env.GOOGLE_MAPS_API_KEY !== 'your_google_maps_key_here'),
     },
   });

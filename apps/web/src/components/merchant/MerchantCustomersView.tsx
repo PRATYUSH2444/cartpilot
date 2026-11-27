@@ -25,7 +25,7 @@ export const MerchantCustomersView: React.FC = () => {
         totalSpendPaise: 845000,
         lastOrderDate: 'Today, 10:24 AM',
         status: 'VIP',
-        address: 'A-101, Green Park Apartments, Indiranagar, Bengaluru - 560038',
+        address: 'A-101, Green Park Apartments, Boring Road, Patna - 800001',
       },
       {
         id: 'cust-2',
@@ -36,7 +36,7 @@ export const MerchantCustomersView: React.FC = () => {
         totalSpendPaise: 420000,
         lastOrderDate: 'Today, 09:15 AM',
         status: 'Active',
-        address: '42, 4th Cross, Koramangala 4th Block, Bengaluru - 560034',
+        address: '42, Kankarbagh Main Road, Patna - 800020',
       },
       {
         id: 'cust-3',
@@ -47,7 +47,7 @@ export const MerchantCustomersView: React.FC = () => {
         totalSpendPaise: 1540000,
         lastOrderDate: 'Today, 08:42 AM',
         status: 'VIP',
-        address: 'B-602, Prestige Palms, HSR Layout Sector 2, Bengaluru - 560102',
+        address: 'B-602, Royal Palms, Patliputra Colony, Patna - 800013',
       },
       {
         id: 'cust-4',
@@ -58,7 +58,7 @@ export const MerchantCustomersView: React.FC = () => {
         totalSpendPaise: 185000,
         lastOrderDate: 'Yesterday',
         status: 'New',
-        address: '15, 1st Main, Defence Colony, Indiranagar, Bengaluru - 560038',
+        address: '15, Bailey Road, Near Saguna More, Patna - 801503',
       },
       {
         id: 'cust-5',
@@ -69,7 +69,7 @@ export const MerchantCustomersView: React.FC = () => {
         totalSpendPaise: 380000,
         lastOrderDate: 'Yesterday',
         status: 'Active',
-        address: '88, 7th Cross, Domlur 2nd Stage, Bengaluru - 560071',
+        address: '88, Rajendra Nagar Road No. 3, Patna - 800016',
       },
       {
         id: 'cust-6',
@@ -80,7 +80,7 @@ export const MerchantCustomersView: React.FC = () => {
         totalSpendPaise: 685000,
         lastOrderDate: '24 Dec 2024',
         status: 'Active',
-        address: '104, Sunrise Residency, Bellandur, Bengaluru - 560103',
+        address: '104, Sunrise Residency, Danapur Cantt, Patna - 801503',
       },
     ],
     []

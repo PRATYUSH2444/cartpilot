@@ -53,8 +53,8 @@ export const MerchantShopView: React.FC<MerchantShopViewProps> = ({
   const [email, setEmail] = useState(store?.email || '');
   const [description, setDescription] = useState(store?.description || '');
   const [street, setStreet] = useState(store?.address?.street || '');
-  const [city, setCity] = useState(store?.address?.city || 'Bengaluru');
-  const [postalCode, setPostalCode] = useState(store?.address?.postalCode || '560038');
+  const [city, setCity] = useState(store?.address?.city || 'Patna');
+  const [postalCode, setPostalCode] = useState(store?.address?.postalCode || '800001');
   const [fssaiLicense, setFssaiLicense] = useState('11223344556677');
 
   // Sync state when store or subtab changes

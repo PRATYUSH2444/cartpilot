@@ -1133,8 +1133,8 @@ export class MerchantService {
       },
       shippingAddressSnapshot: {
         street: input.customer.street || 'Storefront Walk-in / Direct Order',
-        city: input.customer.city || 'Bengaluru',
-        state: 'Karnataka',
+        city: input.customer.city || 'Patna',
+        state: 'Bihar',
         postalCode: input.customer.postalCode || '560038',
         phone: input.customer.phone,
         name: input.customer.name,

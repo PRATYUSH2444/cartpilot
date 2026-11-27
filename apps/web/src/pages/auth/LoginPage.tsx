@@ -56,7 +56,7 @@ export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   // Location Auto-Detection State (Blinkit / Instamart style)
-  const [detectedLocation, setDetectedLocation] = useState<string>('HSR Layout, Bengaluru');
+  const [detectedLocation, setDetectedLocation] = useState<string>('Boring Road, Patna');
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
   // Common UI state
@@ -110,7 +110,7 @@ export const LoginPage: React.FC = () => {
   // HTML5 Live Geolocation Detection (Blinkit/Instamart style)
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
-      setDetectedLocation('HSR Layout, Bengaluru');
+      setDetectedLocation('Boring Road, Patna');
       return;
     }
     setIsDetectingLocation(true);
@@ -118,12 +118,12 @@ export const LoginPage: React.FC = () => {
       (pos) => {
         const lat = pos.coords.latitude.toFixed(2);
         const lng = pos.coords.longitude.toFixed(2);
-        setDetectedLocation(`GPS: ${lat}°N, ${lng}°E (Express Hub)`);
+        setDetectedLocation(`GPS: ${lat}°N, ${lng}°E (Patna Hub)`);
         setIsDetectingLocation(false);
       },
       (err) => {
         console.warn('Geolocation access denied or unavailable:', err.message);
-        setDetectedLocation('HSR Layout, Bengaluru');
+        setDetectedLocation('Boring Road, Patna');
         setIsDetectingLocation(false);
       },
       { timeout: 7000 }

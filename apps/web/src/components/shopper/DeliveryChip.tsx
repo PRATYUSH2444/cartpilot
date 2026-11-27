@@ -8,8 +8,8 @@ interface DeliveryChipProps {
 }
 
 export const DeliveryChip: React.FC<DeliveryChipProps> = ({
-  address = 'Indiranagar, Bengaluru · 560038',
-  etaText = 'Delivery in about 30 min (estimated, simulated)',
+  address = 'Boring Road, Patna, Bihar · 800001',
+  etaText = 'Next-Day Delivery (Morning & Evening Slots)',
   onClickAddress,
 }) => {
   return (

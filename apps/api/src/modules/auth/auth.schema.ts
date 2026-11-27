@@ -86,8 +86,8 @@ export const applyMerchantSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number'),
   phone: z.string().min(10, 'Valid 10-digit phone number is required').trim(),
   street: z.string().min(3, 'Street address is required').trim(),
-  city: z.string().min(2, 'City is required').trim().default('Bengaluru'),
-  state: z.string().min(2, 'State is required').trim().default('Karnataka'),
+  city: z.string().min(2, 'City is required').trim().default('Patna'),
+  state: z.string().min(2, 'State is required').trim().default('Bihar'),
   postalCode: z.string().regex(/^[1-9][0-9]{5}$/, 'Valid 6-digit postal code is required'),
   serviceAreaPincodes: z.array(z.string().regex(/^[1-9][0-9]{5}$/)).default(['560001', '560034']),
   vegetarianDeclaration: z.literal(true, {

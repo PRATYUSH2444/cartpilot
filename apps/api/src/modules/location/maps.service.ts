@@ -83,9 +83,9 @@ export class MapsService {
               longitude: loc.lng,
               formattedAddress: first.formatted_address,
               locality: locality || city,
-              city: city || district || 'Bengaluru',
+              city: city || district || 'Patna',
               district,
-              state: state || 'Karnataka',
+              state: state || 'Bihar',
               pincode,
               country,
               placeId: first.place_id,
@@ -100,7 +100,7 @@ export class MapsService {
 
     // 2. OpenStreetMap Nominatim (Open, reliable, zero secret required)
     try {
-      const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanQuery)}&format=json&addressdetails=1&limit=1`;
+      const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanQuery + ', Patna, Bihar')}&format=json&addressdetails=1&limit=1`;
       const res = await fetch(osmUrl, {
         headers: {
           'User-Agent': 'CartPilot-AgenticCommerce/1.0',
@@ -117,11 +117,11 @@ export class MapsService {
             longitude: parseFloat(item.lon),
             formattedAddress: item.display_name,
             street: addr.road || addr.street,
-            locality: addr.suburb || addr.neighbourhood || addr.subdivision,
-            city: addr.city || addr.town || addr.village || 'Bengaluru',
-            district: addr.county || addr.state_district,
-            state: addr.state || 'Karnataka',
-            pincode: addr.postcode,
+            locality: addr.suburb || addr.neighbourhood || addr.subdivision || addr.residential || 'Patna',
+            city: addr.city || addr.town || addr.village || 'Patna',
+            district: addr.county || addr.state_district || 'Patna',
+            state: addr.state || 'Bihar',
+            pincode: addr.postcode || '800001',
             country: addr.country || 'India',
             placeId: item.place_id?.toString(),
             source: 'openstreetmap',
@@ -132,14 +132,14 @@ export class MapsService {
       logger.warn({ err, cleanQuery }, 'OpenStreetMap Nominatim geocoding failed');
     }
 
-    // Default safe fallback if network offline
+    // Default safe fallback if network offline (Patna Central)
     return {
-      latitude: 12.9298,
-      longitude: 77.6848,
-      formattedAddress: `${cleanQuery}, Bengaluru, Karnataka`,
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      pincode: '560103',
+      latitude: 25.5941,
+      longitude: 85.1376,
+      formattedAddress: `${cleanQuery}, Patna, Bihar`,
+      city: 'Patna',
+      state: 'Bihar',
+      pincode: '800001',
       country: 'India',
       source: 'openstreetmap',
     };
@@ -187,9 +187,9 @@ export class MapsService {
               houseFlat,
               street,
               locality: locality || street || city,
-              city: city || district || 'Bengaluru',
+              city: city || district || 'Patna',
               district,
-              state: state || 'Karnataka',
+              state: state || 'Bihar',
               pincode,
               country,
               placeId: first.place_id,
@@ -216,10 +216,10 @@ export class MapsService {
         if (item && item.lat && item.lon) {
           const addr = item.address || {};
           const locality = addr.suburb || addr.neighbourhood || addr.residential || addr.subdivision || addr.road || '';
-          const city = addr.city || addr.town || addr.village || addr.municipality || 'Bengaluru';
-          const district = addr.county || addr.state_district || '';
-          const state = addr.state || 'Karnataka';
-          const pincode = addr.postcode || '';
+          const city = addr.city || addr.town || addr.village || addr.municipality || 'Patna';
+          const district = addr.county || addr.state_district || 'Patna';
+          const state = addr.state || 'Bihar';
+          const pincode = addr.postcode || '800001';
 
           return {
             latitude: parseFloat(item.lat),
@@ -246,9 +246,10 @@ export class MapsService {
     return {
       latitude: lat,
       longitude: lng,
-      formattedAddress: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
-      city: 'Bengaluru',
-      state: 'Karnataka',
+      formattedAddress: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)} (Patna, Bihar)`,
+      city: 'Patna',
+      state: 'Bihar',
+      pincode: '800001',
       country: 'India',
       source: 'openstreetmap',
     };
@@ -374,7 +375,8 @@ export class MapsService {
 
   /**
    * Centralized Delivery Radius & Serviceability Engine:
-   * Compares customer location against merchant dark-stores & fulfillment centers.
+   * Active delivery hub is centered in Patna, Bihar.
+   * Core delivery model: Order by midnight -> Next-day scheduled delivery (Morning 7-10 AM / Evening 5-9 PM).
    */
   public static async checkServiceability(
     customerLat?: number,
@@ -387,14 +389,19 @@ export class MapsService {
         status: 'APPROVED',
       }).lean();
 
-      // Standard central default hub (Indiranagar / Bellandur tech corridor)
+      // Standard central default hub for Patna, Bihar (Boring Road / Fraser Road Central Hub)
       const DEFAULT_HUB = {
-        id: 'central_hub_01',
-        businessName: 'CartPilot Darkstore #1 (Central)',
-        latitude: 12.9716,
-        longitude: 77.5946,
-        deliveryRadiusKm: 15,
-        serviceAreaPincodes: ['560001', '560034', '560102', '560103', '560038', '560008', '560095'],
+        id: 'patna_central_hub_01',
+        businessName: 'CartPilot Central Fulfillment Hub (Patna)',
+        latitude: 25.5941,
+        longitude: 85.1376,
+        deliveryRadiusKm: 30, // 30 km radius covers all of Patna, Danapur, Patliputra, Kankarbagh, Phulwari Sharif, Patna City
+        serviceAreaPincodes: [
+          '800001', '800002', '800003', '800004', '800005', '800006', '800007',
+          '800008', '800009', '800010', '800011', '800012', '800013', '800014',
+          '800015', '800016', '800017', '800018', '800019', '800020', '800023',
+          '800024', '800025', '800026', '800027', '800028', '801503', '801105'
+        ],
       };
 
       const hubs =
@@ -404,12 +411,12 @@ export class MapsService {
               businessName: m.businessName,
               latitude: (m.address as any)?.latitude || DEFAULT_HUB.latitude,
               longitude: (m.address as any)?.longitude || DEFAULT_HUB.longitude,
-              deliveryRadiusKm: m.deliverySettings?.deliveryRadiusKm || 15,
-              serviceAreaPincodes: m.serviceAreaPincodes || [],
+              deliveryRadiusKm: m.deliverySettings?.deliveryRadiusKm || 30,
+              serviceAreaPincodes: m.serviceAreaPincodes?.length ? m.serviceAreaPincodes : DEFAULT_HUB.serviceAreaPincodes,
             }))
           : [DEFAULT_HUB];
 
-      // 1. Precise Coordinate Validation (Blinkit / Zepto Standard)
+      // 1. Precise Coordinate Validation
       if (
         customerLat !== undefined &&
         customerLng !== undefined &&
@@ -429,14 +436,13 @@ export class MapsService {
           }
         }
 
-        const isServiceable = minDistanceKm <= (nearestHub.deliveryRadiusKm || 15);
-        const estimatedMinutes = this.estimateDeliveryMinutes(minDistanceKm);
-        const deliveryFeePaise = minDistanceKm <= 3 ? 0 : 3500;
+        const isServiceable = minDistanceKm <= (nearestHub.deliveryRadiusKm || 30);
+        const deliveryFeePaise = minDistanceKm <= 5 ? 0 : 2900;
 
         return {
           isServiceable,
           distanceKm: minDistanceKm,
-          estimatedMinutes: isServiceable ? estimatedMinutes : 0,
+          estimatedMinutes: 0, // Quick-commerce time removed; Next-Day slot model active
           deliveryFeePaise,
           freeDeliveryThresholdPaise: 39900,
           pincode,
@@ -446,53 +452,51 @@ export class MapsService {
             distanceKm: minDistanceKm,
           },
           message: isServiceable
-            ? `Express delivery in ${estimatedMinutes} mins (${minDistanceKm} km from ${nearestHub.businessName})`
-            : `Location is ${minDistanceKm} km away. We currently deliver within ${nearestHub.deliveryRadiusKm || 15} km of our fulfillment store.`,
+            ? `Serviceable in Patna! Order before midnight for next-day delivery (Morning 7-10 AM / Evening 5-9 PM)`
+            : `Location is ${minDistanceKm} km from our Patna fulfillment hub. Currently serving Patna, Bihar — coming soon to your city! 🚀`,
         };
       }
 
       // 2. PIN code lookup fallback
       if (pincode) {
         const cleanPin = pincode.trim();
-        const matched = hubs.find((h) => h.serviceAreaPincodes.includes(cleanPin));
-        const isCommonMetro =
-          cleanPin.startsWith('560') || cleanPin.startsWith('400') || cleanPin.startsWith('110') || cleanPin.startsWith('500');
+        const matched = hubs.some((h) => h.serviceAreaPincodes.includes(cleanPin));
+        const isPatnaPin = cleanPin.startsWith('800') || cleanPin.startsWith('801');
 
-        const isServiceable = Boolean(matched) || isCommonMetro;
-        const distanceKm = isServiceable ? 3.8 : 22.0;
-        const estimatedMinutes = isServiceable ? 20 : 0;
+        const isServiceable = Boolean(matched) || isPatnaPin;
+        const distanceKm = isServiceable ? 4.2 : 45.0;
 
         return {
           isServiceable,
           distanceKm,
-          estimatedMinutes,
-          deliveryFeePaise: 3500,
+          estimatedMinutes: 0,
+          deliveryFeePaise: 0,
           freeDeliveryThresholdPaise: 39900,
           pincode: cleanPin,
           message: isServiceable
-            ? `PIN ${cleanPin} is inside our delivery radius (est. 18-25 mins)`
-            : `PIN ${cleanPin} is currently outside our 30-minute delivery zone.`,
+            ? `PIN ${cleanPin} is serviceable in Patna! Next-day morning & evening slots available.`
+            : `PIN ${cleanPin} is outside our Patna delivery region. Expanding to your area soon! 🚀`,
         };
       }
 
-      // 3. Initial App Launch Default
+      // 3. Initial App Launch Default (Patna Central)
       return {
         isServiceable: true,
-        distanceKm: 2.1,
-        estimatedMinutes: 15,
+        distanceKm: 2.5,
+        estimatedMinutes: 0,
         deliveryFeePaise: 0,
         freeDeliveryThresholdPaise: 39900,
-        message: '15-20 min quick delivery zone',
+        message: 'Active delivery in Patna, Bihar (Next-Day Morning & Evening Slots)',
       };
     } catch (err) {
       logger.error({ err }, 'Error checking serviceability');
       return {
         isServiceable: true,
         distanceKm: 3.0,
-        estimatedMinutes: 20,
-        deliveryFeePaise: 3500,
+        estimatedMinutes: 0,
+        deliveryFeePaise: 0,
         freeDeliveryThresholdPaise: 39900,
-        message: 'Standard delivery zone (15-25 min)',
+        message: 'Active delivery in Patna, Bihar (Next-Day Morning & Evening Slots)',
       };
     }
   }

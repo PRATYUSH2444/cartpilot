@@ -56,8 +56,8 @@ export const MerchantCreateOrderModal: React.FC<MerchantCreateOrderModalProps> =
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [streetAddress, setStreetAddress] = useState('Storefront Pickup / Direct Order');
-  const [city, setCity] = useState('Bengaluru');
-  const [postalCode, setPostalCode] = useState('560038');
+  const [city, setCity] = useState('Patna');
+  const [postalCode, setPostalCode] = useState('800001');
   const [deliveryNote, setDeliveryNote] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'CASH_STORE' | 'UPI'>('COD');
 

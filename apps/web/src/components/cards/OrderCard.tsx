@@ -69,7 +69,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   // Defensive address string resolution
   const addressDisplay = shippingAddress?.street
     ? `${shippingAddress.street}, ${shippingAddress.city}, ${shippingAddress.state} — ${shippingAddress.postalCode}`
-    : 'Indiranagar, Bengaluru, Karnataka — 560038';
+    : 'Boring Road, Patna, Bihar — 800001';
 
   // Novelty N6: Cryptographic Proof Verification State
   const [isVerifying, setIsVerifying] = useState(false);

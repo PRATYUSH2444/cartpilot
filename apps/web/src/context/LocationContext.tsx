@@ -31,6 +31,26 @@ const LocationContext = createContext<LocationContextType | undefined>(undefined
 
 const STORAGE_KEY = 'cartpilot_selected_address';
 const COORDS_KEY = 'cartpilot_current_coords';
+const SAVED_ADDRS_KEY = 'cartpilot_saved_addresses';
+
+export const DEFAULT_PATNA_ADDRESS: UserAddress = {
+  _id: 'default_patna_address',
+  userId: 'guest',
+  fullName: 'Patna Resident',
+  phone: '',
+  houseFlat: 'Boring Road',
+  apartmentStreet: 'Near Boring Canal Road',
+  areaLocality: 'Boring Road',
+  landmark: 'Boring Road Crossing',
+  city: 'Patna',
+  state: 'Bihar',
+  pincode: '800001',
+  addressType: 'HOME',
+  latitude: 25.5941,
+  longitude: 85.1376,
+  isDefault: true,
+  isServiceable: true,
+};
 
 export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { authFetch, token, user } = useAuth();
@@ -38,22 +58,29 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [currentCoordinates, setCurrentCoordinates] = useState<Coordinates | null>(() => {
     try {
       const stored = localStorage.getItem(COORDS_KEY);
-      return stored ? JSON.parse(stored) : null;
+      return stored ? JSON.parse(stored) : { latitude: 25.5941, longitude: 85.1376 };
     } catch {
-      return null;
+      return { latitude: 25.5941, longitude: 85.1376 };
     }
   });
 
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : null;
+      return stored ? JSON.parse(stored) : DEFAULT_PATNA_ADDRESS;
     } catch {
-      return null;
+      return DEFAULT_PATNA_ADDRESS;
     }
   });
 
-  const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>([]);
+  const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>(() => {
+    try {
+      const local = localStorage.getItem(SAVED_ADDRS_KEY);
+      return local ? JSON.parse(local) : [DEFAULT_PATNA_ADDRESS];
+    } catch {
+      return [DEFAULT_PATNA_ADDRESS];
+    }
+  });
   const [serviceability, setServiceability] = useState<ServiceabilityInfo | null>(null);
   const [isDetectingLocation, setIsDetectingLocation] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -81,13 +108,31 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Fetch saved addresses from server if authenticated
   const refreshAddresses = useCallback(async () => {
-    if (!token && !authFetch) return;
+    if (!token || !user || !authFetch) {
+      // Unauthenticated / guest session: safely load local cache and avoid 401 Unauthorized spam
+      try {
+        const local = localStorage.getItem(SAVED_ADDRS_KEY);
+        if (local) {
+          setSavedAddresses(JSON.parse(local));
+        } else {
+          setSavedAddresses([DEFAULT_PATNA_ADDRESS]);
+        }
+      } catch {}
+      return;
+    }
+
     try {
       const res = await authFetch(`${API_BASE}/addresses`);
+      if (res.status === 401) {
+        return; // Token expired or invalid; handled by AuthContext
+      }
       if (res.ok) {
         const data = await res.json();
         const addrs: UserAddress[] = data.data || [];
-        setSavedAddresses(addrs);
+        setSavedAddresses(addrs.length > 0 ? addrs : [DEFAULT_PATNA_ADDRESS]);
+        try {
+          localStorage.setItem(SAVED_ADDRS_KEY, JSON.stringify(addrs.length > 0 ? addrs : [DEFAULT_PATNA_ADDRESS]));
+        } catch {}
 
         // If no selected address yet, pick default or first
         if (!selectedAddress && addrs.length > 0) {
@@ -101,10 +146,10 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
           }
         }
       }
-    } catch (err) {
-      console.warn('Failed to load saved addresses:', err);
+    } catch {
+      // Quiet fallback
     }
-  }, [authFetch, token, selectedAddress, checkServiceability]);
+  }, [authFetch, token, user, selectedAddress, checkServiceability]);
 
   // Automatic browser geolocation detection
   const detectCurrentLocation = useCallback(async (): Promise<UserAddress | null> => {
@@ -143,14 +188,14 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
               userId: user?.id || 'guest',
               fullName: user?.name || 'Customer',
               phone: user?.phone || '',
-              houseFlat: geo.houseFlat || 'Current Location',
-              apartmentStreet: geo.street || geo.locality || 'GPS Location',
-              areaLocality: geo.locality || geo.city || 'Near You',
+              houseFlat: geo.houseFlat || 'Detected Location',
+              apartmentStreet: geo.street || geo.locality || 'Patna Area',
+              areaLocality: geo.locality || geo.city || 'Patna',
               landmark: '',
-              city: geo.city || 'Bengaluru',
-              state: geo.state || 'Karnataka',
-              pincode: geo.pincode || '560001',
-              addressType: 'OTHER',
+              city: geo.city || 'Patna',
+              state: geo.state || 'Bihar',
+              pincode: geo.pincode || '800001',
+              addressType: 'HOME',
               latitude: lat,
               longitude: lng,
               isDefault: true,
@@ -214,10 +259,10 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
           apartmentStreet: addressInfo?.apartmentStreet || geo.street || geo.locality || 'Road',
           areaLocality: addressInfo?.areaLocality || geo.locality || geo.city || 'Locality',
           landmark: addressInfo?.landmark || '',
-          city: addressInfo?.city || geo.city || 'Bengaluru',
-          state: addressInfo?.state || geo.state || 'Karnataka',
-          pincode: addressInfo?.pincode || geo.pincode || '560001',
-          addressType: addressInfo?.addressType || 'OTHER',
+          city: addressInfo?.city || geo.city || 'Patna',
+          state: addressInfo?.state || geo.state || 'Bihar',
+          pincode: addressInfo?.pincode || geo.pincode || '800001',
+          addressType: addressInfo?.addressType || 'HOME',
           latitude: lat,
           longitude: lng,
           isDefault: true,

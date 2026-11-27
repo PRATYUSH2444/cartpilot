@@ -194,19 +194,19 @@ export class CheckoutService {
           street: `${defaultAddr.houseFlat ? defaultAddr.houseFlat + ', ' : ''}${
             defaultAddr.apartmentStreet || defaultAddr.areaLocality
           }`,
-          city: defaultAddr.city || 'Bengaluru',
-          state: defaultAddr.state || 'Karnataka',
-          postalCode: defaultAddr.pincode || '560001',
+          city: defaultAddr.city || 'Patna',
+          state: defaultAddr.state || 'Bihar',
+          postalCode: defaultAddr.pincode || '800001',
         };
       }
     }
 
     if (!shippingAddressSnapshot && (env.NODE_ENV === 'test' || process.env.NODE_ENV === 'test')) {
       shippingAddressSnapshot = {
-        street: 'Flat 101, Test Street, Sector 1',
-        city: 'Bengaluru',
-        state: 'Karnataka',
-        postalCode: '560001',
+        street: 'Flat 101, Test Street, Boring Road',
+        city: 'Patna',
+        state: 'Bihar',
+        postalCode: '800001',
       };
     }
 

@@ -67,8 +67,8 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   const cartCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) ?? (cart?.itemCount || 0);
   const addressTypeLabel = selectedAddress?.addressType || 'Delivery to';
   const addressLocalityLabel = selectedAddress
-    ? selectedAddress.areaLocality || selectedAddress.apartmentStreet || selectedAddress.city
-    : 'Select Location';
+    ? `${selectedAddress.areaLocality || selectedAddress.apartmentStreet || 'Boring Road'}, ${selectedAddress.city || 'Patna'}`
+    : 'Boring Road, Patna';
 
   // Format currency with standard INR formatting without stray decimals
   const formattedWallet = new Intl.NumberFormat('en-IN', {
@@ -113,8 +113,8 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                 <span className="font-extrabold text-stone-900 dark:text-white capitalize text-[11px]">
                   {addressTypeLabel}:
                 </span>
-                <span className="text-emerald-700 dark:text-emerald-400 font-black text-[10px] uppercase">
-                  15 Mins
+                <span className="text-emerald-700 dark:text-emerald-400 font-bold text-[10px] tracking-tight">
+                  Next-Day Slot
                 </span>
               </div>
               <p className="text-stone-500 dark:text-stone-400 truncate text-[11px] font-medium leading-tight">

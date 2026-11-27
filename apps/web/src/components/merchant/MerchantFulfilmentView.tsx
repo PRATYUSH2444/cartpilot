@@ -26,10 +26,10 @@ export const MerchantFulfilmentView: React.FC<FulfilmentViewProps> = ({
 
     const defaultAddress = {
       name: 'Priya Sharma',
-      street: 'A-101 Green Park',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      postalCode: '560038',
+      street: 'A-101 Green Park, Boring Road',
+      city: 'Patna',
+      state: 'Bihar',
+      postalCode: '800001',
       phone: '+91 98765 43210',
     };
 

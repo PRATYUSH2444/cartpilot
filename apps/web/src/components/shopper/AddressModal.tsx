@@ -8,7 +8,6 @@ import {
   Check,
   Trash2,
   Edit2,
-  Clock,
   AlertCircle,
   CheckCircle2,
   Loader2,
@@ -58,9 +57,9 @@ const INITIAL_FORM: AddressFormData = {
   apartmentStreet: '',
   areaLocality: '',
   landmark: '',
-  city: 'Bengaluru',
-  state: 'Karnataka',
-  pincode: '',
+  city: 'Patna',
+  state: 'Bihar',
+  pincode: '800001',
   addressType: 'HOME',
   deliveryInstructions: '',
   isDefault: false,
@@ -189,12 +188,41 @@ export const AddressModal: React.FC<AddressModalProps> = ({
     try {
       const detected = await detectCurrentLocation();
       if (detected) {
-        if (onSelectAddress) {
-          onSelectAddress(detected);
+        // Transition directly to address details form with detected GPS locality pre-filled
+        setFormData({
+          ...INITIAL_FORM,
+          fullName: user?.name || '',
+          phone: user?.phone || '',
+          houseFlat: detected.houseFlat && !detected.houseFlat.includes('Location') ? detected.houseFlat : '',
+          apartmentStreet: detected.apartmentStreet || detected.areaLocality || '',
+          areaLocality: detected.areaLocality || 'Patna',
+          landmark: detected.landmark || '',
+          city: detected.city || 'Patna',
+          state: detected.state || 'Bihar',
+          pincode: detected.pincode || '800001',
+          latitude: detected.latitude,
+          longitude: detected.longitude,
+          isDefault: addresses.length === 0,
+        });
+
+        // Run serviceability check for coordinates
+        if (detected.latitude && detected.longitude) {
+          const servRes = await fetch(`${API_BASE}/location/serviceability`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              latitude: detected.latitude,
+              longitude: detected.longitude,
+              pincode: detected.pincode,
+            }),
+          });
+          const servJson = await servRes.json();
+          setFormServiceability(servJson.data || null);
         }
-        onClose();
+
+        setViewState('FORM');
       } else {
-        setError('Could not detect location. Please search for your building or address manually.');
+        setError('Could not detect location. Please search for your locality or building manually.');
       }
     } catch (err: any) {
       setError(err.message || 'Location access was denied or timed out');
@@ -239,22 +267,40 @@ export const AddressModal: React.FC<AddressModalProps> = ({
         const servJson = await servRes.json();
         const serv = servJson.data || null;
 
+        // Transition directly to address details form with selected location
+        setFormData({
+          ...INITIAL_FORM,
+          fullName: user?.name || '',
+          phone: user?.phone || '',
+          houseFlat: '',
+          apartmentStreet: item.mainText || geoData.street || geoData.locality || '',
+          areaLocality: geoData.locality || item.mainText || 'Patna',
+          landmark: '',
+          city: geoData.city || 'Patna',
+          state: geoData.state || 'Bihar',
+          pincode: geoData.pincode || '800001',
+          latitude: lat,
+          longitude: lng,
+          isDefault: addresses.length === 0,
+        });
+
         setPinnedLocation({
           lat,
           lng,
           formattedAddress: item.description || geoData.formattedAddress,
           locality: geoData.locality || item.mainText,
-          city: geoData.city || 'Bengaluru',
-          state: geoData.state || 'Karnataka',
-          pincode: geoData.pincode || '',
+          city: geoData.city || 'Patna',
+          state: geoData.state || 'Bihar',
+          pincode: geoData.pincode || '800001',
           serviceability: serv,
         });
 
-        setViewState('PIN_PREVIEW');
+        setFormServiceability(serv);
+        setViewState('FORM');
       } else {
-        setError('Could not pinpoint selected location. Please try entering details manually.');
+        setError('Could not pinpoint selected location. Please enter details manually.');
       }
-    } catch (err) {
+    } catch {
       setError('Error resolving place coordinates');
     } finally {
       setIsLoading(false);
@@ -271,10 +317,10 @@ export const AddressModal: React.FC<AddressModalProps> = ({
       phone: user?.phone || '',
       houseFlat: '',
       apartmentStreet: pinnedLocation.locality || pinnedLocation.formattedAddress.split(',')[0] || '',
-      areaLocality: pinnedLocation.locality || '',
-      city: pinnedLocation.city || 'Bengaluru',
-      state: pinnedLocation.state || 'Karnataka',
-      pincode: pinnedLocation.pincode || '',
+      areaLocality: pinnedLocation.locality || 'Patna',
+      city: pinnedLocation.city || 'Patna',
+      state: pinnedLocation.state || 'Bihar',
+      pincode: pinnedLocation.pincode || '800001',
       latitude: pinnedLocation.lat,
       longitude: pinnedLocation.lng,
       isDefault: addresses.length === 0,
@@ -403,16 +449,13 @@ export const AddressModal: React.FC<AddressModalProps> = ({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token && !authFetch) return;
 
     if (
-      !formData.fullName.trim() ||
-      !formData.phone.trim() ||
       !formData.houseFlat.trim() ||
       !formData.apartmentStreet.trim() ||
       !formData.pincode.trim()
     ) {
-      setError('Please fill in all required fields');
+      setError('Please fill in your flat/house number and street name');
       return;
     }
 
@@ -425,22 +468,47 @@ export const AddressModal: React.FC<AddressModalProps> = ({
     setError(null);
 
     const payload = {
-      fullName: formData.fullName.trim(),
-      phone: formData.phone.trim(),
+      fullName: (formData.fullName || user?.name || 'Customer').trim(),
+      phone: (formData.phone || user?.phone || '9999999999').trim(),
       houseFlat: formData.houseFlat.trim(),
       apartmentStreet: formData.apartmentStreet.trim(),
-      areaLocality: formData.areaLocality.trim(),
+      areaLocality: (formData.areaLocality || 'Patna').trim(),
       landmark: formData.landmark.trim(),
-      city: formData.city.trim(),
-      state: formData.state.trim(),
-      pincode: formData.pincode.trim(),
+      city: (formData.city || 'Patna').trim(),
+      state: (formData.state || 'Bihar').trim(),
+      pincode: (formData.pincode || '800001').trim(),
       addressType: formData.addressType,
       deliveryInstructions: formData.deliveryInstructions.trim(),
       latitude: formData.latitude,
       longitude: formData.longitude,
-      isDefault: formData.isDefault,
+      isDefault: formData.isDefault || addresses.length === 0,
     };
 
+    // Guest / non-logged in flow: Save to local state and storage
+    if (!token || !authFetch) {
+      const localAddress: UserAddress = {
+        _id: formData.id || `local_${Date.now()}`,
+        userId: 'guest',
+        ...payload,
+        isServiceable: formServiceability?.isServiceable ?? true,
+      };
+
+      const updated = [localAddress, ...addresses.filter((a) => a._id !== localAddress._id)];
+      setAddresses(updated);
+      try {
+        localStorage.setItem('cartpilot_saved_addresses', JSON.stringify(updated));
+      } catch {}
+
+      if (onSelectAddress) {
+        onSelectAddress(localAddress);
+      }
+      await selectAddress(localAddress);
+      setIsSaving(false);
+      onClose();
+      return;
+    }
+
+    // Authenticated user API flow
     try {
       const url = formData.id ? `${API_BASE}/addresses/${formData.id}` : `${API_BASE}/addresses`;
       const method = formData.id ? 'PUT' : 'POST';
@@ -454,13 +522,13 @@ export const AddressModal: React.FC<AddressModalProps> = ({
       const data = await res.json();
       if (res.ok && data.success) {
         const saved: UserAddress = data.data;
-        if (onSelectAddress && (saved.isDefault || addresses.length === 0)) {
+        if (onSelectAddress) {
           onSelectAddress(saved);
         }
         await selectAddress(saved);
         await loadAddresses();
         await refreshAddresses();
-        setViewState('LIST');
+        onClose();
       } else {
         setError(data.error?.message || 'Failed to save address');
       }
@@ -509,9 +577,9 @@ export const AddressModal: React.FC<AddressModalProps> = ({
               </h2>
               <p className="text-[11px] text-stone-500 font-medium">
                 {viewState === 'LIST'
-                  ? 'Express 15-20 min delivery area'
+                  ? 'Serving Patna, Bihar • Morning & Evening Delivery Slots'
                   : viewState === 'PIN_PREVIEW'
-                  ? 'Review pin coordinates and delivery radius'
+                  ? 'Review pin coordinates and Patna serviceability'
                   : 'Enter complete house & floor details'}
               </p>
             </div>
@@ -614,7 +682,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                       {isDetectingLocation ? 'Detecting Precise GPS Location…' : 'Use Current Location'}
                     </span>
                     <span className="text-[11px] text-emerald-100 font-medium block">
-                      Using device GPS • Accurate 15-20 min quick delivery
+                      Using device GPS • Accurate pin location in Patna
                     </span>
                   </div>
                 </div>
@@ -648,7 +716,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   <Navigation className="w-10 h-10 mx-auto mb-2 text-emerald-600/40" />
                   <p className="font-bold text-xs text-stone-900 dark:text-white">No saved addresses yet</p>
                   <p className="text-[11px] text-stone-500 mt-1">
-                    Use your current location above or tap Add New to save your home address.
+                    Use your current location above or tap Add New to save your home address in Patna.
                   </p>
                 </div>
               ) : (
@@ -689,13 +757,13 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                             )}
                             {addr.isServiceable ? (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                                <Clock className="w-2.5 h-2.5" />
-                                15-20 min
+                                <Check className="w-2.5 h-2.5" />
+                                Next-Day Slot
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-1">
                                 <ShieldAlert className="w-2.5 h-2.5" />
-                                Outside zone
+                                Outside Patna
                               </span>
                             )}
                           </div>
@@ -817,17 +885,17 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                     <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <span>Within 15-Minute Express Zone</span>
+                        <span>Serviceable in Patna (Next-Day Slot)</span>
                       </div>
                       <span className="font-mono text-white">
-                        {pinnedLocation.serviceability.distanceKm} km away
+                        {pinnedLocation.serviceability.distanceKm} km from hub
                       </span>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between text-xs font-bold text-amber-400">
                       <div className="flex items-center gap-1.5">
                         <AlertCircle className="w-4 h-4 text-amber-400" />
-                        <span>Outside Express Radius</span>
+                        <span>Outside Patna Delivery Radius</span>
                       </div>
                       <span className="font-mono text-white">
                         {pinnedLocation.serviceability?.distanceKm} km
