@@ -115,6 +115,14 @@ export function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/shopper/assistant"
+              element={
+                <ProtectedRoute allowedRoles={['CUSTOMER']}>
+                  <ShopperWorkspace />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/merchant"

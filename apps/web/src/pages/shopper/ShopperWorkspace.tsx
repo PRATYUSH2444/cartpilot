@@ -79,7 +79,19 @@ export const ShopperWorkspace: React.FC = () => {
   }, []);
 
   // Active navigation tab
-  const [activeMobileTab, setActiveMobileTab] = useState<TabKey>('home');
+  const [activeMobileTab, setActiveMobileTab] = useState<TabKey>(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tabParam = searchParams.get('tab');
+      if (tabParam === 'assistant' || tabParam === 'chat') return 'chat';
+      if (tabParam === 'browse') return 'browse';
+      if (tabParam === 'cart') return 'cart';
+      if (tabParam === 'orders') return 'account';
+      if (tabParam === 'account') return 'account';
+      if (window.location.pathname.includes('/shopper/assistant')) return 'chat';
+    } catch {}
+    return 'home';
+  });
   const [selectedBrowseCategory, setSelectedBrowseCategory] = useState<string>('ALL');
 
   // Core state
@@ -103,6 +115,7 @@ export const ShopperWorkspace: React.FC = () => {
   // Modals & Overlays state
   const [isConversationDrawerOpen, setIsConversationDrawerOpen] = useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [isLiveTrackingOpen, setIsLiveTrackingOpen] = useState(false);
   const [trackedOrder, setTrackedOrder] = useState<OrderData | null>(null);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
@@ -1181,12 +1194,42 @@ export const ShopperWorkspace: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const handleSelectTab = (tab: TabKey, categoryId?: string) => {
+  const handleSelectTab = useCallback((tab: TabKey, categoryId?: string) => {
     setActiveMobileTab(tab);
     if (categoryId) {
       setSelectedBrowseCategory(categoryId);
     }
-  };
+    try {
+      const url = new URL(window.location.href);
+      if (tab === 'chat') {
+        url.searchParams.set('tab', 'assistant');
+      } else {
+        url.searchParams.set('tab', tab);
+      }
+      window.history.pushState({ tab }, '', url.toString());
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      const tab = e.state?.tab;
+      if (tab) {
+        setActiveMobileTab(tab);
+      } else {
+        const searchParams = new URLSearchParams(window.location.search);
+        const tabParam = searchParams.get('tab');
+        if (tabParam === 'assistant' || tabParam === 'chat') setActiveMobileTab('chat');
+        else if (tabParam === 'browse') setActiveMobileTab('browse');
+        else if (tabParam === 'cart') setActiveMobileTab('cart');
+        else if (tabParam === 'orders') setActiveMobileTab('account');
+        else if (tabParam === 'account') setActiveMobileTab('account');
+        else if (window.location.pathname.includes('/shopper/assistant')) setActiveMobileTab('chat');
+        else setActiveMobileTab('home');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const handleTriggerCookingPrompt = async (prompt: string) => {
     const trimmed = prompt.trim();
@@ -1415,6 +1458,7 @@ export const ShopperWorkspace: React.FC = () => {
                 setIsLoading(false);
               }}
               onOpenDrawer={() => setIsConversationDrawerOpen(true)}
+              onOpenCartDrawer={() => setIsCartDrawerOpen(true)}
               onNewChat={handleNewChat}
               cart={cart}
               onAddToCart={handleAddToCart}
@@ -1465,7 +1509,7 @@ export const ShopperWorkspace: React.FC = () => {
 
         {/* Desktop Persistent Context Panel (on wide screens >= 1024px when on chat or cart) */}
         {(activeMobileTab === 'chat' || activeMobileTab === 'cart') && (
-          <div className="hidden lg:flex flex-col h-full min-h-0 border-l border-[--line] w-[clamp(360px,28vw,440px)] flex-shrink-0 overflow-hidden">
+          <div className="hidden min-[1100px]:flex flex-col h-full min-h-0 border-l border-[--line] w-[clamp(360px,28vw,440px)] flex-shrink-0 overflow-hidden">
             <ContextPanel
               cart={cart}
               mandate={mandate}
@@ -1519,6 +1563,37 @@ export const ShopperWorkspace: React.FC = () => {
           ).length
         }
       />
+
+            {/* ── Responsive Cart Drawer (< 1100px) ──────────────────────── */}
+      {isCartDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
+          <div
+            className="fixed inset-0"
+            onClick={() => setIsCartDrawerOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="relative w-full max-w-md h-full bg-card shadow-2xl z-10 flex flex-col">
+            <ContextPanel
+              cart={cart}
+              isCollapsed={false}
+              onToggleCollapse={() => setIsCartDrawerOpen(false)}
+              onUpdateQuantity={handleUpdateQuantity}
+              onRemoveItem={handleRemoveItem}
+              onClearCart={handleClearCart}
+              onInitiateCheckout={() => {
+                setIsCartDrawerOpen(false);
+                evaluatePolicy().catch(() => {});
+                setIsCheckoutModalOpen(true);
+              }}
+              onOpenBrowse={() => {
+                setIsCartDrawerOpen(false);
+                setActiveMobileTab('browse');
+              }}
+              isLoading={isLoading}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Checkout Modal (Screen 12) ─────────────────────────────────────── */}
       <CheckoutModal

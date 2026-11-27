@@ -8,6 +8,7 @@ import {
   Sparkles,
   Leaf,
   ArrowDown,
+  ArrowRight,
   AlertCircle,
   RotateCcw,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ interface AIShopScreenProps {
   onSendMessage: (text: string) => void;
   onStopGeneration?: () => void;
   onOpenDrawer: () => void;
+  onOpenCartDrawer?: () => void;
   onNewChat: () => void;
   cart: CartData | null;
   onAddToCart?: (productId: string, quantity: number) => void;
@@ -59,6 +61,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
   onSendMessage,
   onStopGeneration,
   onOpenDrawer,
+  onOpenCartDrawer,
   onNewChat,
   cart,
   onAddToCart,
@@ -384,6 +387,30 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
           </button>
         )}
       </div>
+
+            {/* Floating Cart Bar for < 1100px */}
+      {Boolean(cart && cart.items && cart.items.length > 0 && onOpenCartDrawer) && (
+        <div className="min-[1100px]:hidden px-4 pt-1 flex-shrink-0 z-20 max-w-[760px] mx-auto w-full">
+          <button
+            type="button"
+            onClick={onOpenCartDrawer}
+            className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl bg-[--ink] text-[--surface] shadow-md hover:opacity-95 transition-opacity cursor-pointer font-sans"
+          >
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[--brand] text-white text-[11px] font-bold flex items-center justify-center font-sans">
+                {cart!.items.reduce((s, i) => s + i.quantity, 0)}
+              </span>
+              <span className="text-xs font-semibold">View Cart</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs font-bold font-sans">
+              <span>
+                ₹{(cart!.items.reduce((s, i) => s + (i.itemTotalPaise || i.pricePaise * i.quantity), 0) / 100).toFixed(2)}
+              </span>
+              <ArrowRight className="w-3.5 h-3.5 text-[--brand]" />
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* ── Composer Bar ───────────────────────────────────────────────────── */}
       <div className="bg-[--surface]/95 backdrop-blur-md border-t border-[--line] px-4 py-3 flex-shrink-0 z-20 shadow-md">
