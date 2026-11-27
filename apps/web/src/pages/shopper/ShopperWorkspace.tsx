@@ -37,6 +37,7 @@ import { WishlistModal } from '../../components/shopper/WishlistModal';
 import { WalletModal } from '../../components/shopper/WalletModal';
 import { CouponsModal } from '../../components/shopper/CouponsModal';
 import { NotificationsModal } from '../../components/shopper/NotificationsModal';
+import { PullToRefresh } from '../../components/common/PullToRefresh';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface ServerChatMessage {
@@ -912,6 +913,58 @@ export const ShopperWorkspace: React.FC = () => {
     }, 150);
   };
 
+  // ── Pull-to-Refresh Handler ───────────────────────────────────────────────
+  const handlePullToRefresh = useCallback(async () => {
+    if (!token) return;
+    try {
+      const promises: Promise<any>[] = [
+        authFetch(`${API_BASE}/catalog?limit=50`).then(async (res) => {
+          if (res.ok) {
+            const d = await res.json();
+            setProducts(d.data || []);
+          }
+        }),
+        authFetch(`${API_BASE}/cart`).then(async (res) => {
+          if (res.ok) {
+            const d = await res.json();
+            setCart(d.data);
+          }
+        }),
+        authFetch(`${API_BASE}/orders`).then(async (res) => {
+          if (res.ok) {
+            const d = await res.json();
+            const ords = d.data || [];
+            setOrders(ords);
+            if (ords.length > 0) {
+              setTrackedOrder(ords[0]);
+            }
+          }
+        }),
+        authFetch(`${API_BASE}/users/wallet`).then(async (res) => {
+          if (res.ok) {
+            const wData = await res.json();
+            if (wData.data?.balanceRupees !== undefined) {
+              setWalletBalance(wData.data.balanceRupees);
+              localStorage.setItem('cartpilot_wallet_balance', wData.data.balanceRupees.toString());
+            }
+          }
+        }),
+        authFetch(`${API_BASE}/chat/sessions`).then(async (res) => {
+          if (res.ok) {
+            const sData = await res.json();
+            setChatSessions(sData.data || []);
+          }
+        }),
+      ];
+
+      await Promise.allSettled(promises);
+      await evaluatePolicy();
+      showBanner('success', 'Refreshed! Fresh farm inventory up to date.');
+    } catch (e) {
+      console.warn('Pull to refresh failed:', e);
+    }
+  }, [token, evaluatePolicy]);
+
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'P';
 
   return (
@@ -942,8 +995,9 @@ export const ShopperWorkspace: React.FC = () => {
       {/* ── Main Screen Viewport Switching ──────────────────────────────────── */}
       <div className="flex-1 flex min-h-0 overflow-hidden relative">
         {/* Active Tab Screen */}
-        <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-          {activeMobileTab === 'home' && (
+        <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
+          <PullToRefresh onRefresh={handlePullToRefresh}>
+            {activeMobileTab === 'home' && (
             <HomeScreen
               products={products}
               cart={cart}
@@ -1050,6 +1104,7 @@ export const ShopperWorkspace: React.FC = () => {
               onToggleTheme={() => setIsDark((d) => !d)}
             />
           )}
+          </PullToRefresh>
         </main>
 
         {/* Desktop Persistent Context Panel (on wide screens >= 1024px when on chat or cart) */}
