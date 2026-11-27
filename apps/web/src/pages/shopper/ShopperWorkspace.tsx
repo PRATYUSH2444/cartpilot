@@ -1030,6 +1030,7 @@ export const ShopperWorkspace: React.FC = () => {
               orders={orders}
               selectedAddress={selectedAddress}
               walletBalance={walletBalance}
+              favoritesCount={favorites.length}
               onOpenOrders={() => setIsOrdersSheetOpen(true)}
               onOpenAddresses={() => setIsAddressModalOpen(true)}
               onOpenRules={() => setIsRulesSheetOpen(true)}

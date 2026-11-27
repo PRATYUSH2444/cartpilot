@@ -45,6 +45,7 @@ interface AccountScreenProps {
   orders: OrderData[];
   selectedAddress?: UserAddress | null;
   walletBalance?: number;
+  favoritesCount?: number;
   onOpenOrders: () => void;
   onOpenAddresses: () => void;
   onOpenRules: () => void;
@@ -63,6 +64,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   orders,
   selectedAddress,
   walletBalance = 349.0,
+  favoritesCount = 0,
   onOpenOrders,
   onOpenAddresses,
   onOpenRules,
@@ -363,87 +365,90 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
 
           {/* ── Right Column: Interactive Grid, Coupons & Support (7-8 Cols) ─── */}
           <div className="lg:col-span-7 xl:col-span-8 space-y-4 sm:space-y-5">
-            {/* 3-Card Primary Actions Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
-              {/* Orders */}
-              <button
-                type="button"
-                onClick={onOpenOrders}
-                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-4 sm:p-5 shadow-xs flex flex-col items-start justify-between text-left hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group relative min-h-[125px]"
-              >
-                {activeOrdersCount > 0 && (
-                  <span className="absolute top-3.5 right-3.5 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+            {/* ── Clubbed Account Essentials Hub (Orders, Addresses, Wishlist) ─── */}
+            <div className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3 sm:p-4 shadow-xs">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-stone-100 dark:border-stone-800/80 px-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+                  Quick Actions
+                </span>
+                {activeOrdersCount > 0 ? (
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
-                    <span>Active</span>
+                    <span>{activeOrdersCount} Active Order</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-medium text-stone-400 dark:text-stone-500">
+                    {orders.length} placed orders
                   </span>
                 )}
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                  <ShoppingBag className="w-5 h-5 fill-emerald-600 text-emerald-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-white">Orders</h3>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                    {orders.length} placed orders & live tracking
-                  </p>
-                </div>
-              </button>
+              </div>
 
-              {/* Saved Addresses */}
-              <button
-                type="button"
-                onClick={onOpenAddresses}
-                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-4 sm:p-5 shadow-xs flex flex-col items-start justify-between text-left hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group min-h-[125px]"
-              >
-                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                  <MapPin className="w-5 h-5 fill-blue-500 text-blue-500" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-white">
-                    Saved Addresses
-                  </h3>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                    Manage home & work delivery points
+              {/* 3-Column Segmented Action Hub */}
+              <div className="grid grid-cols-3 divide-x divide-stone-100 dark:divide-stone-800">
+                {/* 1. Orders */}
+                <button
+                  type="button"
+                  onClick={onOpenOrders}
+                  className="p-2 sm:p-2.5 flex flex-col items-center text-center hover:bg-stone-50 dark:hover:bg-stone-850/60 rounded-xl transition-all cursor-pointer group active:scale-95"
+                >
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform shadow-2xs">
+                    <ShoppingBag className="w-5 h-5 fill-emerald-600 text-emerald-600" />
+                  </div>
+                  <h4 className="font-bold text-xs sm:text-sm text-stone-900 dark:text-white">Orders</h4>
+                  <p className="text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 mt-0.5 font-medium">
+                    {orders.length} placed
                   </p>
-                </div>
-              </button>
+                </button>
 
-              {/* Favorites / Wishlist */}
-              <button
-                type="button"
-                onClick={onOpenWishlist}
-                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-4 sm:p-5 shadow-xs flex flex-col items-start justify-between text-left hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group min-h-[125px]"
-              >
-                <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-500 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                  <Heart className="w-5 h-5 fill-rose-500 text-rose-500" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-white">
-                    Wishlist & Favorites
-                  </h3>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                    Quick 1-tap reordering bookmarks
+                {/* 2. Saved Addresses */}
+                <button
+                  type="button"
+                  onClick={onOpenAddresses}
+                  className="p-2 sm:p-2.5 flex flex-col items-center text-center hover:bg-stone-50 dark:hover:bg-stone-850/60 rounded-xl transition-all cursor-pointer group active:scale-95"
+                >
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/70 text-blue-600 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform shadow-2xs">
+                    <MapPin className="w-5 h-5 fill-blue-500 text-blue-500" />
+                  </div>
+                  <h4 className="font-bold text-xs sm:text-sm text-stone-900 dark:text-white">Addresses</h4>
+                  <p className="text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 mt-0.5 font-medium">
+                    Delivery points
                   </p>
-                </div>
-              </button>
+                </button>
+
+                {/* 3. Wishlist */}
+                <button
+                  type="button"
+                  onClick={onOpenWishlist}
+                  className="p-2 sm:p-2.5 flex flex-col items-center text-center hover:bg-stone-50 dark:hover:bg-stone-850/60 rounded-xl transition-all cursor-pointer group active:scale-95"
+                >
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-rose-50 dark:bg-rose-950/70 text-rose-500 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform shadow-2xs">
+                    <Heart className="w-5 h-5 fill-rose-500 text-rose-500" />
+                  </div>
+                  <h4 className="font-bold text-xs sm:text-sm text-stone-900 dark:text-white">Wishlist</h4>
+                  <p className="text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 mt-0.5 font-medium">
+                    {favoritesCount} saved
+                  </p>
+                </button>
+              </div>
             </div>
 
-            {/* 2-Card Secondary Actions Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+            {/* ── 2-Column Compact Secondary Grid (Coupons & Offers + Help & Support) ─── */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
               {/* Coupons */}
               <button
                 type="button"
                 onClick={onOpenCoupons}
-                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3.5 sm:p-4 shadow-xs flex items-center gap-3 hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group text-left"
+                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3 sm:p-3.5 shadow-xs flex items-center gap-2.5 sm:gap-3 hover:border-purple-500/50 hover:shadow-xs transition-all cursor-pointer group text-left active:scale-98"
               >
-                <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Ticket className="w-5 h-5 fill-purple-600 text-purple-600" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Ticket className="w-4.5 h-4.5 sm:w-5 sm:h-5 fill-purple-600 text-purple-600" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-sm text-stone-900 dark:text-white group-hover:text-emerald-700 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-xs sm:text-sm text-stone-900 dark:text-white group-hover:text-purple-600 transition-colors truncate">
                     Coupons & Offers
                   </h3>
-                  <p className="text-xs text-stone-500 dark:text-stone-400">
-                    Apply promo codes & save up to ₹100
+                  <p className="text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 truncate">
+                    Save up to ₹100
                   </p>
                 </div>
               </button>
@@ -452,17 +457,17 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsHelpCenterOpen(true)}
-                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3.5 sm:p-4 shadow-xs flex items-center gap-3 hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group text-left"
+                className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3 sm:p-3.5 shadow-xs flex items-center gap-2.5 sm:gap-3 hover:border-emerald-500/50 hover:shadow-xs transition-all cursor-pointer group text-left active:scale-98"
               >
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Headphones className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Headphones className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-emerald-700 dark:text-emerald-400" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-sm text-stone-900 dark:text-white group-hover:text-emerald-700 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-xs sm:text-sm text-stone-900 dark:text-white group-hover:text-emerald-700 transition-colors truncate">
                     Help & Support
                   </h3>
-                  <p className="text-xs text-stone-500 dark:text-stone-400">
-                    Direct email assistance & quick inquiry form
+                  <p className="text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 truncate">
+                    Direct assistance
                   </p>
                 </div>
               </button>
