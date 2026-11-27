@@ -1477,7 +1477,7 @@ export const ShopperWorkspace: React.FC = () => {
               onUpdateQuantity={handleUpdateQuantity}
               onRemoveItem={handleRemoveItem}
               onClearCart={handleClearCart}
-              onInitiateCheckout={() => setIsCheckoutModalOpen(true)}
+              onInitiateCheckout={() => { evaluatePolicy().catch(() => {}); setIsCheckoutModalOpen(true); }}
               onUpdateDeliveryNote={handleUpdateDeliveryNote}
               onOpenRules={() => setIsRulesSheetOpen(true)}
               onOpenBrowse={() => setActiveMobileTab('browse')}

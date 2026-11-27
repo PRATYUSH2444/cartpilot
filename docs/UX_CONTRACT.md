@@ -11,7 +11,7 @@ ONE SOURCE OF TRUTH
 LAYOUTS (all three are first-class)
 - Mobile (360 to 640 px): single column chat. Bottom tab bar: Chat, Browse, Cart (with count and total), Orders, More. Product, cart, payment and order details open as bottom sheets with a drag handle. Composer sits above the tab bar. Sticky "View cart, N items, ₹X" bar appears after the first add. Safe areas and on-screen keyboard handled.
 - Tablet (641 to 1023 px): collapsible navigation rail plus chat. Browse and cart open as a right slide-over (about 420 px). Product details open as a centered sheet.
-- Laptop (1024 px and wider): three zones: conversation sidebar (280 px), chat column (max 760 px), and a persistent context panel (about 360 px) showing the live cart, delivery estimate and rules summary, collapsible. Browse opens as a large modal grid. 1440 px and wider add margins, not stretched content.
+- Laptop (1024 px and wider): three zones: conversation sidebar (280 px), chat column (max 760 px), and a persistent context panel (about 360 px) showing the live cart products ONLY (thumbnail, 2-line name, unit price, stepper, line total, subtotal, and Proceed to Checkout CTA; delivery address, delivery slot, instructions, policy status, and payment methods are located exclusively in Checkout), collapsible. Browse opens as a large modal grid. 1440 px and wider add margins, not stretched content.
 
 QUICK-COMMERCE CORE (inspired by the pattern, not by any brand's visuals)
 - Delivery chip at the top: "Delivery in about 30 min (estimated, simulated)" and the saved address.
