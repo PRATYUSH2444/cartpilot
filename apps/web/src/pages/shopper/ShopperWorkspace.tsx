@@ -1409,7 +1409,9 @@ export const ShopperWorkspace: React.FC = () => {
       className={`w-full flex flex-col bg-[--bg] text-[--ink] selection:bg-brand selection:text-white ${
         activeMobileTab === 'chat'
           ? 'h-[100dvh] max-h-[100dvh] overflow-hidden'
-          : 'min-h-screen'
+          : activeMobileTab === 'cart'
+            ? 'min-h-screen lg:h-[100dvh] lg:max-h-[100dvh] lg:overflow-hidden'
+            : 'min-h-screen'
       }`}
     >
       {/* ── Desktop Full-Width Top Header (Screen >= 1024px) ───────────────── */}
@@ -1438,13 +1440,21 @@ export const ShopperWorkspace: React.FC = () => {
       {/* ── Main Screen Viewport Switching ──────────────────────────────────── */}
       <div
         className={`flex-1 flex min-w-0 w-full relative ${
-          activeMobileTab === 'chat' ? 'min-h-0 overflow-hidden' : ''
+          activeMobileTab === 'chat'
+            ? 'min-h-0 overflow-hidden'
+            : activeMobileTab === 'cart'
+              ? 'min-h-0 lg:overflow-hidden'
+              : ''
         }`}
       >
         {/* Active Tab Screen */}
         <main
           className={`flex-1 flex flex-col min-w-0 w-full ${
-            activeMobileTab === 'chat' ? 'min-h-0 overflow-hidden pb-0' : 'pb-20 lg:pb-0'
+            activeMobileTab === 'chat'
+              ? 'min-h-0 overflow-hidden pb-0'
+              : activeMobileTab === 'cart'
+                ? 'min-h-0 lg:overflow-hidden pb-20 lg:pb-0'
+                : 'pb-20 lg:pb-0'
           }`}
         >
           {activeMobileTab === 'home' && (
