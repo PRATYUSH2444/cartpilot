@@ -89,13 +89,15 @@ export class WalletController {
   ): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const { amountRupees } = req.body;
-      const idempotencyKey =
-        (req.headers['idempotency-key'] as string) ||
-        req.body.idempotencyKey ||
-        `intent_${userId}_${amountRupees}_${Date.now()}`;
+      const rawRupees = req.body.amountRupees ?? req.body.amount;
+      const rawPaise = req.body.amountPaise;
 
-      if (!amountRupees || isNaN(Number(amountRupees)) || Number(amountRupees) <= 0) {
+      let amountRupees: number;
+      if (rawRupees !== undefined && rawRupees !== null && !isNaN(Number(rawRupees))) {
+        amountRupees = Number(rawRupees);
+      } else if (rawPaise !== undefined && rawPaise !== null && !isNaN(Number(rawPaise))) {
+        amountRupees = Number(rawPaise) / 100;
+      } else {
         res.status(400).json({
           success: false,
           error: { message: 'A positive numeric amount is required' },
@@ -103,15 +105,41 @@ export class WalletController {
         return;
       }
 
+      if (amountRupees <= 0) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'A positive numeric amount is required' },
+        });
+        return;
+      }
+
+      const idempotencyKey =
+        (req.headers['idempotency-key'] as string) ||
+        req.body.idempotencyKey ||
+        `intent_${userId}_${amountRupees}_${Date.now()}`;
+
       const intent = await WalletService.createTopupIntent(
         userId,
-        Number(amountRupees),
+        amountRupees,
         idempotencyKey
       );
 
       res.status(200).json({
         success: true,
-        data: intent,
+        data: {
+          ...intent,
+          intent: {
+            id: intent.orderId,
+            orderId: intent.orderId,
+            amountPaise: intent.amountPaise,
+          },
+          razorpay: {
+            orderId: intent.orderId,
+            amountPaise: intent.amountPaise,
+            currency: intent.currency,
+            keyId: intent.keyId,
+          },
+        },
       });
     } catch (err: any) {
       res.status(400).json({
@@ -131,7 +159,19 @@ export class WalletController {
   ): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+      const razorpay_order_id =
+        req.body.razorpay_order_id ||
+        req.body.razorpayOrderId ||
+        req.body.orderId ||
+        req.body.intentId;
+      const razorpay_payment_id =
+        req.body.razorpay_payment_id ||
+        req.body.razorpayPaymentId ||
+        req.body.paymentId;
+      const razorpay_signature =
+        req.body.razorpay_signature ||
+        req.body.razorpaySignature ||
+        req.body.signature;
 
       if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
         res.status(400).json({

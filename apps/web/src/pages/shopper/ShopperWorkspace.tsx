@@ -224,32 +224,59 @@ export const ShopperWorkspace: React.FC = () => {
   useEffect(() => {
     if (!token) return;
 
-    // 1. Fetch initial live balance from ledger API
-    authFetch(`${API_BASE}/wallet`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.data?.wallet && typeof data.data.wallet.balancePaise === 'number') {
+    let isMounted = true;
+
+    const syncWalletBalance = async () => {
+      try {
+        const res = await authFetch(`${API_BASE}/wallet`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.data?.wallet && typeof data.data.wallet.balancePaise === 'number' && isMounted) {
           const balRupees = data.data.wallet.balancePaise / 100;
           setWalletBalance(balRupees);
           try {
             localStorage.setItem('cartpilot_wallet_balance', balRupees.toString());
           } catch {}
         }
-      })
-      .catch((err) => console.error('Failed to sync wallet balance:', err));
+      } catch {}
+    };
 
-    // 2. Connect to WebSocket for instant live balance updates
+    // 1. Initial live balance fetch
+    syncWalletBalance();
+
+    // 2. Window focus listener to refresh balance whenever user returns to tab
+    const handleFocus = () => {
+      syncWalletBalance();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    // 3. Periodic polling fallback (every 45s) for zero-latency balance accuracy
+    const pollInterval = setInterval(syncWalletBalance, 45000);
+
+    // 4. Connect to backend WebSocket for instantaneous push updates
     let ws: WebSocket | null = null;
     try {
-      const isHttps = window.location.protocol === 'https:';
-      const wsProtocol = isHttps ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
+      let wsHost = window.location.host;
+      let wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+      const explicitWsUrl = import.meta.env.VITE_WS_URL as string | undefined;
+      if (explicitWsUrl && explicitWsUrl.trim()) {
+        const url = new URL(explicitWsUrl.trim());
+        wsHost = url.host;
+        wsProtocol = url.protocol;
+      } else if (API_BASE && API_BASE.startsWith('http')) {
+        const url = new URL(API_BASE);
+        wsHost = url.host;
+        wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+      }
+
+      const wsUrl = `${wsProtocol}//${wsHost}/ws?token=${encodeURIComponent(token)}`;
       ws = new WebSocket(wsUrl);
 
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
-          if (msg.event === 'wallet:updated' && msg.data?.balancePaise !== undefined) {
+          if (msg.event === 'wallet:updated' && msg.data?.balancePaise !== undefined && isMounted) {
             const updatedRupees = msg.data.balancePaise / 100;
             setWalletBalance(updatedRupees);
             try {
@@ -260,13 +287,23 @@ export const ShopperWorkspace: React.FC = () => {
       };
 
       ws.onerror = () => {
-        // Silent recovery
+        // Silent recovery: HTTP polling & window focus continue seamlessly
+      };
+      ws.onclose = () => {
+        // Handled cleanly
       };
     } catch {}
 
     return () => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.close();
+      isMounted = false;
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(pollInterval);
+      if (ws) {
+        try {
+          if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+            ws.close();
+          }
+        } catch {}
       }
     };
   }, [token, authFetch]);

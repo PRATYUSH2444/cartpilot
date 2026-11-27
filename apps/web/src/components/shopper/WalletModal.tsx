@@ -185,7 +185,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           'Content-Type': 'application/json',
           'idempotency-key': idempotencyKey,
         },
-        body: JSON.stringify({ amountPaise }),
+        body: JSON.stringify({
+          amountRupees: amountToAdd,
+          amountPaise,
+        }),
       });
 
       const intentJson = await intentRes.json();
@@ -193,7 +196,12 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         throw new Error(intentJson.error?.message || intentJson.message || 'Failed to initiate top-up');
       }
 
-      const { intent, razorpay } = intentJson.data;
+      const intentPayload = intentJson.data?.razorpay || intentJson.data?.intent || intentJson.data;
+      const orderId = intentPayload?.orderId || intentPayload?.id || intentJson.data?.orderId;
+      const keyId = intentPayload?.keyId || intentJson.data?.keyId;
+      const amountPaiseFinal = intentPayload?.amountPaise || intentJson.data?.amountPaise || amountPaise;
+      const currency = intentPayload?.currency || intentJson.data?.currency || 'INR';
+      const isSimulated = intentJson.data?.isSimulated ?? (!keyId || keyId === 'rzp_test_placeholder');
 
       // 2. Open Razorpay Checkout or verify simulation
       const sdkReady = await loadRazorpaySdk();
@@ -203,9 +211,12 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            intentId: intent.id,
-            razorpayPaymentId: paymentId,
-            razorpaySignature: signature,
+            razorpay_order_id: orderId,
+            razorpay_payment_id: paymentId,
+            razorpay_signature: signature,
+            orderId,
+            paymentId,
+            signature,
           }),
         });
 
@@ -214,7 +225,14 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           throw new Error(verifyJson.error?.message || verifyJson.message || 'Payment verification failed');
         }
 
-        const newBalPaise = verifyJson.data?.wallet?.balancePaise ?? (liveBalancePaise + amountPaise);
+        const newBalPaise =
+          verifyJson.data?.wallet?.balancePaise ??
+          (verifyJson.data?.newBalancePaise !== undefined
+            ? verifyJson.data.newBalancePaise
+            : (verifyJson.data?.newBalanceRupees !== undefined
+                ? Math.round(verifyJson.data.newBalanceRupees * 100)
+                : (liveBalancePaise + amountPaiseFinal)));
+
         setLiveBalancePaise(newBalPaise);
         onAddFunds(amountToAdd);
         setIsSuccess(true);
@@ -231,17 +249,18 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
       if (
         sdkReady &&
-        razorpay?.keyId &&
-        razorpay.keyId.startsWith('rzp_') &&
-        razorpay.keyId !== 'rzp_test_placeholder'
+        keyId &&
+        keyId.startsWith('rzp_') &&
+        keyId !== 'rzp_test_placeholder' &&
+        !isSimulated
       ) {
         const options = {
-          key: razorpay.keyId,
-          amount: razorpay.amountPaise,
-          currency: razorpay.currency || 'INR',
+          key: keyId,
+          amount: amountPaiseFinal,
+          currency,
           name: 'CartPilot Wallet',
           description: `Top-up ₹${amountToAdd}`,
-          order_id: razorpay.orderId,
+          order_id: orderId,
           prefill: {
             name: user?.name || '',
             email: user?.email || '',
@@ -273,7 +292,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         // Safe sandbox simulator for local testing or placeholder keys
         await completeVerification(
           `pay_sim_${Date.now()}`,
-          'simulated_test_signature'
+          'sig_sim_test'
         );
         setIsProcessing(false);
       }

@@ -280,7 +280,14 @@ export class WalletService {
   ): Promise<{
     success: boolean;
     newBalanceRupees: number;
+    newBalancePaise: number;
     transactionId: string;
+    wallet?: {
+      id: string;
+      balancePaise: number;
+      balanceRupees: number;
+      status: string;
+    };
   }> {
     // 1. Signature Verification
     const isValid = paymentGateway.verifyPaymentSignature(
@@ -311,7 +318,16 @@ export class WalletService {
       return {
         success: true,
         newBalanceRupees: (currentWallet?.balancePaise || 0) / 100,
+        newBalancePaise: currentWallet?.balancePaise || 0,
         transactionId: existingTxn?._id.toString() || '',
+        wallet: currentWallet
+          ? {
+              id: currentWallet._id.toString(),
+              balancePaise: currentWallet.balancePaise,
+              balanceRupees: currentWallet.balancePaise / 100,
+              status: currentWallet.status,
+            }
+          : undefined,
       };
     }
 
@@ -353,7 +369,14 @@ export class WalletService {
     return {
       success: true,
       newBalanceRupees: newBalance / 100,
+      newBalancePaise: newBalance,
       transactionId: txn._id.toString(),
+      wallet: {
+        id: wallet._id.toString(),
+        balancePaise: newBalance,
+        balanceRupees: newBalance / 100,
+        status: wallet.status,
+      },
     };
   }
 
