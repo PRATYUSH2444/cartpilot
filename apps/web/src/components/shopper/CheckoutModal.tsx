@@ -31,6 +31,8 @@ interface CheckoutModalProps {
   token: string | null;
   walletBalance?: number;
   onDeductWallet?: (amountRupees: number) => void;
+  initialDeliverySlot?: 'morning' | 'evening';
+  appliedCoupon?: { code: string; discountPaise: number } | null;
 }
 
 const formatINR = (paise: number) => {
@@ -50,14 +52,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   token,
   walletBalance = 349.0,
   onDeductWallet,
+  initialDeliverySlot = 'morning',
+  appliedCoupon,
 }) => {
   const { authFetch } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<'RAZORPAY' | 'WALLET' | 'COD'>('RAZORPAY');
-  const [deliverySlot, setDeliverySlot] = useState<'morning' | 'evening'>('morning');
+  const [deliverySlot, setDeliverySlot] = useState<'morning' | 'evening'>(initialDeliverySlot);
   const [deliveryInstructions, setDeliveryInstructions] = useState('');
   const [isItemsExpanded, setIsItemsExpanded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (initialDeliverySlot) {
+      setDeliverySlot(initialDeliverySlot);
+    }
+  }, [initialDeliverySlot]);
 
   if (!isOpen || !cart) return null;
 
@@ -70,15 +80,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   );
   const deliveryFeePaise = pricing?.deliveryFeePaise ?? (subtotalPaise >= 50000 ? 0 : 4000);
   const taxPaise = pricing?.taxPaise ?? Math.round(subtotalPaise * 0.05);
-  const totalPaise = pricing?.totalPaise ?? (subtotalPaise + deliveryFeePaise + taxPaise);
+  const discountPaise = appliedCoupon ? appliedCoupon.discountPaise : 0;
+  const baseTotalPaise = pricing?.totalPaise ?? (subtotalPaise + deliveryFeePaise + taxPaise);
+  const totalPaise = Math.max(0, baseTotalPaise - discountPaise);
 
   const totalRupees = Math.round(totalPaise / 100);
   const isWalletSufficient = walletBalance >= totalRupees;
 
   const slotLabel =
     deliverySlot === 'morning'
-      ? 'Tomorrow, 6:00 AM – 10:00 AM (Morning Fresh)'
-      : 'Today, 5:00 PM – 9:00 PM (Evening Express)';
+      ? 'Morning Delivery (6:00 AM – 12:00 PM)'
+      : 'Evening Delivery (5:00 PM – 9:00 PM)';
 
   const handlePlaceOrder = async () => {
     if (!token) {
@@ -259,8 +271,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   className="mt-0.5 accent-[--brand] cursor-pointer"
                 />
                 <div className="text-left">
-                  <div className="text-xs font-bold leading-tight">Tomorrow Morning</div>
-                  <div className="text-[10px] text-[--mut] mt-0.5">6:00 AM – 10:00 AM · Fresh harvest</div>
+                  <div className="text-xs font-bold leading-tight">Morning Delivery</div>
+                  <div className="text-[10px] text-[--mut] mt-0.5">6:00 AM – 12:00 PM</div>
                 </div>
               </label>
 
@@ -280,8 +292,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   className="mt-0.5 accent-[--brand] cursor-pointer"
                 />
                 <div className="text-left">
-                  <div className="text-xs font-bold leading-tight">Today Evening</div>
-                  <div className="text-[10px] text-[--mut] mt-0.5">5:00 PM – 9:00 PM · Express</div>
+                  <div className="text-xs font-bold leading-tight">Evening Delivery</div>
+                  <div className="text-[10px] text-[--mut] mt-0.5">5:00 PM – 9:00 PM</div>
                 </div>
               </label>
             </div>
@@ -463,7 +475,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <span className="font-heading font-extrabold text-xs text-[--ink] block">
                     Cash on Delivery (COD)
                   </span>
-                  <span className="text-[10px] text-[--mut]">Pay cash upon morning arrival</span>
+                  <span className="text-[10px] text-[--mut]">Pay upon arrival</span>
                 </div>
               </div>
               <input
@@ -500,7 +512,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
           <div className="flex items-center justify-center gap-1.5 text-[10px] text-[--mut] font-sans">
             <Lock className="w-3 h-3 text-[--brand]" />
-            <span>256-bit encrypted secure checkout · 100% vegetarian guarantee</span>
+            <span>Secure checkout · CartPilot Verified</span>
           </div>
         </div>
       </div>

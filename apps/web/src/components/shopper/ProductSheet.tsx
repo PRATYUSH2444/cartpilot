@@ -75,7 +75,7 @@ export const ProductSheet: React.FC<ProductSheetProps> = ({
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-700" />
             </span>
             <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-800 font-bold">
-              100% Pure Vegetarian
+              Vegetarian
             </span>
           </div>
 

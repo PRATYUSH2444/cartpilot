@@ -505,10 +505,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
                   <div className="text-xs">
                     <span className="font-semibold text-emerald-900 dark:text-emerald-200">
-                      100% Certified Vegetarian Platform Invariant
+                      Vegetarian Grocery Platform
                     </span>
                     <p className="text-emerald-700 dark:text-emerald-300 text-[11px] mt-0.5">
-                      CartPilot strictly enforces pure vegetarian, cruelty-free grocery catalogs across all merchants.
+                      CartPilot curates vegetarian, fresh grocery essentials across all partner merchants.
                     </p>
                   </div>
                 </div>

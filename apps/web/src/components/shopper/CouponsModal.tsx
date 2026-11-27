@@ -230,7 +230,7 @@ export const CouponsModal: React.FC<CouponsModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleApply(coupon.code)}
-                    className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-all cursor-pointer flex-shrink-0 active:scale-95"
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-all cursor-pointer flex-shrink-0 active:scale-95"
                   >
                     {copiedCode === coupon.code ? (
                       <>

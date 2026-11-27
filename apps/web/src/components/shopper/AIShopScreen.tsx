@@ -42,7 +42,7 @@ interface AIShopScreenProps {
 const EXAMPLE_PROMPTS = [
   { emoji: '🍲', label: 'Quick Paneer Pulao for 4', prompt: 'Make Paneer Pulao for 4 people with all ingredients' },
   { emoji: '🍛', label: 'Spicy Dal Tadka, serves 2', prompt: 'Dal Tadka recipe with ingredients for 2 servings' },
-  { emoji: '📖', label: 'Weekly groceries under ₹1,500', prompt: 'Weekly vegetarian grocery list under ₹1500' },
+  { emoji: '📖', label: 'Weekly groceries under ₹1,500', prompt: 'Weekly grocery list under ₹1500' },
   { emoji: '🧄', label: 'Aloo Matar curry, feeds 6', prompt: 'Aloo Matar curry ingredients for 6 people' },
 ];
 
@@ -50,7 +50,7 @@ const PROMPT_CHIPS = [
   'Quick Paneer Pulao',
   'Dal Tadka for 2',
   'Weekly budget ₹1500',
-  'High protein veg',
+  'High protein items',
 ];
 
 export const AIShopScreen: React.FC<AIShopScreenProps> = ({
@@ -332,8 +332,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
                 How can CartPilot help you today?
               </h3>
               <p className="text-xs text-[--mut]">
-                Ask for custom meal plans, pure vegetarian recipes, or grocery shopping within your
-                budget.
+                Ask for custom meal plans, recipes, or grocery shopping within your budget.
               </p>
             </div>
 
@@ -444,7 +443,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
                 e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
               }}
               onKeyDown={handleKeyDown}
-              placeholder="Ask CartPilot for vegetarian groceries, recipes, or budgets…"
+              placeholder="Ask CartPilot for groceries, recipes, or meal ideas…"
               className="flex-1 resize-none rounded-[var(--radius-input)] bg-[--surface-2] border border-[--line] px-4 py-2.5 text-xs text-[--ink] placeholder:text-[--mut] focus:outline-none focus:ring-2 focus:ring-[--brand]/20 focus:border-[--brand] min-h-[44px] max-h-24 leading-relaxed font-sans"
             />
 

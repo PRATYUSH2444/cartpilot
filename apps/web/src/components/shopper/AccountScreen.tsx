@@ -537,7 +537,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                     setActiveInfoModal({
                       title: 'Terms & Conditions',
                       content:
-                        'CartPilot guarantees 100% pure vegetarian produce and pantry supplies. Morning deliveries are fulfilled between 6:00 AM and 9:00 AM for all orders placed before the 12:00 AM midnight cutoff. In the rare event of damaged produce, instant wallet compensation is issued with zero dispute hurdles.',
+                        'CartPilot provides fresh grocery produce and pantry supplies. Deliveries are fulfilled within scheduled morning and evening slots. In the rare event of damaged produce, instant wallet compensation is issued with zero dispute hurdles.',
                     })
                   }
                   className="w-full py-4 flex items-center justify-between text-left hover:text-emerald-700 transition-colors cursor-pointer group"
@@ -558,7 +558,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                     setActiveInfoModal({
                       title: 'About CartPilot',
                       content:
-                        'CartPilot is India\'s premier agentic grocery commerce platform. By combining farm-to-door direct sourcing with autonomous AI meal planning and spending mandates, CartPilot guarantees pure vegetarian essentials delivered fresh every single morning without the hassle of manual reordering.',
+                        'CartPilot is India\'s premier agentic grocery commerce platform. By combining farm-to-door direct sourcing with autonomous AI meal planning and spending mandates, CartPilot delivers fresh essentials with scheduled delivery windows without the hassle of manual reordering.',
                     })
                   }
                   className="w-full py-4 flex items-center justify-between text-left hover:text-emerald-700 transition-colors cursor-pointer group"
@@ -609,7 +609,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                           Frequently Asked Questions
                         </span>
                         <span className="text-xs text-stone-400 dark:text-stone-500">
-                          Delivery timings, pure vegetarian guarantee & limits
+                          Delivery timings, order policies & spending limits
                         </span>
                       </div>
                     </div>

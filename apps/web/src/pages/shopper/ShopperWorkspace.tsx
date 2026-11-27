@@ -102,6 +102,10 @@ export const ShopperWorkspace: React.FC = () => {
   const [policyEval, setPolicyEval] = useState<PolicyEvaluation | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
 
+  // Cart & Checkout configuration state
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountPaise: number } | null>(null);
+  const [selectedDeliverySlot, setSelectedDeliverySlot] = useState<'morning' | 'evening'>('morning');
+
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [composerText, setComposerText] = useState('');
@@ -219,12 +223,78 @@ export const ShopperWorkspace: React.FC = () => {
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isCouponsOpen, setIsCouponsOpen] = useState(false);
-  const [couponsModalMode, setCouponsModalMode] = useState<'view' | 'apply'>('view');
 
-  const handleOpenCoupons = (mode: 'view' | 'apply' = 'view') => {
-    setCouponsModalMode(mode);
+  const handleOpenCoupons = (_mode: 'view' | 'apply' = 'view') => {
     setIsCouponsOpen(true);
   };
+
+  const calculateCouponDiscount = useCallback(
+    (code: string, currentCart: CartData | null): number => {
+      const clean = code.trim().toUpperCase();
+      const subtotal =
+        currentCart?.pricing?.subtotalPaise ??
+        (currentCart?.items || []).reduce(
+          (sum, i) => sum + (i.itemTotalPaise || i.pricePaise * i.quantity),
+          0
+        );
+      if (clean === 'FRESH20' || clean === 'CARTPILOT20') {
+        return 2000; // ₹20
+      }
+      if (clean === 'VEG10' || clean === 'VEGFRESH') {
+        return Math.round(subtotal * 0.1); // 10%
+      }
+      if (clean === 'MORNING') {
+        return 5000; // ₹50
+      }
+      if (clean === 'WELCOME100') {
+        return subtotal >= 50000 ? 10000 : 0; // ₹100 on >= ₹500
+      }
+      if (clean === 'ORGANIC15') {
+        return Math.round(subtotal * 0.15); // 15%
+      }
+      try {
+        const stored = localStorage.getItem('cartpilot_merchant_coupons');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const found = parsed.find((c: any) => c.code?.toUpperCase() === clean);
+            if (found) {
+              const pct = found.discountPercent || 15;
+              return Math.round((subtotal * pct) / 100);
+            }
+          }
+        }
+      } catch {}
+      return 0;
+    },
+    []
+  );
+
+  const handleApplyCoupon = useCallback(
+    (code: string): boolean => {
+      const discount = calculateCouponDiscount(code, cart);
+      if (discount > 0) {
+        setAppliedCoupon({ code: code.trim().toUpperCase(), discountPaise: discount });
+        return true;
+      }
+      return false;
+    },
+    [calculateCouponDiscount, cart]
+  );
+
+  const handleRemoveCoupon = useCallback(() => {
+    setAppliedCoupon(null);
+  }, []);
+
+  // Sync discount dynamically if cart items change
+  useEffect(() => {
+    if (appliedCoupon && cart) {
+      const updatedDiscount = calculateCouponDiscount(appliedCoupon.code, cart);
+      if (updatedDiscount !== appliedCoupon.discountPaise) {
+        setAppliedCoupon((prev) => (prev ? { ...prev, discountPaise: updatedDiscount } : null));
+      }
+    }
+  }, [cart, calculateCouponDiscount, appliedCoupon]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isOrdersSheetOpen, setIsOrdersSheetOpen] = useState(false);
   const [isRulesSheetOpen, setIsRulesSheetOpen] = useState(false);
@@ -1473,6 +1543,8 @@ export const ShopperWorkspace: React.FC = () => {
           {activeMobileTab === 'cart' && (
             <CartScreen
               cart={cart}
+              products={products}
+              onAddToCart={handleAddToCart}
               onUpdateQuantity={handleUpdateQuantity}
               onRemoveItem={handleRemoveItem}
               onClearCart={handleClearCart}
@@ -1480,6 +1552,12 @@ export const ShopperWorkspace: React.FC = () => {
               onUpdateDeliveryNote={handleUpdateDeliveryNote}
               onExploreProducts={() => setActiveMobileTab('browse')}
               onOpenCoupons={() => handleOpenCoupons((cart?.items?.length ?? 0) > 0 ? 'apply' : 'view')}
+              appliedCoupon={appliedCoupon}
+              onApplyCoupon={handleApplyCoupon}
+              onRemoveCoupon={handleRemoveCoupon}
+              selectedDeliverySlot={selectedDeliverySlot}
+              onSelectDeliverySlot={setSelectedDeliverySlot}
+              onBack={() => setActiveMobileTab('browse')}
               isLoading={isLoading}
             />
           )}
@@ -1507,8 +1585,8 @@ export const ShopperWorkspace: React.FC = () => {
           )}
         </main>
 
-        {/* Desktop Persistent Context Panel (on wide screens >= 1024px when on chat or cart) */}
-        {(activeMobileTab === 'chat' || activeMobileTab === 'cart') && (
+        {/* Desktop Persistent Context Panel (on wide screens >= 1100px when on chat) */}
+        {activeMobileTab === 'chat' && (
           <div className="hidden min-[1100px]:flex flex-col h-full min-h-0 border-l border-[--line] w-[clamp(360px,28vw,440px)] flex-shrink-0 overflow-hidden">
             <ContextPanel
               cart={cart}
@@ -1606,6 +1684,8 @@ export const ShopperWorkspace: React.FC = () => {
         token={token}
         walletBalance={walletBalance}
         onDeductWallet={handleDeductWalletFunds}
+        initialDeliverySlot={selectedDeliverySlot}
+        appliedCoupon={appliedCoupon}
       />
 
       {/* ── Wishlist & Favorites Modal ─────────────────────────────────────── */}
@@ -1634,10 +1714,15 @@ export const ShopperWorkspace: React.FC = () => {
       <CouponsModal
         isOpen={isCouponsOpen}
         onClose={() => setIsCouponsOpen(false)}
-        showApply={couponsModalMode === 'apply' && (cart?.items?.length ?? 0) > 0}
+        showApply={(cart?.items?.length ?? 0) > 0}
         onApplyCoupon={(code) => {
+          const applied = handleApplyCoupon(code);
           setActiveMobileTab('cart');
-          showBanner('success', `Coupon '${code}' applied to your basket!`);
+          if (applied) {
+            showBanner('success', `Coupon '${code.toUpperCase()}' applied to your basket!`);
+          } else {
+            showBanner('error', `Coupon '${code.toUpperCase()}' could not be applied. Check order minimum.`);
+          }
         }}
       />
 

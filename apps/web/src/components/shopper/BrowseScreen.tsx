@@ -248,7 +248,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                     <div className="flex items-center justify-between">
                       <div
                         className="w-4 h-4 rounded-xs border border-emerald-600 bg-white flex items-center justify-center shadow-xs"
-                        title="100% Pure Vegetarian"
+                        title="Vegetarian"
                       >
                         <span className="w-2 h-2 rounded-full bg-emerald-600" />
                       </div>

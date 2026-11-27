@@ -38,7 +38,7 @@ export class MockLLMProvider implements LLMProvider {
 
         if (missing.length > 0 && missing[0]?.isVegetarianViolation) {
           return {
-            text: `I cannot fulfill this request: ${missing[0].reason} CartPilot operates an exclusively 100% certified vegetarian catalog.`,
+            text: `I cannot fulfill this request: ${missing[0].reason} CartPilot operates an exclusively vegetarian catalog.`,
           };
         }
 
@@ -80,7 +80,7 @@ export class MockLLMProvider implements LLMProvider {
       if (toolName === 'searchCatalog') {
         const products = toolResult?.products || [];
         if (products.length === 0) {
-          return { text: 'No matching certified vegetarian products found in the catalog.' };
+          return { text: 'No matching products found in the catalog.' };
         }
         const summary = products
           .slice(0, 4)
@@ -189,7 +189,7 @@ export class MockLLMProvider implements LLMProvider {
       else if (userText.includes('oil')) query = 'mustard oil';
 
       return {
-        text: `Searching our vegetarian catalog for "${query}"...`,
+        text: `Searching our catalog for "${query}"...`,
         toolCalls: [
           {
             id: `call_${Date.now()}`,
@@ -216,7 +216,7 @@ export class MockLLMProvider implements LLMProvider {
 
     // Default general response
     return {
-      text: 'Hello! I am CartPilot, your policy-governed shopping assistant. You can ask me to plan meals (e.g., "Paneer Pulao for 4 people"), find certified vegetarian ingredients, or inspect your cart and mandate limits. What can I help you with today?',
+      text: 'Hello! I am CartPilot, your shopping assistant. You can ask me to plan meals (e.g., "Paneer Pulao for 4 people"), find grocery ingredients, or inspect your cart. What can I help you with today?',
     };
   }
 }
