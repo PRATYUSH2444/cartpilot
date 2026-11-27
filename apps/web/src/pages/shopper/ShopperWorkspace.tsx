@@ -1303,7 +1303,13 @@ export const ShopperWorkspace: React.FC = () => {
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'P';
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-[--bg] text-[--ink] selection:bg-brand selection:text-white">
+    <div
+      className={`w-full flex flex-col bg-[--bg] text-[--ink] selection:bg-brand selection:text-white ${
+        activeMobileTab === 'chat'
+          ? 'h-[100dvh] max-h-[100dvh] overflow-hidden'
+          : 'min-h-screen'
+      }`}
+    >
       {/* ── Desktop Full-Width Top Header (Screen >= 1024px) ───────────────── */}
       <DesktopHeader
         activeTab={activeMobileTab}
@@ -1328,9 +1334,17 @@ export const ShopperWorkspace: React.FC = () => {
       />
 
       {/* ── Main Screen Viewport Switching ──────────────────────────────────── */}
-      <div className="flex-1 flex min-w-0 w-full relative">
+      <div
+        className={`flex-1 flex min-w-0 w-full relative ${
+          activeMobileTab === 'chat' ? 'min-h-0 overflow-hidden' : ''
+        }`}
+      >
         {/* Active Tab Screen */}
-        <main className="flex-1 flex flex-col min-w-0 w-full pb-20 lg:pb-0">
+        <main
+          className={`flex-1 flex flex-col min-w-0 w-full ${
+            activeMobileTab === 'chat' ? 'min-h-0 overflow-hidden pb-0' : 'pb-20 lg:pb-0'
+          }`}
+        >
           {activeMobileTab === 'home' && (
             <HomeScreen
               products={products}
@@ -1444,7 +1458,7 @@ export const ShopperWorkspace: React.FC = () => {
 
         {/* Desktop Persistent Context Panel (on wide screens >= 1024px when on chat or cart) */}
         {(activeMobileTab === 'chat' || activeMobileTab === 'cart') && (
-          <div className="hidden lg:block h-full border-l border-[--line]">
+          <div className="hidden lg:flex flex-col h-full min-h-0 border-l border-[--line] w-[clamp(360px,28vw,440px)] flex-shrink-0 overflow-hidden">
             <ContextPanel
               cart={cart}
               mandate={mandate}

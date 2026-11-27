@@ -102,7 +102,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             type="button"
             data-tour="delivery-location"
             onClick={onOpenAddressModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200/80 dark:hover:bg-stone-700 border border-stone-200 dark:border-stone-700 text-xs font-semibold text-stone-800 dark:text-stone-200 transition-colors cursor-pointer max-w-[160px] xl:max-w-[220px]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200/80 dark:hover:bg-stone-700 border border-stone-200 dark:border-stone-700 text-xs font-semibold text-stone-800 dark:text-stone-200 transition-colors cursor-pointer max-w-[220px] xl:max-w-[280px]"
             title="Change Delivery Location"
           >
             <MapPin className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 flex-shrink-0" />
@@ -119,7 +119,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
         </div>
 
         {/* ── Center: Clean Search Bar + Dedicated Standalone AI Assistant Button ── */}
-        <div className="flex-1 max-w-xl min-w-0 flex items-center gap-2">
+        <div className="flex-1 max-w-2xl min-w-0 flex items-center gap-2">
           {/* Search Input Box */}
           <div
             data-tour="search"

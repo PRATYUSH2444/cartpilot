@@ -112,7 +112,7 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
   return (
     <aside
       data-testid="context-panel"
-      className="w-[380px] h-full bg-card dark:bg-card-top border-l border-brd flex flex-col flex-shrink-0 z-20 shadow-sm transition-all overflow-hidden"
+      className="w-full h-full min-h-0 bg-card dark:bg-card-top flex flex-col flex-shrink-0 z-20 shadow-sm transition-all overflow-hidden"
       aria-label="Live Shopping Context"
     >
       {/* ── Top Header Bar ─────────────────────────────────────────────────── */}
@@ -150,7 +150,7 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
       </div>
 
       {/* ── Scrollable Body Canvas (Items, Delivery Address, Delivery Note, Spending Rules) ── */}
-      <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-brd/70 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+      <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain overflow-x-hidden divide-y divide-brd/70 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
         {/* Delivery ETA & Address Card */}
         <div className="p-3.5 space-y-2.5 bg-paper/40">
           <div className="flex items-center justify-between text-xs">
