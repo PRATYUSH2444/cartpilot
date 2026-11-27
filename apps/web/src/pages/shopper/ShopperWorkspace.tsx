@@ -886,21 +886,23 @@ export const ShopperWorkspace: React.FC = () => {
     if (items.length === 0) return;
     setIsLoading(true);
     try {
-      for (const item of items) {
-        if (!item.productId) continue;
-        await authFetch(`${API_BASE}/cart/items`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(item),
-        });
-      }
+      const validItems = items.filter((i) => Boolean(i.productId));
+      await Promise.all(
+        validItems.map((item) =>
+          authFetch(`${API_BASE}/cart/items`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item),
+          })
+        )
+      );
       const cartRes = await authFetch(`${API_BASE}/cart`);
       if (cartRes.ok) {
         const cData = await cartRes.json();
         setCart(cData.data);
         await evaluatePolicy();
       }
-      showBanner('success', `Added ${items.length} proposed ingredients to cart!`);
+      showBanner('success', `Added ${validItems.length} ingredients to cart!`);
     } catch {
       showBanner('error', 'Failed to add items to cart');
     } finally {
@@ -1451,7 +1453,7 @@ export const ShopperWorkspace: React.FC = () => {
         <main
           className={`flex-1 flex flex-col min-w-0 w-full ${
             activeMobileTab === 'chat'
-              ? 'min-h-0 overflow-hidden pb-0'
+              ? 'min-h-0 overflow-hidden pb-[64px] lg:pb-0'
               : activeMobileTab === 'cart'
                 ? 'min-h-0 lg:overflow-hidden pb-16 lg:pb-0'
                 : 'pb-20 lg:pb-0'
