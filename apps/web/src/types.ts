@@ -412,9 +412,15 @@ export interface UserProfile {
 
 export interface ServiceabilityInfo {
   isServiceable: boolean;
-  pincode: string;
-  estimatedMinutes: number;
-  deliveryFeePaise: number;
-  freeDeliveryThresholdPaise: number;
-  message: string;
+  pincode?: string;
+  estimatedMinutes?: number;
+  deliveryFeePaise?: number;
+  freeDeliveryThresholdPaise?: number;
+  message?: string;
+  distanceKm?: number;
+  nearestMerchant?: {
+    id: string;
+    businessName: string;
+    distanceKm: number;
+  };
 }

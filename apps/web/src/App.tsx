@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ClerkProvider } from '@clerk/clerk-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LocationProvider } from './context/LocationContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicRoute } from './components/PublicRoute';
 import { SessionEndedModal } from './components/SessionEndedModal';
@@ -47,11 +48,12 @@ export function App() {
   const appContent = (
     <ErrorBoundary fallbackTitle="Application Workspace Encountered an Error">
       <AuthProvider>
-        <BrowserRouter>
-          {/* Session expiry re-auth dialog */}
-          <SessionEndedModal />
+        <LocationProvider>
+          <BrowserRouter>
+            {/* Session expiry re-auth dialog */}
+            <SessionEndedModal />
 
-          <Routes>
+            <Routes>
             {/* Public Authentication Routes (Guarded: authenticated users cannot navigate back into them) */}
             <Route
               path="/login"
@@ -155,6 +157,7 @@ export function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
+        </LocationProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

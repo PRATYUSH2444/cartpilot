@@ -97,22 +97,29 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             </div>
           </button>
 
-          {/* Location Selector Pill */}
+          {/* Location Selector Pill (Blinkit / Zepto Quick Commerce Style) */}
           <button
             type="button"
             data-tour="delivery-location"
             onClick={onOpenAddressModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200/80 dark:hover:bg-stone-700 border border-stone-200 dark:border-stone-700 text-xs font-semibold text-stone-800 dark:text-stone-200 transition-colors cursor-pointer max-w-[220px] xl:max-w-[280px]"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-stone-850 hover:bg-stone-200/80 dark:hover:bg-stone-800 border border-stone-200 dark:border-stone-750 text-xs font-semibold text-stone-800 dark:text-stone-200 transition-all cursor-pointer max-w-[240px] xl:max-w-[320px] shadow-2xs"
             title="Change Delivery Location"
           >
-            <MapPin className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 flex-shrink-0" />
-            <div className="truncate text-left text-xs">
-              <span className="font-bold text-stone-900 dark:text-white mr-1 capitalize">
-                {addressTypeLabel}:
-              </span>
-              <span className="text-stone-500 dark:text-stone-400 truncate">
+            <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-700 dark:text-emerald-400 flex-shrink-0">
+              <MapPin className="w-3.5 h-3.5" />
+            </div>
+            <div className="truncate text-left text-xs min-w-0">
+              <div className="flex items-center gap-1.5 leading-tight">
+                <span className="font-extrabold text-stone-900 dark:text-white capitalize text-[11px]">
+                  {addressTypeLabel}:
+                </span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-black text-[10px] uppercase">
+                  15 Mins
+                </span>
+              </div>
+              <p className="text-stone-500 dark:text-stone-400 truncate text-[11px] font-medium leading-tight">
                 {addressLocalityLabel}
-              </span>
+              </p>
             </div>
             <ChevronDown className="w-3 h-3 text-stone-400 flex-shrink-0 ml-auto" />
           </button>

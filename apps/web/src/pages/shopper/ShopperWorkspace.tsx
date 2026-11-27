@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useLocation } from '../../context/LocationContext';
 import {
   CartData,
   MandateData,
@@ -102,7 +103,13 @@ export const ShopperWorkspace: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [mandate, setMandate] = useState<MandateData | null>(null);
   const [policyEval, setPolicyEval] = useState<PolicyEvaluation | null>(null);
-  const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
+  const {
+    selectedAddress,
+    selectAddress,
+    isAddressModalOpen,
+    openAddressModal,
+    closeAddressModal,
+  } = useLocation();
 
   // Cart & Checkout configuration state
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountPaise: number } | null>(null);
@@ -213,7 +220,6 @@ export const ShopperWorkspace: React.FC = () => {
   const [isPhoneLoginOpen, setIsPhoneLoginOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
-  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isUnserviceableModalOpen, setIsUnserviceableModalOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number>(() => {
     const saved = localStorage.getItem('cartpilot_wallet_balance');
@@ -506,7 +512,9 @@ export const ShopperWorkspace: React.FC = () => {
             const addrData = await addrRes.json();
             const addrs: UserAddress[] = addrData.data || [];
             const def = addrs.find((a) => a.isDefault) || addrs[0] || null;
-            setSelectedAddress(def);
+            if (def && !selectedAddress) {
+              selectAddress(def);
+            }
           }
         } catch (e) {
           console.warn('Addresses fetch failed:', e);
@@ -1281,7 +1289,7 @@ export const ShopperWorkspace: React.FC = () => {
       setIsCheckoutModalOpen(false);
       setIsLiveTrackingOpen(false);
       setIsGlobalSearchOpen(false);
-      setIsAddressModalOpen(false);
+      closeAddressModal();
       setIsWishlistOpen(false);
       setIsWalletOpen(false);
       setIsCouponsOpen(false);
@@ -1549,7 +1557,7 @@ export const ShopperWorkspace: React.FC = () => {
         onSelectTab={handleSelectTab}
         cart={cart}
         selectedAddress={selectedAddress}
-        onOpenAddressModal={() => setIsAddressModalOpen(true)}
+        onOpenAddressModal={openAddressModal}
         onOpenSearchModal={() => setIsGlobalSearchOpen(true)}
         onOpenWishlist={() => setIsWishlistOpen(true)}
         onOpenWallet={() => setIsWalletOpen(true)}
@@ -1595,7 +1603,7 @@ export const ShopperWorkspace: React.FC = () => {
               orders={orders}
               selectedAddress={selectedAddress}
               onSelectTab={handleSelectTab}
-              onOpenAddressModal={() => setIsAddressModalOpen(true)}
+              onOpenAddressModal={openAddressModal}
               onOpenSearchModal={() => setIsGlobalSearchOpen(true)}
               onOpenProfile={() => setActiveMobileTab('account')}
               onOpenWallet={() => setIsWalletOpen(true)}
@@ -1696,7 +1704,7 @@ export const ShopperWorkspace: React.FC = () => {
               walletBalance={walletBalance}
               favoritesCount={favorites.length}
               onOpenOrders={() => setIsOrdersSheetOpen(true)}
-              onOpenAddresses={() => setIsAddressModalOpen(true)}
+              onOpenAddresses={openAddressModal}
               onOpenRules={() => setIsRulesSheetOpen(true)}
               onOpenProfileModal={() => setIsProfileModalOpen(true)}
               onOpenWishlist={() => setIsWishlistOpen(true)}
@@ -1730,7 +1738,7 @@ export const ShopperWorkspace: React.FC = () => {
               onOpenRules={() => setIsRulesSheetOpen(true)}
               onOpenBrowse={() => setActiveMobileTab('browse')}
               selectedAddress={selectedAddress}
-              onOpenAddressModal={() => setIsAddressModalOpen(true)}
+              onOpenAddressModal={openAddressModal}
               isLoading={isLoading}
             />
           </div>
@@ -1757,7 +1765,7 @@ export const ShopperWorkspace: React.FC = () => {
         onRenameSession={handleRenameSession}
         onDeleteSession={handleDeleteSession}
         onOpenOrders={() => setIsOrdersSheetOpen(true)}
-        onOpenAddresses={() => setIsAddressModalOpen(true)}
+        onOpenAddresses={openAddressModal}
         onOpenRules={() => setIsRulesSheetOpen(true)}
         onOpenAccount={() => setActiveMobileTab('account')}
         onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
@@ -1774,7 +1782,7 @@ export const ShopperWorkspace: React.FC = () => {
         onClose={() => setIsCheckoutModalOpen(false)}
         cart={cart}
         selectedAddress={selectedAddress}
-        onOpenAddressSelector={() => setIsAddressModalOpen(true)}
+        onOpenAddressSelector={openAddressModal}
         onOrderSuccess={handleOrderSuccess}
         token={token}
         walletBalance={walletBalance}
@@ -1888,11 +1896,11 @@ export const ShopperWorkspace: React.FC = () => {
       {/* ── Location Selector & Address Management Modal (Screens 7 & 11) ──── */}
       <AddressModal
         isOpen={isAddressModalOpen}
-        onClose={() => setIsAddressModalOpen(false)}
+        onClose={closeAddressModal}
         token={token}
         selectedAddressId={selectedAddress?._id}
         onSelectAddress={(addr) => {
-          setSelectedAddress(addr);
+          selectAddress(addr);
           if (addr.isServiceable === false) {
             setIsUnserviceableModalOpen(true);
           }
@@ -1931,7 +1939,7 @@ export const ShopperWorkspace: React.FC = () => {
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         token={token}
-        onOpenAddresses={() => setIsAddressModalOpen(true)}
+        onOpenAddresses={openAddressModal}
         onOpenOrders={() => setIsOrdersSheetOpen(true)}
         onOpenRules={() => setIsRulesSheetOpen(true)}
         onLogout={() => logout()}

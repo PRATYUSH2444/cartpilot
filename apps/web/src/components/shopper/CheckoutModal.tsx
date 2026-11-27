@@ -324,10 +324,27 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </button>
             </div>
             {selectedAddress ? (
-              <p className="text-xs text-stone-700 dark:text-stone-300 font-medium leading-relaxed pl-5.5 font-sans">
-                {selectedAddress.houseFlat ? `${selectedAddress.houseFlat}, ` : ''}
-                {selectedAddress.apartmentStreet || selectedAddress.areaLocality}, {selectedAddress.city} — {selectedAddress.pincode}
-              </p>
+              <div className="pl-5.5 space-y-1">
+                <p className="text-xs text-stone-700 dark:text-stone-300 font-medium leading-relaxed font-sans">
+                  {selectedAddress.houseFlat ? `${selectedAddress.houseFlat}, ` : ''}
+                  {selectedAddress.apartmentStreet || selectedAddress.areaLocality}, {selectedAddress.city} — {selectedAddress.pincode}
+                </p>
+                <div className="flex items-center gap-2 pt-0.5">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                    {selectedAddress.addressType || 'HOME'}
+                  </span>
+                  {selectedAddress.isServiceable ? (
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      15-20 Min Express Delivery Zone
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-bold text-amber-600 flex items-center gap-1">
+                      Standard Fulfillment Zone
+                    </span>
+                  )}
+                </div>
+              </div>
             ) : (
               <div className="pl-5.5 pt-1">
                 <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">

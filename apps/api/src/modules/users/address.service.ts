@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { AddressModel, IAddress, AddressType } from './address.model.js';
 import { UserModel } from './user.model.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../common/errors/app-error.js';
+import { MapsService } from '../location/maps.service.js';
 
 export interface CreateAddressDTO {
   fullName: string;
@@ -63,7 +64,21 @@ export class AddressService {
       throw new BadRequestError('PIN code must be a valid 6-digit Indian postal code');
     }
 
-    const isServiceable = !BLOCKED_OR_REMOTE_PINCODES.includes(input.pincode);
+    // Try geocoding coordinates if not supplied
+    let lat = input.latitude;
+    let lng = input.longitude;
+    if ((lat === undefined || lng === undefined) && input.areaLocality && input.city) {
+      try {
+        const geo = await MapsService.geocode(`${input.houseFlat} ${input.apartmentStreet} ${input.areaLocality} ${input.city} ${input.pincode}`);
+        if (geo) {
+          lat = geo.latitude;
+          lng = geo.longitude;
+        }
+      } catch {}
+    }
+
+    const serviceCheck = await MapsService.checkServiceability(lat, lng, input.pincode);
+    const isServiceable = serviceCheck.isServiceable;
 
     // Check if user has any existing addresses
     const count = await AddressModel.countDocuments({ userId: userObjectId });
@@ -88,8 +103,8 @@ export class AddressService {
       pincode: input.pincode.trim(),
       addressType: input.addressType || 'HOME',
       deliveryInstructions: input.deliveryInstructions?.trim(),
-      latitude: input.latitude,
-      longitude: input.longitude,
+      latitude: lat,
+      longitude: lng,
       isDefault,
       isServiceable,
     });
@@ -171,26 +186,19 @@ export class AddressService {
     return address;
   }
 
-  public static checkServiceability(pincode: string): ServiceabilityResult {
-    const cleanPin = pincode.trim();
-    if (!/^[1-9][0-9]{5}$/.test(cleanPin)) {
-      throw new BadRequestError('PIN code must be a valid 6-digit Indian postal code');
-    }
-
-    const isBlocked = BLOCKED_OR_REMOTE_PINCODES.includes(cleanPin);
-    const isExpressZone = cleanPin.startsWith('560') || cleanPin.startsWith('400') || cleanPin.startsWith('110');
-
-    const estimatedMinutes = isBlocked ? 0 : isExpressZone ? 20 : 30;
-
+  public static async checkServiceability(
+    pincode?: string,
+    latitude?: number,
+    longitude?: number
+  ): Promise<ServiceabilityResult> {
+    const res = await MapsService.checkServiceability(latitude, longitude, pincode);
     return {
-      isServiceable: !isBlocked,
-      pincode: cleanPin,
-      estimatedMinutes,
-      deliveryFeePaise: 4000, // ₹40 standard delivery fee
-      freeDeliveryThresholdPaise: 50000, // ₹500 free delivery threshold
-      message: isBlocked
-        ? `Location with PIN ${cleanPin} is currently outside our 30-minute delivery zone.`
-        : `Delivering in about ${estimatedMinutes} minutes to PIN ${cleanPin} (estimated, simulated).`,
+      isServiceable: res.isServiceable,
+      pincode: res.pincode || pincode || '',
+      estimatedMinutes: res.estimatedMinutes,
+      deliveryFeePaise: res.deliveryFeePaise,
+      freeDeliveryThresholdPaise: res.freeDeliveryThresholdPaise,
+      message: res.message,
     };
   }
 }

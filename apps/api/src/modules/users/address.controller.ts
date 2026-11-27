@@ -112,8 +112,15 @@ export class AddressController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const pincode = (req.body?.pincode || req.query.pincode) as string;
-      const result = AddressService.checkServiceability(pincode);
+      const pincode = (req.body?.pincode || req.query.pincode) as string | undefined;
+      const lat = parseFloat((req.body?.lat ?? req.body?.latitude ?? req.query.lat ?? req.query.latitude) as string);
+      const lng = parseFloat((req.body?.lng ?? req.body?.longitude ?? req.query.lng ?? req.query.longitude) as string);
+
+      const result = await AddressService.checkServiceability(
+        pincode,
+        isNaN(lat) ? undefined : lat,
+        isNaN(lng) ? undefined : lng
+      );
       res.status(200).json({
         success: true,
         data: result,
