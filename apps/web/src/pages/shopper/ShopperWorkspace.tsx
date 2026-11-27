@@ -37,7 +37,6 @@ import { WishlistModal } from '../../components/shopper/WishlistModal';
 import { WalletModal } from '../../components/shopper/WalletModal';
 import { CouponsModal } from '../../components/shopper/CouponsModal';
 import { NotificationsModal } from '../../components/shopper/NotificationsModal';
-import { PullToRefresh } from '../../components/common/PullToRefresh';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { updateCartOptimistically, calculateOptimisticPricing } from '../../utils/optimisticCart';
 
@@ -1125,63 +1124,86 @@ export const ShopperWorkspace: React.FC = () => {
     }, 150);
   };
 
-  // ── Pull-to-Refresh Handler ───────────────────────────────────────────────
-  const handlePullToRefresh = useCallback(async () => {
+  // ── Silent Live Data Sync on Tab Visibility / Focus (Zero Banners or Shifts) ──
+  useEffect(() => {
     if (!token) return;
-    try {
-      const promises: Promise<any>[] = [
-        authFetch(`${API_BASE}/catalog?limit=50`).then(async (res) => {
-          if (res.ok) {
-            const d = await res.json();
-            setProducts(d.data || []);
-          }
-        }),
-        authFetch(`${API_BASE}/cart`).then(async (res) => {
-          if (res.ok) {
-            const d = await res.json();
-            lastConfirmedCartRef.current = d.data;
-            setCart(d.data);
-          }
-        }),
-        authFetch(`${API_BASE}/orders`).then(async (res) => {
-          if (res.ok) {
-            const d = await res.json();
-            const ords = d.data || [];
-            setOrders(ords);
-            if (ords.length > 0) {
-              setTrackedOrder(ords[0]);
-            }
-          }
-        }),
-        authFetch(`${API_BASE}/users/wallet`).then(async (res) => {
-          if (res.ok) {
-            const wData = await res.json();
-            if (wData.data?.balanceRupees !== undefined) {
-              setWalletBalance(wData.data.balanceRupees);
-              localStorage.setItem('cartpilot_wallet_balance', wData.data.balanceRupees.toString());
-            }
-          }
-        }),
-        authFetch(`${API_BASE}/chat/sessions`).then(async (res) => {
-          if (res.ok) {
-            const sData = await res.json();
-            setChatSessions(sData.data || []);
-          }
-        }),
-      ];
 
-      await Promise.allSettled(promises);
-      await evaluatePolicy();
-      showBanner('success', 'Refreshed! Fresh farm inventory up to date.');
-    } catch (e) {
-      console.warn('Pull to refresh failed:', e);
-    }
-  }, [token, evaluatePolicy]);
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        // Refetch quietly in background with no banners, toasts, or indicators
+        authFetch(`${API_BASE}/catalog?limit=50`)
+          .then(async (res) => {
+            if (res.ok) {
+              const d = await res.json();
+              setProducts(d.data || []);
+            }
+          })
+          .catch(() => {});
+
+        authFetch(`${API_BASE}/cart`)
+          .then(async (res) => {
+            if (res.ok) {
+              const d = await res.json();
+              if (pendingQuantitiesRef.current.size === 0) {
+                lastConfirmedCartRef.current = d.data;
+                setCart(d.data);
+              }
+            }
+          })
+          .catch(() => {});
+
+        authFetch(`${API_BASE}/orders`)
+          .then(async (res) => {
+            if (res.ok) {
+              const d = await res.json();
+              const ords = d.data || [];
+              setOrders(ords);
+              if (ords.length > 0) {
+                setTrackedOrder(ords[0]);
+              }
+            }
+          })
+          .catch(() => {});
+
+        authFetch(`${API_BASE}/users/wallet`)
+          .then(async (res) => {
+            if (res.ok) {
+              const wData = await res.json();
+              if (wData.data?.balanceRupees !== undefined) {
+                setWalletBalance(wData.data.balanceRupees);
+                localStorage.setItem(
+                  'cartpilot_wallet_balance',
+                  wData.data.balanceRupees.toString()
+                );
+              }
+            }
+          })
+          .catch(() => {});
+
+        authFetch(`${API_BASE}/chat/sessions`)
+          .then(async (res) => {
+            if (res.ok) {
+              const sData = await res.json();
+              setChatSessions(sData.data || []);
+            }
+          })
+          .catch(() => {});
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [token, authFetch]);
 
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'P';
 
   return (
-    <div className="fixed inset-0 w-full h-full flex flex-col bg-[--bg] text-[--ink] overflow-hidden select-none">
+    <div className="min-h-screen w-full flex flex-col bg-[--bg] text-[--ink] selection:bg-brand selection:text-white">
       {/* ── Desktop Full-Width Top Header (Screen >= 1024px) ───────────────── */}
       <DesktopHeader
         activeTab={activeMobileTab}
@@ -1206,11 +1228,10 @@ export const ShopperWorkspace: React.FC = () => {
       />
 
       {/* ── Main Screen Viewport Switching ──────────────────────────────────── */}
-      <div className="flex-1 flex min-h-0 overflow-hidden relative">
+      <div className="flex-1 flex min-w-0 w-full relative">
         {/* Active Tab Screen */}
-        <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
-          <PullToRefresh onRefresh={handlePullToRefresh}>
-            {activeMobileTab === 'home' && (
+        <main className="flex-1 flex flex-col min-w-0 w-full pb-20 lg:pb-0">
+          {activeMobileTab === 'home' && (
             <HomeScreen
               products={products}
               cart={cart}
@@ -1317,7 +1338,6 @@ export const ShopperWorkspace: React.FC = () => {
               onToggleTheme={() => setIsDark((d) => !d)}
             />
           )}
-          </PullToRefresh>
         </main>
 
         {/* Desktop Persistent Context Panel (on wide screens >= 1024px when on chat or cart) */}
@@ -1347,7 +1367,7 @@ export const ShopperWorkspace: React.FC = () => {
       </div>
 
       {/* ── Static Bottom 5-Destination Navigation Bar (Visible only on mobile/tablet) ────── */}
-      <div className="block lg:hidden flex-shrink-0 z-40 w-full">
+      <div className="block lg:hidden fixed bottom-0 left-0 right-0 z-40 w-full bg-white dark:bg-stone-900 border-t border-stone-200/80 dark:border-stone-800">
         <BottomTabBar
           activeTab={activeMobileTab}
           onSelectTab={handleSelectTab}

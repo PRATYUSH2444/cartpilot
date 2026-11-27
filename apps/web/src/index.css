@@ -52,19 +52,30 @@
   --ai-border: #4C1D95;
 }
 
-/* ── Fixed Mobile Viewport Lock (Prevents document bounce & bottom white gaps) ── */
+/* ── Document Scroller Architecture (Enables native browser pull-to-refresh on mobile) ── */
 html,
-body,
+body {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  min-width: 320px;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 #root {
-  height: 100%;
+  min-height: 100%;
   width: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: touch;
-  position: fixed;
-  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg);
 }
 
 body {

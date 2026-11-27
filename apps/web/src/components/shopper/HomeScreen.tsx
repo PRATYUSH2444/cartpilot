@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MapPin,
   ChevronDown,
@@ -20,6 +20,7 @@ import {
   Utensils,
   Cookie,
   Soup,
+  X,
 } from 'lucide-react';
 import { Product, CartData, OrderData, UserAddress } from '../../types';
 import { TabKey } from './BottomTabBar';
@@ -131,6 +132,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   const deliveryWindow = getDeliveryWindowInfo();
   const [cookingInput, setCookingInput] = useState('');
+  const [showFirstUseModal, setShowFirstUseModal] = useState(false);
+
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem('cartpilot_first_use_features_seen');
+      if (!seen) {
+        setShowFirstUseModal(true);
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const handleDismissFirstUseModal = () => {
+    try {
+      localStorage.setItem('cartpilot_first_use_features_seen', 'true');
+    } catch {
+      // Ignore
+    }
+    setShowFirstUseModal(false);
+  };
 
   // Active uncompleted order for live-track pill
   const activeOrder =
@@ -174,7 +196,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.round(amount));
 
   return (
-    <div className="flex-1 overflow-y-auto overscroll-contain pb-16 bg-[var(--bg)] text-[var(--ink)] font-body selection:bg-brand selection:text-white">
+    <div className="flex-1 w-full pb-16 bg-[var(--bg)] text-[var(--ink)] font-body selection:bg-brand selection:text-white">
       {/* ── Mobile Top App Bar (< 1024px) ── */}
       <div className="block lg:hidden sticky top-0 z-30 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-b border-stone-200/60 dark:border-stone-800/60 shadow-2xs">
         <div className="max-w-xl mx-auto px-4 pt-3 pb-2.5 space-y-2">
@@ -402,65 +424,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
 
-        {/* ── 4 Feature Highlights Strip ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-4 shadow-2xs">
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400 flex-shrink-0">
-              <Truck className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="font-heading font-extrabold text-xs sm:text-sm text-stone-900 dark:text-white leading-tight">
-                Scheduled Delivery
-              </p>
-              <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
-                6:00 AM – 10:00 AM at your door
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400 flex-shrink-0">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="font-heading font-extrabold text-xs sm:text-sm text-stone-900 dark:text-white leading-tight">
-                Spend Guard
-              </p>
-              <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
-                Shop within your daily budget
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400 flex-shrink-0">
-              <BadgePercent className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="font-heading font-extrabold text-xs sm:text-sm text-stone-900 dark:text-white leading-tight">
-                Daily Deals
-              </p>
-              <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
-                Save more on everyday staples
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400 flex-shrink-0">
-              <Leaf className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="font-heading font-extrabold text-xs sm:text-sm text-stone-900 dark:text-white leading-tight">
-                Farm Fresh
-              </p>
-              <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
-                Handpicked farm harvest daily
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* ── Active Order Live Tracking Floating Card ── */}
         {activeOrder && (
           <div className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-4 shadow-2xs space-y-2.5">
@@ -523,8 +486,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-            {bestSellers.map((prod) => {
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 min-h-[360px]">
+            {products.length === 0 ? (
+              Array.from({ length: 10 }).map((_, idx) => (
+                <div
+                  key={`home-skeleton-${idx}`}
+                  className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3 shadow-2xs flex flex-col justify-between animate-pulse min-h-[220px]"
+                >
+                  <div className="space-y-2">
+                    <div className="w-full aspect-square rounded-xl bg-stone-100 dark:bg-stone-800" />
+                    <div className="h-4 w-3/4 rounded-md bg-stone-100 dark:bg-stone-800" />
+                    <div className="h-3 w-1/2 rounded-md bg-stone-100 dark:bg-stone-800" />
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between">
+                    <div className="h-5 w-12 rounded-md bg-stone-100 dark:bg-stone-800" />
+                    <div className="w-8 h-8 rounded-lg bg-stone-100 dark:bg-stone-800" />
+                  </div>
+                </div>
+              ))
+            ) : (
+              bestSellers.map((prod) => {
               const qty = getCartQuantity(prod._id);
               const price = Math.round(prod.pricePaise / 100);
               const strikethroughMrp = Math.round(price * 1.15);
@@ -641,10 +622,118 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </div>
       </div>
+
+      {/* ── First-Use Welcome & Features Modal (Pop Up on 1st Use) ── */}
+      {showFirstUseModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={handleDismissFirstUseModal}
+        >
+          <div
+            className="w-full max-w-md bg-white dark:bg-stone-900 rounded-3xl border border-stone-200/80 dark:border-stone-800 shadow-2xl p-5 sm:p-6 space-y-5 animate-in zoom-in-95 duration-200 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={handleDismissFirstUseModal}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 hover:text-stone-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Header */}
+            <div className="space-y-1.5 pr-8">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold">
+                <Leaf className="w-3.5 h-3.5" />
+                <span>Welcome to CartPilot</span>
+              </div>
+              <h2 className="font-heading font-extrabold text-lg sm:text-xl text-stone-900 dark:text-white leading-tight">
+                Fresh Groceries, Delivered Smart
+              </h2>
+              <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                Here is why thousands of homes trust CartPilot for pure farm-fresh daily essentials.
+              </p>
+            </div>
+
+            {/* 4 Feature Items */}
+            <div className="space-y-2.5">
+              <div className="flex items-start gap-3 p-3 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-700/50">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shrink-0">
+                  <Truck className="w-4.5 h-4.5" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="font-heading font-bold text-xs sm:text-sm text-stone-900 dark:text-white">
+                    Scheduled Morning Delivery
+                  </p>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-tight">
+                    6:00 AM – 10:00 AM at your door. Order by midnight to get fresh morning harvest.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-700/50">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shrink-0">
+                  <ShieldCheck className="w-4.5 h-4.5" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="font-heading font-bold text-xs sm:text-sm text-stone-900 dark:text-white">
+                    Autonomous Spend Guard
+                  </p>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-tight">
+                    Keep your grocery budget under control with daily spend caps and instant anomaly protection.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-700/50">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shrink-0">
+                  <BadgePercent className="w-4.5 h-4.5" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="font-heading font-bold text-xs sm:text-sm text-stone-900 dark:text-white">
+                    Daily Farm Deals
+                  </p>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-tight">
+                    Direct-from-farm pricing with zero middlemen, saving you more on everyday essentials.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/60 dark:border-stone-700/50">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shrink-0">
+                  <Leaf className="w-4.5 h-4.5" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="font-heading font-bold text-xs sm:text-sm text-stone-900 dark:text-white">
+                    100% Certified Farm Fresh
+                  </p>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-tight">
+                    Strictly vegetarian, fresh harvested vegetables, dairy, pulses, and zero-compromise quality.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action CTA */}
+            <button
+              type="button"
+              onClick={handleDismissFirstUseModal}
+              className="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-heading font-bold text-sm shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>Start Fresh Shopping</span>
+              <Sparkles className="w-4 h-4 text-emerald-200" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

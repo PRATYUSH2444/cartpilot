@@ -225,7 +225,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
       </div>
 
       {/* ── Messages Canvas ────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full max-w-sm mx-auto text-center py-8 space-y-6">
             <div className="w-16 h-16 rounded-3xl bg-[--brand] text-white flex items-center justify-center shadow-md">

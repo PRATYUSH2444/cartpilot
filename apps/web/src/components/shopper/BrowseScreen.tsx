@@ -110,7 +110,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
   }, [products, selectedCategory, selectedSubcategory, searchQuery]);
 
   return (
-    <div className="flex-1 overflow-y-auto overscroll-contain pb-8 bg-[--bg]">
+    <div className="flex-1 w-full pb-16 bg-[--bg]">
       {/* ── Top Search & Filter Bar ────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-[--bg]/95 backdrop-blur-md border-b border-[--line]/60">
         <div className="page-container pt-3 pb-2 space-y-2.5">
@@ -212,8 +212,26 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
-            {filteredProducts.map((prod) => {
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5 min-h-[380px]">
+            {products.length === 0 ? (
+              Array.from({ length: 12 }).map((_, idx) => (
+                <div
+                  key={`browse-skeleton-${idx}`}
+                  className="rounded-[var(--radius-card)] bg-[--surface] border border-[--line] p-3 flex flex-col justify-between shadow-card animate-pulse min-h-[240px]"
+                >
+                  <div className="space-y-2">
+                    <div className="relative aspect-square rounded-xl bg-[--surface-2]" />
+                    <div className="h-4 w-3/4 rounded-md bg-[--surface-2]" />
+                    <div className="h-3 w-1/2 rounded-md bg-[--surface-2]" />
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-[--line]/60 flex items-center justify-between">
+                    <div className="h-4 w-12 rounded-md bg-[--surface-2]" />
+                    <div className="w-14 h-7 rounded-full bg-[--surface-2]" />
+                  </div>
+                </div>
+              ))
+            ) : (
+              filteredProducts.map((prod) => {
               const qty = getCartQuantity(prod._id);
               const priceRupees = (prod.pricePaise / 100).toFixed(0);
               const origPrice = Math.round(Number(priceRupees) * 1.15);
@@ -329,7 +347,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         )}
       </div>
