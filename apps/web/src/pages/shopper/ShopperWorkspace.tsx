@@ -105,6 +105,12 @@ export const ShopperWorkspace: React.FC = () => {
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isCouponsOpen, setIsCouponsOpen] = useState(false);
+  const [couponsModalMode, setCouponsModalMode] = useState<'view' | 'apply'>('view');
+
+  const handleOpenCoupons = (mode: 'view' | 'apply' = 'view') => {
+    setCouponsModalMode(mode);
+    setIsCouponsOpen(true);
+  };
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isOrdersSheetOpen, setIsOrdersSheetOpen] = useState(false);
   const [isRulesSheetOpen, setIsRulesSheetOpen] = useState(false);
@@ -948,7 +954,7 @@ export const ShopperWorkspace: React.FC = () => {
               onOpenSearchModal={() => setIsGlobalSearchOpen(true)}
               onOpenProfile={() => setActiveMobileTab('account')}
               onOpenWallet={() => setIsWalletOpen(true)}
-              onOpenCoupons={() => setIsCouponsOpen(true)}
+              onOpenCoupons={() => handleOpenCoupons('view')}
               onOpenWishlist={() => setIsWishlistOpen(true)}
               onOpenNotifications={() => setIsNotificationsOpen(true)}
               onSelectProduct={(p) => {
@@ -1019,7 +1025,7 @@ export const ShopperWorkspace: React.FC = () => {
               onProceedToCheckout={() => setIsCheckoutModalOpen(true)}
               onUpdateDeliveryNote={handleUpdateDeliveryNote}
               onExploreProducts={() => setActiveMobileTab('browse')}
-              onOpenCoupons={() => setIsCouponsOpen(true)}
+              onOpenCoupons={() => handleOpenCoupons((cart?.items?.length ?? 0) > 0 ? 'apply' : 'view')}
               isLoading={isLoading}
             />
           )}
@@ -1037,7 +1043,7 @@ export const ShopperWorkspace: React.FC = () => {
               onOpenProfileModal={() => setIsProfileModalOpen(true)}
               onOpenWishlist={() => setIsWishlistOpen(true)}
               onOpenWallet={() => setIsWalletOpen(true)}
-              onOpenCoupons={() => setIsCouponsOpen(true)}
+              onOpenCoupons={() => handleOpenCoupons('view')}
               onOpenIntegrations={() => setIsIntegrationsModalOpen(true)}
               onLogout={() => logout()}
               isDark={isDark}
@@ -1142,6 +1148,7 @@ export const ShopperWorkspace: React.FC = () => {
       <CouponsModal
         isOpen={isCouponsOpen}
         onClose={() => setIsCouponsOpen(false)}
+        showApply={couponsModalMode === 'apply' && (cart?.items?.length ?? 0) > 0}
         onApplyCoupon={(code) => {
           setActiveMobileTab('cart');
           showBanner('success', `Coupon '${code}' applied to your basket!`);
