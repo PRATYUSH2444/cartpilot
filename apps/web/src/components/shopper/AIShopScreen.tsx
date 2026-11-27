@@ -107,7 +107,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
     if (composerRef.current) {
       composerRef.current.style.height = 'auto';
       const scrollH = composerRef.current.scrollHeight;
-      composerRef.current.style.height = `${Math.min(Math.max(scrollH, 42), 112)}px`;
+      composerRef.current.style.height = `${Math.min(Math.max(scrollH, 48), 128)}px`;
     }
   }, [composerText]);
 
@@ -117,7 +117,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
       if (!isLoading && composerText.trim()) {
         onSendMessage(composerText);
         if (composerRef.current) {
-          composerRef.current.style.height = 'auto';
+          composerRef.current.style.height = '48px';
         }
       }
     }
@@ -154,11 +154,11 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
       >
         {!isUser && (
           isFirstInAssistantRun ? (
-            <div className="w-7 h-7 rounded-xl bg-stone-900 dark:bg-stone-100 flex items-center justify-center flex-shrink-0 text-white dark:text-stone-900 shadow-2xs mt-0.5">
-              <Leaf className="w-3.5 h-3.5" />
+            <div className="w-7.5 h-7.5 rounded-xl bg-gradient-to-tr from-emerald-700 to-emerald-600 flex items-center justify-center flex-shrink-0 text-white shadow-2xs mt-0.5 ring-1 ring-emerald-600/20">
+              <Leaf className="w-3.5 h-3.5 fill-white/20" />
             </div>
           ) : (
-            <div className="w-7 h-7 flex-shrink-0" />
+            <div className="w-7.5 h-7.5 flex-shrink-0" />
           )
         )}
 
@@ -185,7 +185,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
           ) : (
             msg.content && (
               <div
-                className={`px-4 py-2.5 sm:py-3 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
+                className={`px-4 py-2.5 sm:py-3 text-[13.5px] sm:text-sm leading-relaxed whitespace-pre-wrap ${
                   isUser
                     ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-[18px] rounded-br-xs shadow-2xs font-medium'
                     : 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-[18px] rounded-bl-xs border border-stone-200/80 dark:border-stone-800 shadow-2xs'
@@ -302,8 +302,8 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-stone-900 dark:bg-stone-100 flex items-center justify-center text-white dark:text-stone-900 shadow-2xs">
-              <Leaf className="w-3.5 h-3.5" />
+            <div className="w-7.5 h-7.5 rounded-xl bg-gradient-to-tr from-emerald-700 to-emerald-600 flex items-center justify-center text-white shadow-2xs">
+              <Leaf className="w-3.5 h-3.5 fill-white/20" />
             </div>
             <div>
               <h2 className="font-heading font-bold text-sm text-stone-900 dark:text-white leading-tight">
@@ -366,8 +366,8 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
 
             {isLoading && (
               <div className="flex gap-2.5 items-start">
-                <div className="w-7 h-7 rounded-xl bg-stone-900 dark:bg-stone-100 flex items-center justify-center text-white dark:text-stone-900 mt-0.5 shadow-2xs flex-shrink-0">
-                  <Leaf className="w-3.5 h-3.5" />
+                <div className="w-7.5 h-7.5 rounded-xl bg-gradient-to-tr from-emerald-700 to-emerald-600 flex items-center justify-center text-white mt-0.5 shadow-2xs flex-shrink-0">
+                  <Leaf className="w-3.5 h-3.5 fill-white/20" />
                 </div>
                 <div className="px-4 py-2.5 bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-[18px] rounded-bl-xs shadow-2xs">
                   <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
@@ -433,7 +433,7 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
                 <button
                   key={q}
                   onClick={() => handleChipClick(q)}
-                  className="flex-shrink-0 px-2.5 py-1 rounded-full bg-stone-100 hover:bg-stone-200 dark:bg-stone-850 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200/60 dark:border-stone-750 text-[11px] font-medium transition-colors cursor-pointer shadow-2xs"
+                  className="flex-shrink-0 px-3 py-1 rounded-full bg-white dark:bg-stone-850 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200/80 dark:border-stone-750 text-xs font-medium transition-all cursor-pointer shadow-2xs active:scale-95"
                 >
                   {q}
                 </button>
@@ -441,24 +441,25 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
             </div>
           )}
 
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-2.5">
             <textarea
               ref={composerRef}
               rows={1}
               value={composerText}
               onChange={(e) => setComposerText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask for groceries, recipes, or meal ideas…"
-              className="flex-1 resize-none rounded-xl bg-stone-100 dark:bg-stone-850 border border-stone-200 dark:border-stone-750 px-3.5 py-2.5 text-xs sm:text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400 min-h-[42px] max-h-28 leading-5 font-sans box-border"
+              placeholder="Ask for groceries, recipes, or meals…"
+              className="flex-1 resize-none rounded-2xl bg-stone-100/90 dark:bg-stone-850 border border-stone-200/90 dark:border-stone-750 px-4 py-3 text-[14px] text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400/30 focus:border-stone-400 dark:focus:ring-stone-600/40 min-h-[48px] max-h-32 leading-[22px] font-sans box-border transition-all"
             />
 
             {isLoading ? (
               <button
                 onClick={onStopGeneration}
-                className="w-10.5 h-10.5 rounded-xl bg-stone-900 hover:bg-black text-white dark:bg-white dark:text-stone-900 flex items-center justify-center transition-all cursor-pointer flex-shrink-0 shadow-2xs"
+                className="w-12 h-12 rounded-2xl bg-stone-900 hover:bg-black text-white dark:bg-white dark:text-stone-900 flex items-center justify-center transition-all cursor-pointer flex-shrink-0 shadow-sm active:scale-95"
                 title="Stop generation"
+                aria-label="Stop generation"
               >
-                <Square className="w-3.5 h-3.5 fill-current" />
+                <Square className="w-4 h-4 fill-current" />
               </button>
             ) : (
               <button
@@ -466,15 +467,20 @@ export const AIShopScreen: React.FC<AIShopScreenProps> = ({
                   if (composerText.trim()) {
                     onSendMessage(composerText);
                     if (composerRef.current) {
-                      composerRef.current.style.height = '42px';
+                      composerRef.current.style.height = '48px';
                     }
                   }
                 }}
                 disabled={!composerText.trim()}
-                className="w-10.5 h-10.5 rounded-xl bg-stone-900 hover:bg-black text-white dark:bg-white dark:text-stone-900 dark:hover:bg-stone-100 flex items-center justify-center hover:opacity-90 disabled:opacity-30 transition-all cursor-pointer flex-shrink-0 shadow-2xs"
-                title="Send"
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 flex-shrink-0 cursor-pointer shadow-sm active:scale-95 ${
+                  composerText.trim()
+                    ? 'bg-stone-900 hover:bg-black text-white dark:bg-white dark:text-stone-950 shadow-stone-900/20'
+                    : 'bg-stone-200/80 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed opacity-60'
+                }`}
+                title="Send message"
+                aria-label="Send message"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-5.5 h-5.5 stroke-[2.2px] ml-0.5" />
               </button>
             )}
           </div>

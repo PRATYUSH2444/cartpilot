@@ -100,7 +100,9 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
           data-testid="tab-chat"
           aria-label="AI Assistant"
           onClick={() => onSelectTab('chat')}
-          className="flex-1 flex flex-col items-center justify-center -mt-4 sm:-mt-5 cursor-pointer group active:scale-95"
+          className={`flex-1 flex flex-col items-center justify-center cursor-pointer group active:scale-95 transition-all ${
+            activeTab === 'chat' ? '-mt-2 sm:-mt-2.5' : '-mt-4 sm:-mt-5'
+          }`}
         >
           <div
             className={`w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all duration-200 shadow-md border-3 sm:border-4 border-white dark:border-stone-900 group-hover:scale-105 ${

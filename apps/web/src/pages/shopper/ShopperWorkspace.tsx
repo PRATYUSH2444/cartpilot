@@ -1410,13 +1410,52 @@ export const ShopperWorkspace: React.FC = () => {
     };
   }, [token, authFetch]);
 
+  // ── Mobile Viewport Lock on Chat (Strictly locks window scrolling and elastic bouncing) ──
+  useEffect(() => {
+    if (activeMobileTab === 'chat') {
+      const origHtmlOverflow = document.documentElement.style.overflow;
+      const origHtmlHeight = document.documentElement.style.height;
+      const origBodyOverflow = document.body.style.overflow;
+      const origBodyHeight = document.body.style.height;
+      const origBodyPosition = document.body.style.position;
+      const origBodyTop = document.body.style.top;
+      const origBodyLeft = document.body.style.left;
+      const origBodyWidth = document.body.style.width;
+      const origBodyOverscroll = document.body.style.overscrollBehaviorY;
+
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.height = '100dvh';
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100dvh';
+      document.body.style.position = 'fixed';
+      document.body.style.top = '0';
+      document.body.style.left = '0';
+      document.body.style.width = '100%';
+      document.body.style.overscrollBehaviorY = 'none';
+
+      window.scrollTo(0, 0);
+
+      return () => {
+        document.documentElement.style.overflow = origHtmlOverflow;
+        document.documentElement.style.height = origHtmlHeight;
+        document.body.style.overflow = origBodyOverflow;
+        document.body.style.height = origBodyHeight;
+        document.body.style.position = origBodyPosition;
+        document.body.style.top = origBodyTop;
+        document.body.style.left = origBodyLeft;
+        document.body.style.width = origBodyWidth;
+        document.body.style.overscrollBehaviorY = origBodyOverscroll;
+      };
+    }
+  }, [activeMobileTab]);
+
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'P';
 
   return (
     <div
       className={`w-full flex flex-col bg-[--bg] text-[--ink] selection:bg-brand selection:text-white ${
         activeMobileTab === 'chat'
-          ? 'h-[100dvh] max-h-[100dvh] overflow-hidden'
+          ? 'fixed inset-0 h-[100dvh] max-h-[100dvh] overflow-hidden lg:relative lg:inset-auto'
           : activeMobileTab === 'cart'
             ? 'min-h-screen lg:h-[100dvh] lg:max-h-[100dvh] lg:overflow-hidden'
             : 'min-h-screen'
@@ -1459,7 +1498,7 @@ export const ShopperWorkspace: React.FC = () => {
         <main
           className={`flex-1 flex flex-col min-w-0 w-full ${
             activeMobileTab === 'chat'
-              ? 'min-h-0 overflow-hidden pb-[64px] lg:pb-0'
+              ? 'min-h-0 overflow-hidden pb-[80px] sm:pb-[84px] lg:pb-0'
               : activeMobileTab === 'cart'
                 ? 'min-h-0 lg:overflow-hidden pb-16 lg:pb-0'
                 : activeMobileTab === 'account'
