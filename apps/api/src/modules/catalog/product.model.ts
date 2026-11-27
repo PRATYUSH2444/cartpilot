@@ -40,6 +40,11 @@ export interface IProduct extends Document {
   isVegetarian: boolean; // Strictly vegetarian
   isActive: boolean;
   imageUrl?: string;
+  brand?: string;
+  subCategory?: string;
+  mrpPaise?: number;
+  rating?: number;
+  reviewCount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -161,6 +166,30 @@ const ProductSchema = new Schema<IProduct>(
     imageUrl: {
       type: String,
       trim: true,
+    },
+    brand: {
+      type: String,
+      trim: true,
+    },
+    subCategory: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    mrpPaise: {
+      type: Number,
+      min: 0,
+    },
+    rating: {
+      type: Number,
+      min: 0,
+      max: 5,
+      default: 4.8,
+    },
+    reviewCount: {
+      type: Number,
+      min: 0,
+      default: 140,
     },
   },
   {

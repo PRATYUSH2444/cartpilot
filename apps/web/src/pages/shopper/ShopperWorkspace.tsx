@@ -504,7 +504,7 @@ export const ShopperWorkspace: React.FC = () => {
           authFetch(`${API_BASE}/cart`),
           authFetch(`${API_BASE}/mandate`),
           authFetch(`${API_BASE}/orders`),
-          authFetch(`${API_BASE}/catalog?limit=50`),
+          authFetch(`${API_BASE}/catalog?limit=100`),
         ]);
 
         if (cartRes.ok) {
@@ -1674,6 +1674,12 @@ export const ShopperWorkspace: React.FC = () => {
               initialCategory={selectedBrowseCategory}
               favorites={favorites}
               onToggleFavorite={handleToggleFavorite}
+              selectedAddress={selectedAddress}
+              onOpenAddresses={openAddressModal}
+              selectedDeliverySlot={selectedDeliverySlot}
+              onOpenWishlist={() => setIsWishlistOpen(true)}
+              onOpenCart={() => handleSelectTab('cart')}
+              onBack={() => handleSelectTab(previousTab || 'home')}
             />
           )}
 

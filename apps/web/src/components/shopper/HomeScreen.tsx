@@ -51,25 +51,31 @@ interface HomeScreenProps {
 
 const CATEGORIES = [
   {
-    id: 'FRUITS_VEGETABLES',
-    title: 'Vegetables & Fruits',
+    id: 'VEGETABLES',
+    title: 'Fresh Vegetables',
     icon: Leaf,
     bg: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300',
   },
   {
-    id: 'DAIRY_BREAKFAST',
+    id: 'FRUITS',
+    title: 'Fresh Fruits',
+    icon: Sparkles,
+    bg: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300',
+  },
+  {
+    id: 'DAIRY',
     title: 'Dairy & Breakfast',
     icon: Milk,
     bg: 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300',
   },
   {
-    id: 'ATTA_RICE_DAL',
+    id: 'STAPLES',
     title: 'Atta, Rice & Dal',
     icon: Wheat,
     bg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300',
   },
   {
-    id: 'MASALA_DRY_FRUITS',
+    id: 'MASALA',
     title: 'Oil, Ghee & Masala',
     icon: Flame,
     bg: 'bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300',
@@ -81,19 +87,19 @@ const CATEGORIES = [
     bg: 'bg-yellow-50 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-300',
   },
   {
-    id: 'SNACKS_MUNCHIES',
+    id: 'SNACKS',
     title: 'Snacks & Munchies',
     icon: Cookie,
     bg: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300',
   },
   {
-    id: 'COLD_DRINKS_JUICES',
+    id: 'BEVERAGES',
     title: 'Drinks & Juices',
     icon: Sparkles,
     bg: 'bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300',
   },
   {
-    id: 'INSTANT_FROZEN_FOOD',
+    id: 'INSTANT',
     title: 'Instant & Ready Food',
     icon: Soup,
     bg: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300',

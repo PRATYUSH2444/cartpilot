@@ -14,6 +14,11 @@ export interface Product {
   isVegetarian: boolean;
   isActive?: boolean;
   imageUrl?: string;
+  brand?: string;
+  subCategory?: string;
+  mrpPaise?: number;
+  rating?: number;
+  reviewCount?: number;
 }
 
 export interface PopulatedCartItem {
