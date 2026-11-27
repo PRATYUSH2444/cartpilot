@@ -186,9 +186,15 @@ export const ShopperWorkspace: React.FC = () => {
 
   const handleReplayTour = useCallback(() => {
     setActiveMobileTab('home');
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    try {
+      localStorage.removeItem('cartpilot_tour_completed');
+    } catch {}
+    setIsTourOpen(false);
     setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       setIsTourOpen(true);
-    }, 200);
+    }, 150);
   }, []);
 
   useEffect(() => {
@@ -1456,7 +1462,9 @@ export const ShopperWorkspace: React.FC = () => {
               ? 'min-h-0 overflow-hidden pb-[64px] lg:pb-0'
               : activeMobileTab === 'cart'
                 ? 'min-h-0 lg:overflow-hidden pb-16 lg:pb-0'
-                : 'pb-20 lg:pb-0'
+                : activeMobileTab === 'account'
+                  ? 'pb-[72px] lg:pb-6'
+                  : 'pb-20 lg:pb-0'
           }`}
         >
           {activeMobileTab === 'home' && (

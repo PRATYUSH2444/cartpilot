@@ -4,7 +4,8 @@ export type SupportTopic =
   | 'Order & Delivery'
   | 'Payment & Wallet'
   | 'Item Quality'
-  | 'General Question';
+  | 'General Question'
+  | 'Rating & Feedback';
 
 export type SupportStatus =
   | 'OPEN'

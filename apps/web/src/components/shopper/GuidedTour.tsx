@@ -56,6 +56,12 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ isOpen, onComplete }) =>
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStepIdx(0);
+    }
+  }, [isOpen]);
+
   const finishTour = useCallback(() => {
     try {
       localStorage.setItem('cartpilot_tour_completed', 'true');
@@ -73,7 +79,12 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ isOpen, onComplete }) =>
     }
 
     const step = TOUR_STEPS[stepIdx];
-    const el = document.querySelector(`[data-tour="${step.targetAttr}"]`);
+    // Search for all elements matching the tour attribute; pick the one currently rendered and visible (mobile vs desktop)
+    const elements = Array.from(document.querySelectorAll<HTMLElement>(`[data-tour="${step.targetAttr}"]`));
+    const el = elements.find((e) => {
+      const r = e.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    }) || elements[0];
 
     if (!el) {
       // Step target missing: silently skip to next step
@@ -85,8 +96,11 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ isOpen, onComplete }) =>
       return;
     }
 
-    // Scroll into view smoothly if needed
-    el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    // Scroll into view if outside visible viewport
+    const curRect = el.getBoundingClientRect();
+    if (curRect.top < 20 || curRect.bottom > window.innerHeight - 20) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }
 
     // Measure bounding rect
     const updateRect = () => {

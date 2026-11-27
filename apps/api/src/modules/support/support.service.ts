@@ -19,6 +19,7 @@ const VALID_TOPICS: SupportTopic[] = [
   'Payment & Wallet',
   'Item Quality',
   'General Question',
+  'Rating & Feedback',
 ];
 
 export class SupportService {

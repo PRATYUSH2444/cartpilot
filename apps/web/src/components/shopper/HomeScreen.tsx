@@ -239,6 +239,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               {/* Profile Avatar */}
               <button
                 type="button"
+                data-tour="account"
                 onClick={onOpenProfile}
                 className="w-8 h-8 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shadow-xs cursor-pointer"
                 title="Profile & Settings"

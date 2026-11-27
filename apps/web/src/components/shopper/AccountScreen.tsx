@@ -43,6 +43,7 @@ interface AccountScreenProps {
     phone?: string;
     role?: string;
     isEmailVerified?: boolean;
+    experienceRating?: number;
   } | null;
   orders: OrderData[];
   selectedAddress?: UserAddress | null;
@@ -96,15 +97,90 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
 
   const adminEmail = (import.meta.env.VITE_ADMIN_SUPPORT_EMAIL as string) || 'prakash.extra20@gmail.com';
 
+  const { authFetch, sendEmailVerification, verifyEmail: verifyEmailAction, setUserProfile } = useAuth();
+
+  // Persistent User Rating state (read from user profile and local storage)
+  const [savedRating, setSavedRating] = useState<number | null>(() => {
+    if (user?.experienceRating && user.experienceRating >= 1 && user.experienceRating <= 5) {
+      return user.experienceRating;
+    }
+    try {
+      const key = `cartpilot_user_rating_${user?.id || user?.email || 'guest'}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        if (parsed >= 1 && parsed <= 5) return parsed;
+      }
+    } catch {}
+    return null;
+  });
+
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
-  const [selectedRating, setSelectedRating] = useState(5);
+  const [selectedRating, setSelectedRating] = useState<number>(() => savedRating || 5);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (user?.experienceRating && user.experienceRating >= 1 && user.experienceRating <= 5) {
+      setSavedRating(user.experienceRating);
+      setSelectedRating(user.experienceRating);
+    }
+  }, [user?.experienceRating]);
+
+  const handleRatingSubmit = async () => {
+    const star = selectedRating;
+    setSavedRating(star);
+
+    // 1. Immediately persist to localStorage
+    try {
+      const key = `cartpilot_user_rating_${user?.id || user?.email || 'guest'}`;
+      localStorage.setItem(key, String(star));
+    } catch {}
+
+    // 2. Update user state in AuthContext
+    if (user && setUserProfile) {
+      setUserProfile({
+        id: user.id || 'usr_current',
+        email: user.email || 'shopper@cartpilot.local',
+        name: user.name || 'Shopper',
+        role: (user.role as any) || 'CUSTOMER',
+        ...user,
+        experienceRating: star,
+      });
+    }
+
+    // 3. Sync to backend user profile and create support feedback record
+    try {
+      authFetch(`${API_BASE}/users/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ experienceRating: star }),
+      }).catch(() => {});
+
+      authFetch(`${API_BASE}/support`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: 'Rating & Feedback',
+          message: `User submitted a ${star}-star experience rating on CartPilot.`,
+          email: user?.email,
+          name: user?.name,
+          phone: user?.phone || displayPhone,
+        }),
+      }).catch(() => {});
+    } catch {}
+
+    setRatingSubmitted(true);
+    setTimeout(() => {
+      setIsRatingModalOpen(false);
+      setRatingSubmitted(false);
+    }, 1200);
+  };
+
   const [shareSuccess, setShareSuccess] = useState(false);
   const [isFaqOpen, setIsFaqOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
   // In-context Email Verification & Auth state
-  const { authFetch, sendEmailVerification, verifyEmail: verifyEmailAction } = useAuth();
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
@@ -205,7 +281,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   ];
 
   return (
-    <div className="flex-1 w-full pb-20 lg:pb-12 bg-[#f8faf9] dark:bg-stone-950 text-stone-900 dark:text-stone-100 font-sans">
+    <div className="flex-1 w-full pb-4 lg:pb-6 bg-[#f8faf9] dark:bg-stone-950 text-stone-900 dark:text-stone-100 font-sans">
       {/* ── Top Header Banner ─────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md py-4 border-b border-stone-200/80 dark:border-stone-800 shadow-xs">
         <div className="page-container flex items-center justify-between">
@@ -227,7 +303,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
       </div>
 
       {/* ── Main Proportional Desktop Viewport Container ─────────────────────── */}
-      <div className="page-container pt-4 sm:pt-6 pb-24">
+      <div className="page-container pt-4 sm:pt-6 pb-4 sm:pb-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 items-start">
           {/* ── Left Column: Identity, Wallet & Spending Security (4-5 Cols) ─── */}
           <div className="lg:col-span-5 xl:col-span-4 space-y-3.5 sm:space-y-4">
@@ -236,15 +312,15 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative flex-shrink-0">
-                    <div className="w-14 h-14 rounded-full border-2 border-emerald-600 dark:border-emerald-500 p-0.5 flex items-center justify-center">
-                      <div className="w-full h-full rounded-full bg-emerald-700 text-white font-extrabold text-2xl flex items-center justify-center shadow-inner">
+                    <div className="w-14 h-14 rounded-full border-2 border-stone-200 dark:border-stone-700 p-0.5 flex items-center justify-center">
+                      <div className="w-full h-full rounded-full bg-stone-900 text-white font-extrabold text-2xl flex items-center justify-center shadow-inner">
                         {userInitial}
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={onOpenProfileModal}
-                      className="absolute -bottom-0.5 -right-0.5 w-5.5 h-5.5 rounded-full bg-emerald-600 text-white border border-white dark:border-stone-900 flex items-center justify-center shadow-xs cursor-pointer hover:scale-110 transition-transform"
+                      className="absolute -bottom-0.5 -right-0.5 w-5.5 h-5.5 rounded-full bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 border border-white dark:border-stone-800 flex items-center justify-center shadow-xs cursor-pointer hover:scale-110 transition-transform"
                       title="Update Avatar"
                     >
                       <Camera className="w-3 h-3" />
@@ -263,7 +339,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                       <Mail className="w-3.5 h-3.5 flex-shrink-0 text-stone-400" />
                       <span className="truncate">{user?.email || 'shopper@cartpilot.local'}</span>
                       {user?.isEmailVerified ? (
-                        <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.2 rounded-full border border-emerald-300 dark:border-emerald-700">
+                        <span className="text-[9px] font-bold text-stone-800 dark:text-stone-200 bg-stone-100 dark:bg-stone-800 px-1.5 py-0.2 rounded-full border border-stone-300 dark:border-stone-700">
                           Verified
                         </span>
                       ) : (
@@ -289,39 +365,39 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 <button
                   type="button"
                   onClick={onOpenProfileModal}
-                  className="w-9 h-9 rounded-xl border border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 hover:border-emerald-500 hover:text-emerald-600 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0 shadow-2xs"
+                  className="w-9 h-9 rounded-xl border border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 hover:border-stone-400 hover:text-stone-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer flex-shrink-0 shadow-2xs"
                   title="Edit Profile"
                 >
-                  <Edit2 className="w-4 h-4 text-emerald-600" />
+                  <Edit2 className="w-4 h-4 text-stone-600 dark:text-stone-300" />
                 </button>
               </div>
             </div>
 
-            {/* CartPilot Wallet Card */}
-            <div className="rounded-2xl bg-gradient-to-br from-emerald-700 via-emerald-800 to-emerald-950 text-white p-4 sm:p-5 shadow-md shadow-emerald-900/15 space-y-3">
+            {/* CartPilot Wallet Card - Executive Obsidian Monochrome Luxury Style */}
+            <div className="rounded-2xl bg-[#09090b] dark:bg-stone-900 border border-stone-800/90 text-white p-4 sm:p-5 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center">
                     <Wallet className="w-4.5 h-4.5 text-white" />
                   </div>
                   <div>
-                    <span className="text-[11px] uppercase font-extrabold tracking-wider text-emerald-200 block">
+                    <span className="text-[11px] uppercase font-bold tracking-wider text-stone-300 block">
                       CartPilot Wallet
                     </span>
-                    <span className="text-[11px] text-emerald-100/80">Instant 1-Tap Checkout</span>
+                    <span className="text-[11px] text-stone-400">Instant 1-Tap Checkout</span>
                   </div>
                 </div>
 
-                <span className="text-[10px] font-bold bg-white/20 px-2.5 py-0.5 rounded-full backdrop-blur-md">
+                <span className="text-[10px] font-medium bg-white/10 text-stone-300 border border-white/10 px-2.5 py-0.5 rounded-full">
                   Active
                 </span>
               </div>
 
               <div className="space-y-0.5">
-                <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight block">
+                <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight block text-white">
                   ₹{walletBalance.toFixed(2)}
                 </span>
-                <p className="text-[11px] text-emerald-100/80">
+                <p className="text-[11px] text-stone-400">
                   Zero transaction fees on daily farm harvest orders.
                 </p>
               </div>
@@ -330,25 +406,25 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 <button
                   type="button"
                   onClick={onOpenWallet}
-                  className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-stone-50 text-emerald-950 font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-stone-100 text-stone-950 font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
                 >
-                  <Wallet className="w-3.5 h-3.5 text-emerald-700" />
+                  <Wallet className="w-3.5 h-3.5 text-stone-900" />
                   <span>+ Add Money / View Passbook</span>
                 </button>
               </div>
             </div>
 
-            {/* Daily Spending Limits Card (Friendly non-technical naming) */}
+            {/* Daily Spending Limits Card */}
             <div
               onClick={onOpenRules}
-              className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3.5 sm:p-4 shadow-xs flex items-center justify-between cursor-pointer hover:border-purple-500/50 hover:shadow-xs transition-all group"
+              className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-3.5 sm:p-4 shadow-xs flex items-center justify-between cursor-pointer hover:border-stone-400 dark:hover:border-stone-600 hover:shadow-xs transition-all group"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Shield className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Shield className="w-5 h-5 text-stone-700 dark:text-stone-300" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-white group-hover:text-purple-600 transition-colors">
+                  <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-white group-hover:text-stone-950 dark:group-hover:text-white transition-colors">
                     Daily Spending Limits
                   </h3>
                   <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
@@ -356,18 +432,8 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                   </p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-purple-600 transition-colors flex-shrink-0" />
+              <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-200 transition-colors flex-shrink-0" />
             </div>
-
-            {/* Sign Out Card */}
-            <button
-              type="button"
-              onClick={onLogout}
-              className="w-full py-2.5 px-4 rounded-xl bg-white dark:bg-stone-900 border border-rose-200 dark:border-rose-900/60 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-colors cursor-pointer"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Log Out of CartPilot</span>
-            </button>
           </div>
 
           {/* ── Right Column: Interactive Grid, Coupons & Support (7-8 Cols) ─── */}
@@ -492,20 +558,20 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                   <button
                     type="button"
                     onClick={onReplayTour}
-                    className="w-full py-4 flex items-center justify-between text-left hover:text-emerald-700 transition-colors cursor-pointer group"
+                    className="w-full py-3.5 flex items-center justify-between text-left hover:text-stone-900 dark:hover:text-white transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
-                      <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform" />
+                      <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform flex-shrink-0" />
                       <div>
-                        <span className="font-bold text-sm text-stone-800 dark:text-stone-200 group-hover:text-emerald-700 block">
+                        <span className="font-medium text-sm text-stone-800 dark:text-stone-200 group-hover:text-stone-950 dark:group-hover:text-white block">
                           Replay Guided Tour
                         </span>
-                        <span className="text-xs text-stone-400 block">
+                        <span className="text-xs text-stone-400 dark:text-stone-500 block">
                           Refresher on search, AI shopping & spend rules
                         </span>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-600 transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-300 transition-colors flex-shrink-0" />
                   </button>
                 )}
 
@@ -519,15 +585,15 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                         'CartPilot is engineered with strict zero-trust data protection principles. We never share your phone number, delivery address, or grocery preferences with third-party advertising brokers. All order communication is encrypted end-to-end, and payment credentials are processed directly via PCI-DSS Level 1 compliant gateway tokenization.',
                     })
                   }
-                  className="w-full py-4 flex items-center justify-between text-left hover:text-emerald-700 transition-colors cursor-pointer group"
+                  className="w-full py-3.5 flex items-center justify-between text-left hover:text-stone-900 dark:hover:text-white transition-colors cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-stone-400 group-hover:text-emerald-600 transition-colors" />
-                    <span className="font-bold text-sm text-stone-800 dark:text-stone-200 group-hover:text-emerald-700">
+                    <FileText className="w-5 h-5 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors flex-shrink-0" />
+                    <span className="font-medium text-sm text-stone-800 dark:text-stone-200 group-hover:text-stone-950 dark:group-hover:text-white">
                       Privacy Policy & Data Security
                     </span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-600 transition-colors" />
+                  <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-300 transition-colors flex-shrink-0" />
                 </button>
 
                 {/* Terms & Conditions */}
@@ -540,15 +606,15 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                         'CartPilot provides fresh grocery produce and pantry supplies. Deliveries are fulfilled within scheduled morning and evening slots. In the rare event of damaged produce, instant wallet compensation is issued with zero dispute hurdles.',
                     })
                   }
-                  className="w-full py-4 flex items-center justify-between text-left hover:text-emerald-700 transition-colors cursor-pointer group"
+                  className="w-full py-3.5 flex items-center justify-between text-left hover:text-stone-900 dark:hover:text-white transition-colors cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <FileCheck2 className="w-5 h-5 text-stone-400 group-hover:text-emerald-600 transition-colors" />
-                    <span className="font-bold text-sm text-stone-800 dark:text-stone-200 group-hover:text-emerald-700">
+                    <FileCheck2 className="w-5 h-5 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors flex-shrink-0" />
+                    <span className="font-medium text-sm text-stone-800 dark:text-stone-200 group-hover:text-stone-950 dark:group-hover:text-white">
                       Terms of Service & Delivery Commitment
                     </span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-600 transition-colors" />
+                  <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-300 transition-colors flex-shrink-0" />
                 </button>
 
                 {/* About Us */}
@@ -561,103 +627,98 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                         'CartPilot is India\'s premier agentic grocery commerce platform. By combining farm-to-door direct sourcing with autonomous AI meal planning and spending mandates, CartPilot delivers fresh essentials with scheduled delivery windows without the hassle of manual reordering.',
                     })
                   }
-                  className="w-full py-4 flex items-center justify-between text-left hover:text-emerald-700 transition-colors cursor-pointer group"
+                  className="w-full py-3.5 flex items-center justify-between text-left hover:text-stone-900 dark:hover:text-white transition-colors cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <Info className="w-5 h-5 text-stone-400 group-hover:text-emerald-600 transition-colors" />
-                    <span className="font-bold text-sm text-stone-800 dark:text-stone-200 group-hover:text-emerald-700">
+                    <Info className="w-5 h-5 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors flex-shrink-0" />
+                    <span className="font-medium text-sm text-stone-800 dark:text-stone-200 group-hover:text-stone-950 dark:group-hover:text-white">
                       About CartPilot & Farm Direct Model
                     </span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-600 transition-colors" />
+                  <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-300 transition-colors flex-shrink-0" />
                 </button>
 
                 {/* Share App */}
                 <button
                   type="button"
                   onClick={handleShareApp}
-                  className="w-full py-4 flex items-center justify-between text-left hover:text-emerald-700 transition-colors cursor-pointer group"
+                  className="w-full py-3.5 flex items-center justify-between text-left hover:text-stone-900 dark:hover:text-white transition-colors cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <Share2 className="w-5 h-5 text-stone-400 group-hover:text-emerald-600 transition-colors" />
-                    <span className="font-bold text-sm text-stone-800 dark:text-stone-200 group-hover:text-emerald-700">
+                    <Share2 className="w-5 h-5 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors flex-shrink-0" />
+                    <span className="font-medium text-sm text-stone-800 dark:text-stone-200 group-hover:text-stone-950 dark:group-hover:text-white">
                       Share CartPilot with Friends & Family
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     {shareSuccess && (
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2.5 py-0.5 rounded-full">
+                      <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                         Link Copied!
                       </span>
                     )}
-                    <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-600 transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-300 transition-colors flex-shrink-0" />
                   </div>
                 </button>
 
                 {/* FAQs Parent Accordion */}
-                <div className="py-1">
+                <div className="py-0.5">
                   <button
                     type="button"
                     onClick={() => setIsFaqOpen(!isFaqOpen)}
-                    className="w-full py-4 flex items-center justify-between text-left hover:text-emerald-700 transition-colors cursor-pointer group"
+                    className="w-full py-3.5 flex items-center justify-between text-left hover:text-stone-900 dark:hover:text-white transition-colors cursor-pointer group"
                     aria-expanded={isFaqOpen}
                   >
                     <div className="flex items-center gap-3">
-                      <HelpCircle className="w-5 h-5 text-stone-400 group-hover:text-emerald-600 transition-colors" />
+                      <HelpCircle className="w-5 h-5 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors flex-shrink-0" />
                       <div>
-                        <span className="font-bold text-sm text-stone-800 dark:text-stone-200 group-hover:text-emerald-700 block">
+                        <span className="font-medium text-sm text-stone-800 dark:text-stone-200 group-hover:text-stone-950 dark:group-hover:text-white block">
                           Frequently Asked Questions
                         </span>
-                        <span className="text-xs text-stone-400 dark:text-stone-500">
+                        <span className="text-xs text-stone-400 dark:text-stone-500 block">
                           Delivery timings, order policies & spending limits
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-stone-600 dark:text-stone-300 bg-stone-100 dark:bg-stone-800 px-2.5 py-0.5 rounded-full">
-                        {FAQS.length} FAQs
-                      </span>
-                      <ChevronDown
-                        className={`w-4 h-4 text-stone-400 group-hover:text-emerald-600 transition-transform duration-200 ${
-                          isFaqOpen ? 'rotate-180 text-emerald-600' : ''
-                        }`}
-                      />
-                    </div>
+                    <ChevronDown
+                      className={`w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-300 transition-transform duration-200 flex-shrink-0 ${
+                        isFaqOpen ? 'rotate-180 text-stone-900 dark:text-white' : ''
+                      }`}
+                    />
                   </button>
 
                   {/* Nested Question Accordions */}
                   {isFaqOpen && (
-                    <div className="space-y-2.5 pt-1 pb-3 pl-1 sm:pl-2 animate-in fade-in-50 duration-200">
+                    <div className="space-y-2 pt-1 pb-3 pl-1 sm:pl-2 animate-in fade-in-50 duration-200">
                       {FAQS.map((faq, idx) => {
                         const isExpanded = openFaqIndex === idx;
                         return (
                           <div
                             key={idx}
-                            className="rounded-2xl border border-stone-300/80 dark:border-stone-700 overflow-hidden shadow-2xs transition-all"
+                            className="rounded-2xl border border-stone-200/90 dark:border-stone-800 overflow-hidden shadow-2xs transition-all"
                           >
-                            {/* Question Header: Solid Black in light mode, Solid White in dark mode */}
+                            {/* Question Header */}
                             <button
                               type="button"
                               onClick={() => setOpenFaqIndex(isExpanded ? null : idx)}
-                              className={`w-full p-3.5 sm:p-4 flex items-center justify-between text-left text-sm font-semibold transition-colors cursor-pointer ${
+                              className={`w-full p-3.5 sm:p-4 flex items-center justify-between text-left text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
                                 isExpanded
                                   ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-950'
-                                  : 'bg-stone-900 text-white hover:bg-black dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white'
+                                  : 'bg-stone-50 text-stone-800 hover:bg-stone-100 dark:bg-stone-850 dark:text-stone-200 dark:hover:bg-stone-800'
                               }`}
                             >
                               <span className="pr-3 leading-snug">{faq.q}</span>
                               <ChevronDown
                                 className={`w-4 h-4 transition-transform duration-200 flex-shrink-0 ${
                                   isExpanded
-                                    ? 'rotate-180 text-emerald-400 dark:text-emerald-600'
+                                    ? 'rotate-180 text-white dark:text-stone-950'
                                     : 'text-stone-400 dark:text-stone-500'
                                 }`}
                               />
                             </button>
 
-                            {/* Answer Body: Solid Crisp White in light mode, Solid Deep Black in dark mode */}
+                            {/* Answer Body */}
                             {isExpanded && (
-                              <div className="bg-white text-stone-800 dark:bg-stone-950 dark:text-stone-200 px-4 py-3.5 text-sm leading-relaxed border-t border-stone-200 dark:border-stone-800 animate-in fade-in-50 duration-150">
+                              <div className="bg-white text-stone-700 dark:bg-stone-900 dark:text-stone-300 px-4 py-3.5 text-xs sm:text-sm leading-relaxed border-t border-stone-200/80 dark:border-stone-800 animate-in fade-in-50 duration-150">
                                 {faq.a}
                               </div>
                             )}
@@ -671,23 +732,52 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 {/* Rate App */}
                 <button
                   type="button"
-                  onClick={() => setIsRatingModalOpen(true)}
-                  className="w-full py-4 flex items-center justify-between text-left hover:text-emerald-700 transition-colors cursor-pointer group"
+                  onClick={() => {
+                    setSelectedRating(savedRating || 5);
+                    setIsRatingModalOpen(true);
+                  }}
+                  className="w-full py-3.5 flex items-center justify-between text-left hover:text-stone-900 dark:hover:text-white transition-colors cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-                    <span className="font-bold text-sm text-stone-800 dark:text-stone-200 group-hover:text-emerald-700">
-                      Rate Your CartPilot Experience
-                    </span>
+                    <Star className="w-5 h-5 text-amber-500 fill-amber-500 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-sm text-stone-800 dark:text-stone-200 group-hover:text-stone-950 dark:group-hover:text-white block">
+                        Rate CartPilot
+                      </span>
+                      <span className="text-xs text-stone-400 dark:text-stone-500 block">
+                        Share your experience with our team
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-amber-600 font-extrabold">
-                    <span>5.0 ★ Rating</span>
-                    <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-emerald-600 transition-colors" />
+                  <div className="flex items-center gap-2">
+                    {savedRating ? (
+                      <span className="flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/60">
+                        <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                        <span>{savedRating}.0</span>
+                      </span>
+                    ) : (
+                      <span className="text-xs text-stone-400 font-normal">
+                        Tap to rate
+                      </span>
+                    )}
+                    <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-300 transition-colors flex-shrink-0" />
                   </div>
                 </button>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* ── Sign Out Dedicated Bottom Section ──────────────────────────────── */}
+        <div className="mt-4 pt-2 border-t border-stone-200/60 dark:border-stone-800/60">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full py-3.5 px-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 text-stone-700 dark:text-stone-300 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-300 dark:hover:border-rose-900/60 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-2xs transition-all cursor-pointer group active:scale-98"
+          >
+            <LogOut className="w-4 h-4 text-stone-400 group-hover:text-rose-500 transition-colors" />
+            <span>Log Out of CartPilot</span>
+          </button>
         </div>
       </div>
 
@@ -867,7 +957,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               <button
                 type="submit"
                 disabled={isSubmittingSupport || !supportMessage.trim()}
-                className="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                className="w-full py-3 px-4 rounded-xl bg-stone-900 hover:bg-black dark:bg-white dark:text-stone-950 dark:hover:bg-stone-100 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
               >
                 {isSubmittingSupport ? (
                   <>
@@ -938,20 +1028,14 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsRatingModalOpen(false)}
-                    className="flex-1 py-3 rounded-2xl border border-stone-200 dark:border-stone-700 text-sm font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 cursor-pointer"
+                    className="flex-1 py-3 rounded-2xl border border-stone-200 dark:border-stone-700 text-sm font-semibold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setRatingSubmitted(true);
-                      setTimeout(() => {
-                        setIsRatingModalOpen(false);
-                        setRatingSubmitted(false);
-                      }, 1400);
-                    }}
-                    className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-md shadow-emerald-600/25 cursor-pointer"
+                    onClick={handleRatingSubmit}
+                    className="flex-1 py-3 rounded-2xl bg-stone-900 hover:bg-black dark:bg-white dark:text-stone-950 dark:hover:bg-stone-100 text-white text-sm font-semibold shadow-xs transition-all cursor-pointer active:scale-98"
                   >
                     Submit Feedback
                   </button>
@@ -986,7 +1070,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
             <button
               type="button"
               onClick={() => setActiveInfoModal(null)}
-              className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold cursor-pointer shadow-md"
+              className="w-full py-3.5 rounded-2xl bg-stone-900 hover:bg-black dark:bg-white dark:text-stone-950 dark:hover:bg-stone-100 text-white text-sm font-semibold cursor-pointer shadow-xs transition-colors"
             >
               Close
             </button>
@@ -1059,7 +1143,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 type="button"
                 onClick={handleVerifyEmail}
                 disabled={isVerifying || verificationCode.length !== 6}
-                className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-md shadow-emerald-600/25 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-3.5 rounded-2xl bg-stone-900 hover:bg-black dark:bg-white dark:text-stone-950 dark:hover:bg-stone-100 text-white font-bold text-sm shadow-xs transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isVerifying ? (
                   <>

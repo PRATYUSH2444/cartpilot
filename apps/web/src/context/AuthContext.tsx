@@ -55,6 +55,7 @@ export interface UserProfile {
   mustChangePassword?: boolean;
   isEmailVerified?: boolean;
   hasSeenTour?: boolean;
+  experienceRating?: number;
 }
 
 export interface AuthContextType {

@@ -13,6 +13,7 @@ export interface UpdateProfileDTO {
   dietaryPreferences?: string[];
   notificationPreferences?: Partial<INotificationPreferences>;
   hasSeenTour?: boolean;
+  experienceRating?: number;
 }
 
 export class UserService {
@@ -49,6 +50,7 @@ export class UserService {
       isEmailVerified: user.isEmailVerified,
       isPhoneVerified: user.isPhoneVerified,
       hasSeenTour: Boolean(user.hasSeenTour),
+      experienceRating: user.experienceRating ?? null,
       defaultAddress,
       createdAt: user.createdAt,
     };
@@ -96,6 +98,10 @@ export class UserService {
 
     if (input.hasSeenTour !== undefined) {
       user.hasSeenTour = Boolean(input.hasSeenTour);
+    }
+
+    if (input.experienceRating !== undefined) {
+      user.experienceRating = Math.max(1, Math.min(5, Math.round(Number(input.experienceRating))));
     }
 
     await user.save();

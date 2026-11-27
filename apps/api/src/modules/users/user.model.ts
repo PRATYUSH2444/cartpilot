@@ -45,6 +45,7 @@ export interface IUser extends Document {
   walletBalancePaise: number;
   themePreference?: 'LIGHT' | 'DARK';
   hasSeenTour?: boolean;
+  experienceRating?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -203,6 +204,12 @@ const UserSchema = new Schema<IUser>(
     hasSeenTour: {
       type: Boolean,
       default: false,
+    },
+    experienceRating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      default: undefined,
     },
   },
   {
