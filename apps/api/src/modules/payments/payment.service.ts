@@ -40,8 +40,10 @@ export class PaymentService {
     params: CreateGatewayOrderParams
   ): Promise<GatewayOrderResult> {
     const isPlaceholderKey =
+      !env.RAZORPAY_KEY_ID ||
       env.RAZORPAY_KEY_ID === 'rzp_test_placeholder' ||
-      !env.RAZORPAY_KEY_ID.startsWith('rzp_test_') ||
+      env.RAZORPAY_KEY_SECRET === 'rzp_test_secret_placeholder' ||
+      (!env.RAZORPAY_KEY_ID.startsWith('rzp_test_') && !env.RAZORPAY_KEY_ID.startsWith('rzp_live_')) ||
       env.NODE_ENV === 'test';
 
     if (isPlaceholderKey) {

@@ -50,6 +50,20 @@ const QUICK_DELIVERY_INSTRUCTION_CHIPS = [
   'Call on arrival',
 ];
 
+const loadRazorpaySdk = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') return resolve(false);
+    if ((window as any).Razorpay) return resolve(true);
+
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   isOpen,
   onClose,
@@ -63,7 +77,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   initialDeliverySlot = 'morning',
   appliedCoupon,
 }) => {
-  const { authFetch } = useAuth();
+  const { authFetch, user } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<'RAZORPAY' | 'WALLET' | 'COD'>('RAZORPAY');
   const [deliverySlot, setDeliverySlot] = useState<SlotId>(initialDeliverySlot);
   const [deliveryInstructions, setDeliveryInstructions] = useState(cart?.deliveryNote || '');
@@ -164,32 +178,96 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       const { order, razorpay } = data.data;
 
       // 2. Complete payment verification / settlement
-      const verifyRes = await authFetch(`${API_BASE}/payments/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orderId: order._id,
-          razorpayOrderId: razorpay?.orderId || `sim_${Date.now()}`,
-          razorpayPaymentId: selectedMethod === 'WALLET' ? `wallet_${Date.now()}` : `pay_${Date.now()}`,
-          razorpaySignature: 'simulated_test_signature',
-        }),
-      });
+      const completeOrderVerification = async (
+        orderId: string,
+        rzpOrderId: string,
+        rzpPaymentId: string,
+        rzpSig: string
+      ) => {
+        const verifyRes = await authFetch(`${API_BASE}/payments/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderId,
+            razorpayOrderId: rzpOrderId,
+            razorpayPaymentId: rzpPaymentId,
+            razorpaySignature: rzpSig,
+          }),
+        });
 
-      const verifyData = await verifyRes.json();
-      if (!verifyRes.ok) {
-        throw new Error(verifyData.error?.message || verifyData.message || 'Payment confirmation failed');
+        const verifyData = await verifyRes.json();
+        if (!verifyRes.ok) {
+          throw new Error(verifyData.error?.message || verifyData.message || 'Payment confirmation failed');
+        }
+
+        // Deduct from wallet if paid by wallet
+        if (selectedMethod === 'WALLET' && onDeductWallet) {
+          onDeductWallet(pricing.total);
+        }
+
+        // Order placed successfully
+        onOrderSuccess(verifyData.data || order);
+        onClose();
+      };
+
+      if (
+        selectedMethod === 'RAZORPAY' &&
+        razorpay?.keyId &&
+        razorpay.keyId.startsWith('rzp_') &&
+        razorpay.keyId !== 'rzp_test_placeholder'
+      ) {
+        const sdkLoaded = await loadRazorpaySdk();
+        if (sdkLoaded) {
+          const options = {
+            key: razorpay.keyId,
+            amount: razorpay.amountPaise || Math.round(pricing.total * 100),
+            currency: razorpay.currency || 'INR',
+            name: 'CartPilot',
+            description: `Order #${order.orderNumber || order._id.slice(-6).toUpperCase()}`,
+            order_id: razorpay.orderId,
+            prefill: {
+              name: user?.name || '',
+              email: user?.email || '',
+              contact: user?.phone || '',
+            },
+            theme: {
+              color: '#10B981',
+            },
+            handler: async (response: any) => {
+              try {
+                await completeOrderVerification(
+                  order._id,
+                  response.razorpay_order_id || razorpay.orderId,
+                  response.razorpay_payment_id,
+                  response.razorpay_signature
+                );
+              } catch (vErr: any) {
+                setError(vErr.message || 'Payment verification failed');
+              } finally {
+                setIsProcessing(false);
+              }
+            },
+            modal: {
+              ondismiss: () => {
+                setIsProcessing(false);
+              },
+            },
+          };
+          const rzp = new (window as any).Razorpay(options);
+          rzp.open();
+          return;
+        }
       }
 
-      // 3. Deduct from wallet if paid by wallet
-      if (selectedMethod === 'WALLET' && onDeductWallet) {
-        onDeductWallet(pricing.total);
-      }
-
-      // 4. Order placed successfully
-      onOrderSuccess(verifyData.data || order);
-      onClose();
+      // Simulation mode fallback
+      await completeOrderVerification(
+        order._id,
+        razorpay?.orderId || `sim_${Date.now()}`,
+        selectedMethod === 'WALLET' ? `wallet_${Date.now()}` : `pay_${Date.now()}`,
+        'simulated_test_signature'
+      );
     } catch (err: any) {
       setError(err.message || 'Unable to complete order. Please check details and try again.');
     } finally {
