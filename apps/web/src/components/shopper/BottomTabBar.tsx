@@ -10,161 +10,197 @@ interface BottomTabBarProps {
   cart: CartData | null;
 }
 
+const TAB_INDEX_MAP: Record<TabKey, number> = {
+  home: 0,
+  browse: 1,
+  chat: 2,
+  cart: 3,
+  account: 4,
+};
+
 export const BottomTabBar: React.FC<BottomTabBarProps> = ({
   activeTab,
   onSelectTab,
   cart,
 }) => {
   const cartCount = cart?.itemCount || 0;
+  const activeIndex = TAB_INDEX_MAP[activeTab] ?? 0;
 
   return (
     <nav
-      className="w-full flex-shrink-0 bg-transparent"
+      role="tablist"
       aria-label="Bottom Navigation"
+      className="w-full flex-shrink-0 select-none py-1"
     >
-      <div className="max-w-md mx-auto flex items-center justify-around px-2 py-1.5">
-        {/* 1. Home */}
+      <div className="relative max-w-md mx-auto flex items-center px-1.5 py-1">
+        {/* ── React Bits Inspired: Smooth Elastic Sliding Pill Indicator ── */}
+        <div
+          aria-hidden="true"
+          className="absolute top-1 bottom-1 left-1.5 w-[calc((100%-12px)/5)] p-0.5 pointer-events-none transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+          style={{
+            transform: `translateX(${activeIndex * 100}%)`,
+          }}
+        >
+          <div
+            className={`w-full h-full rounded-2xl transition-all duration-300 shadow-sm ${
+              activeTab === 'chat'
+                ? 'bg-gradient-to-tr from-violet-600 via-indigo-600 to-purple-500 shadow-indigo-500/30'
+                : 'bg-stone-900 dark:bg-stone-100 shadow-stone-900/20 dark:shadow-white/10'
+            }`}
+          />
+        </div>
+
+        {/* ── 1. Home ── */}
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'home'}
           data-testid="tab-home"
           aria-label="Home"
           onClick={() => onSelectTab('home')}
-          className={`flex-1 flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-            activeTab === 'home'
-              ? 'text-emerald-700 dark:text-emerald-400 font-bold'
-              : 'text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 font-medium'
-          }`}
+          className="relative z-10 flex-1 flex flex-col items-center justify-center py-1.5 cursor-pointer active:scale-95 transition-transform duration-150"
         >
-          <div
-            className={`flex items-center justify-center px-3.5 py-1 rounded-full transition-all ${
+          <Home
+            className={`w-5 h-5 transition-all duration-300 ${
               activeTab === 'home'
-                ? 'bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
-                : ''
+                ? 'text-white dark:text-stone-900 fill-white dark:fill-stone-900 scale-105'
+                : 'text-stone-400 dark:text-stone-500 stroke-[1.8px] hover:text-stone-700 dark:hover:text-stone-300'
+            }`}
+          />
+          <span
+            className={`text-[10px] tracking-tight mt-0.5 transition-colors duration-300 ${
+              activeTab === 'home'
+                ? 'text-white dark:text-stone-900 font-extrabold'
+                : 'text-stone-400 dark:text-stone-500 font-medium'
             }`}
           >
-            <Home
-              className={`w-5 h-5 ${
-                activeTab === 'home'
-                  ? 'fill-emerald-700 text-emerald-700 dark:fill-emerald-400 dark:text-emerald-400'
-                  : 'stroke-[1.8px]'
-              }`}
-            />
-          </div>
-          <span className="text-[11px] tracking-tight mt-0.5">Home</span>
+            Home
+          </span>
         </button>
 
-        {/* 2. Browse */}
+        {/* ── 2. Browse ── */}
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'browse'}
           data-testid="tab-browse"
-          aria-label="Browse"
+          aria-label="Browse Categories"
           onClick={() => onSelectTab('browse')}
-          className={`flex-1 flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-            activeTab === 'browse'
-              ? 'text-emerald-700 dark:text-emerald-400 font-bold'
-              : 'text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 font-medium'
-          }`}
+          className="relative z-10 flex-1 flex flex-col items-center justify-center py-1.5 cursor-pointer active:scale-95 transition-transform duration-150"
         >
-          <div
-            className={`flex items-center justify-center px-3.5 py-1 rounded-full transition-all ${
+          <LayoutGrid
+            className={`w-5 h-5 transition-all duration-300 ${
               activeTab === 'browse'
-                ? 'bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
-                : ''
+                ? 'text-white dark:text-stone-900 stroke-[2.4px] scale-105'
+                : 'text-stone-400 dark:text-stone-500 stroke-[1.8px] hover:text-stone-700 dark:hover:text-stone-300'
+            }`}
+          />
+          <span
+            className={`text-[10px] tracking-tight mt-0.5 transition-colors duration-300 ${
+              activeTab === 'browse'
+                ? 'text-white dark:text-stone-900 font-extrabold'
+                : 'text-stone-400 dark:text-stone-500 font-medium'
             }`}
           >
-            <LayoutGrid
-              className={`w-5 h-5 ${
-                activeTab === 'browse' ? 'stroke-[2.5px]' : 'stroke-[1.8px]'
-              }`}
-            />
-          </div>
-          <span className="text-[11px] tracking-tight mt-0.5">Browse</span>
+            Browse
+          </span>
         </button>
 
-        {/* 3. AI Assistant (Signature elevated center button) */}
+        {/* ── 3. AI Assistant (Signature Electric Indigo/Violet Shimmer) ── */}
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'chat'}
           data-testid="tab-chat"
-          aria-label="AI Assistant"
+          aria-label="AI Shopping Assistant"
           onClick={() => onSelectTab('chat')}
-          className="flex-1 flex flex-col items-center justify-center -mt-5 cursor-pointer group"
+          className="relative z-10 flex-1 flex flex-col items-center justify-center py-1.5 cursor-pointer active:scale-95 transition-transform duration-150 group"
         >
-          <div
-            className={`w-13 h-13 rounded-full flex items-center justify-center transition-all shadow-md border-4 border-white dark:border-stone-900 group-hover:scale-105 ${
-              activeTab === 'chat'
-                ? 'bg-gradient-to-tr from-emerald-500 to-emerald-300 text-stone-950 shadow-emerald-500/30'
-                : 'bg-gradient-to-tr from-emerald-200 to-emerald-100 dark:from-emerald-900 dark:to-emerald-800 text-emerald-800 dark:text-emerald-200 shadow-sm'
-            }`}
-          >
-            <Sparkles className="w-6 h-6 stroke-[2.3px] fill-emerald-800/20" />
+          <div className="relative">
+            <Sparkles
+              className={`w-5 h-5 transition-all duration-300 ${
+                activeTab === 'chat'
+                  ? 'text-white fill-white/30 stroke-[2.4px] scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]'
+                  : 'text-violet-600 dark:text-violet-400 stroke-[2px] group-hover:scale-105'
+              }`}
+            />
+            {/* Subtle idle AI ambient glow dot when inactive */}
+            {activeTab !== 'chat' && (
+              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
+            )}
           </div>
           <span
-            className={`text-[11px] tracking-tight mt-0.5 font-bold ${
+            className={`text-[10px] tracking-tight mt-0.5 transition-colors duration-300 ${
               activeTab === 'chat'
-                ? 'text-emerald-700 dark:text-emerald-400'
-                : 'text-stone-500 dark:text-stone-400'
+                ? 'text-white font-extrabold'
+                : 'text-violet-600 dark:text-violet-400 font-bold group-hover:text-violet-700'
             }`}
           >
             AI Assistant
           </span>
         </button>
 
-        {/* 4. Cart */}
+        {/* ── 4. Cart ── */}
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'cart'}
           data-testid="tab-cart"
-          aria-label="Cart"
+          aria-label="Shopping Cart"
           onClick={() => onSelectTab('cart')}
-          className={`flex-1 flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-            activeTab === 'cart'
-              ? 'text-emerald-700 dark:text-emerald-400 font-bold'
-              : 'text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 font-medium'
-          }`}
+          className="relative z-10 flex-1 flex flex-col items-center justify-center py-1.5 cursor-pointer active:scale-95 transition-transform duration-150"
         >
           <div className="relative">
-            <div
-              className={`flex items-center justify-center px-3.5 py-1 rounded-full transition-all ${
+            <ShoppingBag
+              className={`w-5 h-5 transition-all duration-300 ${
                 activeTab === 'cart'
-                  ? 'bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
-                  : ''
+                  ? 'text-white dark:text-stone-900 stroke-[2.4px] scale-105'
+                  : 'text-stone-400 dark:text-stone-500 stroke-[1.8px] hover:text-stone-700 dark:hover:text-stone-300'
               }`}
-            >
-              <ShoppingBag
-                className={`w-5 h-5 ${
-                  activeTab === 'cart' ? 'stroke-[2.5px]' : 'stroke-[1.8px]'
-                }`}
-              />
-            </div>
+            />
             {cartCount > 0 && (
-              <span className="absolute -top-1 right-2 px-1.5 py-0.2 min-w-[17px] h-4 rounded-full bg-rose-500 text-white text-[10px] font-mono font-bold flex items-center justify-center shadow-xs border border-white dark:border-stone-900">
-                {cartCount}
+              <span className="absolute -top-1 -right-2 px-1.5 py-0.2 min-w-[16px] h-4 rounded-full bg-rose-500 text-white text-[9px] font-mono font-bold flex items-center justify-center shadow-xs border-2 border-white dark:border-stone-900 animate-in zoom-in-75 duration-200">
+                {cartCount > 99 ? '99+' : cartCount}
               </span>
             )}
           </div>
-          <span className="text-[11px] tracking-tight mt-0.5">Cart</span>
-        </button>
-
-        {/* 5. Account */}
-        <button
-          data-testid="tab-account"
-          aria-label="Account"
-          onClick={() => onSelectTab('account')}
-          className={`flex-1 flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-            activeTab === 'account'
-              ? 'text-emerald-700 dark:text-emerald-400 font-bold'
-              : 'text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 font-medium'
-          }`}
-        >
-          <div
-            className={`flex items-center justify-center px-3.5 py-1 rounded-full transition-all ${
-              activeTab === 'account'
-                ? 'bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
-                : ''
+          <span
+            className={`text-[10px] tracking-tight mt-0.5 transition-colors duration-300 ${
+              activeTab === 'cart'
+                ? 'text-white dark:text-stone-900 font-extrabold'
+                : 'text-stone-400 dark:text-stone-500 font-medium'
             }`}
           >
-            <User
-              className={`w-5 h-5 ${
-                activeTab === 'account' ? 'stroke-[2.5px]' : 'stroke-[1.8px]'
-              }`}
-            />
-          </div>
-          <span className="text-[11px] tracking-tight mt-0.5">Account</span>
+            Cart
+          </span>
+        </button>
+
+        {/* ── 5. Account ── */}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'account'}
+          data-testid="tab-account"
+          aria-label="Account and Profile"
+          onClick={() => onSelectTab('account')}
+          className="relative z-10 flex-1 flex flex-col items-center justify-center py-1.5 cursor-pointer active:scale-95 transition-transform duration-150"
+        >
+          <User
+            className={`w-5 h-5 transition-all duration-300 ${
+              activeTab === 'account'
+                ? 'text-white dark:text-stone-900 stroke-[2.4px] scale-105'
+                : 'text-stone-400 dark:text-stone-500 stroke-[1.8px] hover:text-stone-700 dark:hover:text-stone-300'
+            }`}
+          />
+          <span
+            className={`text-[10px] tracking-tight mt-0.5 transition-colors duration-300 ${
+              activeTab === 'account'
+                ? 'text-white dark:text-stone-900 font-extrabold'
+                : 'text-stone-400 dark:text-stone-500 font-medium'
+            }`}
+          >
+            Account
+          </span>
         </button>
       </div>
     </nav>
