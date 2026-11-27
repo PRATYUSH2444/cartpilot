@@ -150,18 +150,33 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
 
         {/* ── Right: Priority-Collapsed Actions (Never overflows viewport) ── */}
         <div className="flex items-center gap-2 xl:gap-3 flex-shrink-0">
-          {/* Quick Nav Links Segmented Toggle (Desktop View) */}
+          {/* Quick Nav Links Segmented Toggle (Desktop View) with Smooth Sliding & Color Fill Animation */}
           <nav
+            role="tablist"
             aria-label="Store navigation"
-            className="hidden lg:flex items-center p-1 rounded-full bg-stone-100 dark:bg-stone-800/80 border border-stone-200/90 dark:border-stone-700/70 shadow-2xs select-none"
+            className="hidden lg:relative lg:inline-flex items-center p-1 rounded-full bg-stone-100 dark:bg-stone-800/80 border border-stone-200/90 dark:border-stone-700/70 shadow-2xs select-none"
           >
+            {/* Sliding Pill Active Backdrop */}
+            <span
+              aria-hidden="true"
+              className={`absolute top-1 bottom-1 left-1 w-20 rounded-full bg-[#0a5c36] shadow-sm shadow-[#0a5c36]/25 pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                activeTab === 'home'
+                  ? 'translate-x-0 opacity-100 scale-100'
+                  : activeTab === 'browse'
+                  ? 'translate-x-full opacity-100 scale-100'
+                  : 'opacity-0 scale-90'
+              }`}
+            />
+
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === 'home'}
               onClick={() => onSelectTab('home')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
+              className={`relative z-10 w-20 py-1.5 rounded-full text-xs text-center transition-colors duration-300 cursor-pointer select-none active:scale-95 ${
                 activeTab === 'home'
-                  ? 'bg-[#0a5c36] text-white shadow-xs font-extrabold'
-                  : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-stone-200/50 dark:hover:bg-stone-700/40 font-semibold'
+                  ? 'text-white font-extrabold'
+                  : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white font-semibold'
               }`}
             >
               Home
@@ -169,11 +184,13 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
 
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === 'browse'}
               onClick={() => onSelectTab('browse')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
+              className={`relative z-10 w-20 py-1.5 rounded-full text-xs text-center transition-colors duration-300 cursor-pointer select-none active:scale-95 ${
                 activeTab === 'browse'
-                  ? 'bg-[#0a5c36] text-white shadow-xs font-extrabold'
-                  : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-stone-200/50 dark:hover:bg-stone-700/40 font-semibold'
+                  ? 'text-white font-extrabold'
+                  : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white font-semibold'
               }`}
             >
               Browse
