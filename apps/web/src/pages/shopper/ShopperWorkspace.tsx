@@ -1071,15 +1071,13 @@ export const ShopperWorkspace: React.FC = () => {
         )}
       </div>
 
-      {/* ── Fixed Bottom 5-Destination Navigation Bar (Visible only on mobile/tablet) ────── */}
-      <div className="block lg:hidden flex-shrink-0 z-40 px-4 pt-2 pb-4 safe-area-inset-bottom bg-transparent pointer-events-none">
-        <div className="pointer-events-auto">
-          <BottomTabBar
-            activeTab={activeMobileTab}
-            onSelectTab={handleSelectTab}
-            cart={cart}
-          />
-        </div>
+      {/* ── Static Bottom 5-Destination Navigation Bar (Visible only on mobile/tablet) ────── */}
+      <div className="block lg:hidden flex-shrink-0 z-40 w-full">
+        <BottomTabBar
+          activeTab={activeMobileTab}
+          onSelectTab={handleSelectTab}
+          cart={cart}
+        />
       </div>
 
       {/* ── Slide-Over Conversation Drawer (Screen 9) ──────────────────────── */}
