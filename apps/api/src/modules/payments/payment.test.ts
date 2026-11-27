@@ -5,6 +5,7 @@ import { createApp } from '../../app.js';
 import { setupTestDatabase, teardownTestDatabase } from '../../test/setup.js';
 import { ProductModel } from '../catalog/product.model.js';
 import { UserModel } from '../users/user.model.js';
+import { MandateModel } from '../mandates/mandate.model.js';
 import { CartModel } from '../cart/cart.model.js';
 import { OrderModel } from '../orders/order.model.js';
 import { StockReservationModel } from '../inventory/stock-reservation.model.js';
@@ -24,6 +25,24 @@ describe('Phase 03 — Payments & Webhook Cryptographic Verification Tests', () 
     const customer = await UserModel.findOne({ email: 'customer@example.com' });
     expect(customer).not.toBeNull();
     customerId = customer!._id.toString();
+
+    // Ensure mandate has adequate daily cap to accommodate operational test orders
+    await MandateModel.findOneAndUpdate(
+      { userId: customer!._id },
+      {
+        userId: customer!._id,
+        autoApproveThresholdPaise: 150000,
+        autoApproveUpToPaise: 150000,
+        maxOrderAmountPaise: 250000,
+        perOrderCapPaise: 250000,
+        dailyBudgetPaise: 500000,
+        dailyCapPaise: 500000,
+        monthlyBudgetPaise: 1000000,
+        monthlyCapPaise: 1000000,
+        isVegetarianEnforced: true,
+      },
+      { upsert: true, new: true }
+    );
 
     const session = AuthService.generateTokens({
       userId: customerId,

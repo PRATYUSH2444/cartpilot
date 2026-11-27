@@ -109,7 +109,7 @@ export async function runSeed(dropExisting = false): Promise<void> {
     { upsert: true, new: true }
   );
 
-  await UserModel.findOneAndUpdate(
+  const customerUserSecondary = await UserModel.findOneAndUpdate(
     { email: 'customer@cartpilot.com' },
     {
       name: 'Priya Sharma (Shopper)',
@@ -198,7 +198,8 @@ export async function runSeed(dropExisting = false): Promise<void> {
   );
 
   // 6. Seed Realistic Operational Orders for Fresh Greens Organics
-  if (customerUserPrimary && freshGreensId) {
+  const orderUser = customerUserSecondary || customerUserPrimary;
+  if (orderUser && freshGreensId) {
     const freshGreensProducts = await ProductModel.find({ merchantId: freshGreensId });
     if (freshGreensProducts.length > 0) {
       const productBySlug = new Map(freshGreensProducts.map((p) => [p.slug, p]));
@@ -213,7 +214,7 @@ export async function runSeed(dropExisting = false): Promise<void> {
       const initialOrders = [
         {
           orderNumber: 'CP-10248',
-          userId: customerUserPrimary._id,
+          userId: orderUser._id,
           merchantId: freshGreensId,
           status: 'CONFIRMED' as const,
           placedAt: new Date(Date.now() - 10 * 60 * 1000), // 10 min ago
@@ -262,7 +263,7 @@ export async function runSeed(dropExisting = false): Promise<void> {
         },
         {
           orderNumber: 'CP-10247',
-          userId: customerUserPrimary._id,
+          userId: orderUser._id,
           merchantId: freshGreensId,
           status: 'PACKING' as const,
           placedAt: new Date(Date.now() - 28 * 60 * 1000), // 28 min ago
@@ -301,7 +302,7 @@ export async function runSeed(dropExisting = false): Promise<void> {
         },
         {
           orderNumber: 'CP-10246',
-          userId: customerUserPrimary._id,
+          userId: orderUser._id,
           merchantId: freshGreensId,
           status: 'PACKING' as const,
           placedAt: new Date(Date.now() - 45 * 60 * 1000), // 45 min ago
@@ -339,7 +340,7 @@ export async function runSeed(dropExisting = false): Promise<void> {
         },
         {
           orderNumber: 'CP-10245',
-          userId: customerUserPrimary._id,
+          userId: orderUser._id,
           merchantId: freshGreensId,
           status: 'OUT_FOR_DELIVERY' as const,
           placedAt: new Date(Date.now() - 65 * 60 * 1000), // 65 min ago
@@ -377,7 +378,7 @@ export async function runSeed(dropExisting = false): Promise<void> {
         },
         {
           orderNumber: 'CP-10244',
-          userId: customerUserPrimary._id,
+          userId: orderUser._id,
           merchantId: freshGreensId,
           status: 'DELIVERED' as const,
           placedAt: new Date(Date.now() - 3 * 3600 * 1000),

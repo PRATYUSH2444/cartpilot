@@ -2,6 +2,7 @@ import { z } from 'zod';
 import mongoose from 'mongoose';
 import { CatalogService } from '../../catalog/catalog.service.js';
 import { CartService } from '../../cart/cart.service.js';
+import { RecipeService } from '../../recipe/recipe.service.js';
 import { PricingService } from '../../pricing/pricing.service.js';
 import { MandateModel } from '../../mandates/mandate.model.js';
 import { ProductCategory } from '../../catalog/product.model.js';
@@ -387,9 +388,56 @@ export const getSpendingRulesTool: ToolDefinition = {
   },
 };
 
+// 9. resolveRecipe Tool (Backwards compatibility)
+const ResolveRecipeInputSchema = z.object({
+  dishName: z.string().min(1, 'Dish name is required').trim(),
+  servings: z.coerce.number().int().positive().max(50).default(4),
+});
+
+export const resolveRecipeTool: ToolDefinition = {
+  name: 'resolveRecipe',
+  description:
+    'Resolve an authentic vegetarian recipe into required ingredients, match against available catalog products, detect missing items, and calculate estimated total.',
+  schema: ResolveRecipeInputSchema,
+  parametersJsonSchema: {
+    type: 'object',
+    properties: {
+      dishName: { type: 'string', description: 'Name of the dish (e.g. "Paneer Pulao", "Dal Tadka")' },
+      servings: { type: 'integer', description: 'Number of people/servings to prepare', default: 4 },
+    },
+    required: ['dishName'],
+  },
+  execute: async (input, _context) => {
+    const resolution = await RecipeService.resolveRecipe(input.dishName, input.servings);
+    return {
+      dishName: resolution.dishName,
+      servings: resolution.servings,
+      description: resolution.description,
+      matchedItemsCount: resolution.matchedItems.length,
+      matchedItems: resolution.matchedItems.map((m) => ({
+        ingredientName: m.ingredientName,
+        productId: m.productId,
+        name: m.name,
+        packCount: m.packCount,
+        packageSize: m.packageSize,
+        packageUnit: m.packageUnit,
+        unitPricePaise: m.unitPricePaise,
+        formattedUnitPrice: m.formattedUnitPrice,
+        subtotalPaise: m.subtotalPaise,
+        formattedSubtotal: m.formattedSubtotal,
+      })),
+      ambiguousItems: resolution.ambiguousItems,
+      missingItems: resolution.missingItems,
+      estimatedTotalPaise: resolution.estimatedTotalPaise,
+      formattedEstimatedTotal: resolution.formattedEstimatedTotal,
+    };
+  },
+};
+
 // Strict Allowlist of permitted AI tools
 export const ALLOWED_TOOLS: Record<string, ToolDefinition> = {
   matchIngredientsToCatalog: matchIngredientsToCatalogTool,
+  resolveRecipe: resolveRecipeTool,
   searchCatalog: searchCatalogTool,
   getProductDetails: getProductDetailsTool,
   getCart: getCartTool,

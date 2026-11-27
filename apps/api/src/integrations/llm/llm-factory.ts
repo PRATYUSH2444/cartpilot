@@ -17,6 +17,17 @@ export class LLMFactory {
 
     const providerType = env.AI_PROVIDER;
 
+    const isGeminiConfigured = Boolean(
+      this.runtimeGeminiKey ||
+      (env.GEMINI_API_KEY && !env.GEMINI_API_KEY.includes('placeholder') && env.GEMINI_API_KEY.trim().length > 10)
+    );
+
+    if (env.NODE_ENV === 'test' && !isGeminiConfigured && !this.runtimeOpenAIKey) {
+      logger.info('Initializing Mock LLM Provider for test environment');
+      this.instance = new MockLLMProvider();
+      return this.instance;
+    }
+
     if (providerType === 'openai' || (!env.GEMINI_API_KEY && env.OPENAI_API_KEY)) {
       logger.info('Initializing Real OpenAI LLM Provider');
       this.instance = new OpenAIProvider(

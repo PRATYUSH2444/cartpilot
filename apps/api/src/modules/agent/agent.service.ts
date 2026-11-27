@@ -18,6 +18,16 @@ export interface AgentTurnResult {
 function compactToolResult(toolName: string, result: any): any {
   if (!result || typeof result !== 'object') return result;
 
+  if (toolName === 'resolveRecipe') {
+    return {
+      dishName: result.dishName,
+      servings: result.servings,
+      matchedItemsCount: result.matchedItemsCount,
+      matchedItems: result.matchedItems,
+      missingItems: result.missingItems,
+    };
+  }
+
   if (toolName === 'matchIngredientsToCatalog') {
     return {
       dishName: result.dishName,
@@ -190,6 +200,9 @@ CRITICAL BEHAVIORS & CAPABILITIES:
               missingItems: execResult.result.missingItems,
               pricing: execResult.result.pricing,
             };
+          } else if (tc.name === 'resolveRecipe' && execResult.result) {
+            detectedCardType = 'items';
+            detectedCardData = execResult.result;
           } else if (tc.name === 'proposeCartItems' && execResult.result) {
             detectedCardType = 'items';
             detectedCardData = execResult.result;

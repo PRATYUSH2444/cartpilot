@@ -22,18 +22,25 @@ export const productCategoryEnum = z.enum([
   'PET_CARE',
 ]);
 
-export const productSearchSchema = z.object({
-  query: z.string().optional(),
-  category: productCategoryEnum.optional(),
-  merchantId: z.string().optional(),
-  minPricePaise: z.coerce.number().min(0).optional(),
-  maxPricePaise: z.coerce.number().min(0).optional(),
-  inStockOnly: z
-    .enum(['true', 'false'])
-    .transform((val) => val === 'true')
-    .optional(),
-  page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(20),
-});
+export const productSearchSchema = z
+  .object({
+    query: z.string().optional(),
+    search: z.string().optional(),
+    q: z.string().optional(),
+    category: productCategoryEnum.optional(),
+    merchantId: z.string().optional(),
+    minPricePaise: z.coerce.number().min(0).optional(),
+    maxPricePaise: z.coerce.number().min(0).optional(),
+    inStockOnly: z
+      .enum(['true', 'false'])
+      .transform((val) => val === 'true')
+      .optional(),
+    page: z.coerce.number().min(1).default(1),
+    limit: z.coerce.number().min(1).max(100).default(20),
+  })
+  .transform((data) => ({
+    ...data,
+    query: data.query || data.search || data.q,
+  }));
 
 export type ProductSearchQuery = z.infer<typeof productSearchSchema>;
