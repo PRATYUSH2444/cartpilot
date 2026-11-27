@@ -38,6 +38,7 @@ import { DesktopHeader } from '../../components/shopper/DesktopHeader';
 import { WishlistModal } from '../../components/shopper/WishlistModal';
 import { WalletModal } from '../../components/shopper/WalletModal';
 import { CouponsModal } from '../../components/shopper/CouponsModal';
+import { validateAndComputeCoupon } from '../../config/couponConfig';
 import { NotificationsModal } from '../../components/shopper/NotificationsModal';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { updateCartOptimistically, calculateOptimisticPricing } from '../../utils/optimisticCart';
@@ -230,56 +231,37 @@ export const ShopperWorkspace: React.FC = () => {
 
   const calculateCouponDiscount = useCallback(
     (code: string, currentCart: CartData | null): number => {
-      const clean = code.trim().toUpperCase();
-      const subtotal =
-        currentCart?.pricing?.subtotalPaise ??
-        (currentCart?.items || []).reduce(
-          (sum, i) => sum + (i.itemTotalPaise || i.pricePaise * i.quantity),
-          0
-        );
-      if (clean === 'FRESH20' || clean === 'CARTPILOT20') {
-        return 2000; // ₹20
-      }
-      if (clean === 'VEG10' || clean === 'VEGFRESH') {
-        return Math.round(subtotal * 0.1); // 10%
-      }
-      if (clean === 'MORNING') {
-        return 5000; // ₹50
-      }
-      if (clean === 'WELCOME100') {
-        return subtotal >= 50000 ? 10000 : 0; // ₹100 on >= ₹500
-      }
-      if (clean === 'ORGANIC15') {
-        return Math.round(subtotal * 0.15); // 15%
-      }
-      try {
-        const stored = localStorage.getItem('cartpilot_merchant_coupons');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            const found = parsed.find((c: any) => c.code?.toUpperCase() === clean);
-            if (found) {
-              const pct = found.discountPercent || 15;
-              return Math.round((subtotal * pct) / 100);
-            }
-          }
-        }
-      } catch {}
-      return 0;
+      const itemsTotal = (currentCart?.items || []).reduce(
+        (sum, i) => sum + (i.pricePaise || 0) * i.quantity,
+        0
+      ) / 100;
+      const isFirstOrder = orders.length === 0;
+      const res = validateAndComputeCoupon(code, itemsTotal, isFirstOrder);
+      return res.isValid ? Math.round(res.discountAmount * 100) : 0;
     },
-    []
+    [orders.length]
   );
 
   const handleApplyCoupon = useCallback(
     (code: string): boolean => {
-      const discount = calculateCouponDiscount(code, cart);
-      if (discount > 0) {
-        setAppliedCoupon({ code: code.trim().toUpperCase(), discountPaise: discount });
+      const itemsTotal = (cart?.items || []).reduce(
+        (sum, i) => sum + (i.pricePaise || 0) * i.quantity,
+        0
+      ) / 100;
+      const isFirstOrder = orders.length === 0;
+      const res = validateAndComputeCoupon(code, itemsTotal, isFirstOrder);
+      if (res.isValid) {
+        setAppliedCoupon({
+          code: res.coupon?.code || code.trim().toUpperCase(),
+          discountPaise: Math.round(res.discountAmount * 100),
+        });
+        showBanner('success', `Coupon '${res.coupon?.code}' applied! Saved ₹${res.discountAmount}`);
         return true;
       }
+      showBanner('error', res.reason || 'Invalid coupon');
       return false;
     },
-    [calculateCouponDiscount, cart]
+    [cart, orders.length]
   );
 
   const handleRemoveCoupon = useCallback(() => {
@@ -1715,14 +1697,13 @@ export const ShopperWorkspace: React.FC = () => {
         isOpen={isCouponsOpen}
         onClose={() => setIsCouponsOpen(false)}
         showApply={(cart?.items?.length ?? 0) > 0}
+        itemsTotalRupees={
+          ((cart?.items || []).reduce((sum, i) => sum + (i.pricePaise || 0) * i.quantity, 0)) / 100
+        }
+        isFirstOrder={orders.length === 0}
         onApplyCoupon={(code) => {
-          const applied = handleApplyCoupon(code);
+          handleApplyCoupon(code);
           setActiveMobileTab('cart');
-          if (applied) {
-            showBanner('success', `Coupon '${code.toUpperCase()}' applied to your basket!`);
-          } else {
-            showBanner('error', `Coupon '${code.toUpperCase()}' could not be applied. Check order minimum.`);
-          }
         }}
       />
 

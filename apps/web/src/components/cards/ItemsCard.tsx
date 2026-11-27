@@ -344,7 +344,7 @@ export const ItemsCard: React.FC<ItemsCardProps> = ({
               Subtotal: <span className="font-bold text-[--ink]">{formattedTotal}</span> (5% GST included)
             </p>
             <p className="text-[10px]">
-              {availableItemsList.length} items ready to order · 100% Certified Vegetarian
+              {availableItemsList.length} items ready to order
             </p>
           </div>
 

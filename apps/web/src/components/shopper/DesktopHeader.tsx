@@ -64,7 +64,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
 }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
-  const cartCount = cart?.itemCount || 0;
+  const cartCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) ?? (cart?.itemCount || 0);
   const addressTypeLabel = selectedAddress?.addressType || 'Delivery to';
   const addressLocalityLabel = selectedAddress
     ? selectedAddress.areaLocality || selectedAddress.apartmentStreet || selectedAddress.city
@@ -228,10 +228,10 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             data-tour="wallet"
             onClick={onOpenWallet}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-extrabold transition-colors cursor-pointer whitespace-nowrap"
-            title="CartPilot Wallet"
+            title={`CartPilot Wallet Balance: ₹${formattedWallet}`}
           >
             <Wallet className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 flex-shrink-0" />
-            <span>₹{formattedWallet}</span>
+            <span>Wallet: ₹{formattedWallet}</span>
           </button>
 
           {/* Cart Button with Count Badge (Always visible on Desktop) */}
