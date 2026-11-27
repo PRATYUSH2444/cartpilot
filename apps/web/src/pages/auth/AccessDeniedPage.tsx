@@ -88,7 +88,7 @@ export const AccessDeniedPage: React.FC<AccessDeniedPageProps> = ({ userRole, al
                 </>
               ) : (
                 <>
-                  <span>Sign In as {targetRole.charAt(0) + targetRole.slice(1).toLowerCase()}</span>
+                  <span>Sign In as {targetRole ? (targetRole.charAt(0) + targetRole.slice(1).toLowerCase()) : 'User'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -100,7 +100,7 @@ export const AccessDeniedPage: React.FC<AccessDeniedPageProps> = ({ userRole, al
             className="w-full py-2.5 px-4 rounded-xl bg-acc text-white font-semibold text-xs hover:bg-blue-600 active:scale-[0.99] transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Return to {userRole.charAt(0) + userRole.slice(1).toLowerCase()} Workspace</span>
+            <span>Return to {userRole ? (userRole.charAt(0) + userRole.slice(1).toLowerCase()) : 'Home'} Workspace</span>
           </button>
 
           <button

@@ -289,7 +289,7 @@ export const MerchantCommandPalette: React.FC<CommandPaletteProps> = ({
       list.push({
         id: `ord-${o._id}`,
         category: 'Orders',
-        title: `Order #${o.orderNumber || o._id.slice(-6).toUpperCase()}`,
+        title: `Order #${o.orderNumber || (o._id ? String(o._id).slice(-6).toUpperCase() : 'NEW')}`,
         subtitle: `Status: ${o.status} • Total: ₹${((o.pricingSnapshot?.totalPaise || 0) / 100).toFixed(2)}`,
         icon: ShoppingBag,
         action: () => {

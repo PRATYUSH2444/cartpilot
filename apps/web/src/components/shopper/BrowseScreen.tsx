@@ -195,7 +195,9 @@ function isFruitProduct(p: Product): boolean {
     query.includes('kela') ||
     query.includes('seb') ||
     query.includes('santra') ||
-    query.includes('anar')
+    query.includes('anar') ||
+    query.includes('singhara') ||
+    query.includes('water chestnut')
   );
 }
 
@@ -534,89 +536,29 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
       .filter((section) => section.totalCount > 0);
   }, [products, applyProductFilters]);
 
-  // ── Scroll-Spy Implementation (Bidirectional) ────────────────────────────
-  useEffect(() => {
-    if (isSingleCategoryMode) return;
-
-    const pane = productPaneRef.current;
-    if (!pane) return;
-
-    let timeoutId: any = null;
-
-    const handleScroll = () => {
-      if (timeoutId) return;
-      timeoutId = setTimeout(() => {
-        timeoutId = null;
-        const containerTop = pane.getBoundingClientRect().top;
-
-        // Find which section header is nearest to containerTop
-        let closestCatId = 'ALL';
-        let minDiff = Infinity;
-
-        continuousCategorySections.forEach(({ category }) => {
-          const el = sectionRefs.current[category.id];
-          if (el) {
-            const rect = el.getBoundingClientRect();
-            const diff = Math.abs(rect.top - containerTop - 100);
-            if (rect.top <= containerTop + 240 && diff < minDiff) {
-              minDiff = diff;
-              closestCatId = category.id;
-            }
-          }
-        });
-
-        if (closestCatId && closestCatId !== activeSpyCategoryId) {
-          setActiveSpyCategoryId(closestCatId);
-          // Keep rail item in view
-          const railBtn = railButtonRefs.current[closestCatId];
-          if (railBtn) {
-            railBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-          }
-        }
-      }, 60);
-    };
-
-    pane.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      pane.removeEventListener('scroll', handleScroll);
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [isSingleCategoryMode, continuousCategorySections, activeSpyCategoryId]);
-
-  // Smooth scroll to section in "All" view or switch view
+  // ── Category selection from left sidebar rail ────────────────────────────
+  // When user clicks ANY category on the rail:
+  // - If 'ALL': switch to continuous All Categories view and scroll to top
+  // - If specific category: IMMEDIATELY filter and show only that category's items (single category mode)
   const handleSelectCategoryFromRail = (catId: string) => {
     if (catId === 'ALL') {
       setIsSingleCategoryMode(false);
       setActiveCategoryId('ALL');
       setActiveSpyCategoryId('ALL');
-      if (productPaneRef.current) {
-        productPaneRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-      return;
-    }
-
-    if (isSingleCategoryMode) {
-      setActiveCategoryId(catId);
-      setActiveSpyCategoryId(catId);
       setSelectedSubcategory('All');
       if (productPaneRef.current) {
         productPaneRef.current.scrollTo({ top: 0, behavior: 'instant' });
       }
-    } else {
-      // In "All" view, smooth scroll to the section
-      const targetEl = sectionRefs.current[catId];
-      if (targetEl && productPaneRef.current) {
-        const paneTop = productPaneRef.current.getBoundingClientRect().top;
-        const targetTop = targetEl.getBoundingClientRect().top;
-        const offset = targetTop - paneTop + productPaneRef.current.scrollTop - 90;
-        productPaneRef.current.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
-        setActiveSpyCategoryId(catId);
-      } else {
-        // Fallback: switch directly
-        setActiveCategoryId(catId);
-        setIsSingleCategoryMode(true);
-        setSelectedSubcategory('All');
-      }
+      return;
+    }
+
+    // Direct filter to that category
+    setActiveCategoryId(catId);
+    setActiveSpyCategoryId(catId);
+    setIsSingleCategoryMode(true);
+    setSelectedSubcategory('All');
+    if (productPaneRef.current) {
+      productPaneRef.current.scrollTo({ top: 0, behavior: 'instant' });
     }
   };
 
@@ -655,7 +597,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
     setIsPackSheetOpen(true);
   };
 
-  // ── Render Product Card Component ─────────────────────────────────────────
+  // ── Render Product Card Component (Dual Theme) ───────────────────────────
   const renderProductCard = (prod: Product) => {
     const qty = getCartQuantity(prod._id);
     const priceRupees = Math.round(prod.pricePaise / 100);
@@ -675,11 +617,11 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
       <div
         key={prod._id}
         onClick={() => onSelectProduct(prod)}
-        className="rounded-2xl bg-[#16181A] border border-[#2A2D31] hover:border-[#22C55E]/50 p-2.5 sm:p-3 flex flex-col justify-between transition-all duration-200 group active:scale-[0.985] cursor-pointer shadow-sm relative overflow-hidden"
+        className="rounded-2xl bg-white dark:bg-[#16181A] border border-stone-200/90 dark:border-[#2A2D31] hover:border-emerald-500/50 dark:hover:border-[#22C55E]/50 p-2.5 sm:p-3 flex flex-col justify-between transition-all duration-200 group active:scale-[0.985] cursor-pointer shadow-2xs hover:shadow-xs relative overflow-hidden"
       >
         <div className="space-y-2">
           {/* ── Image & Overlay Area ── */}
-          <div className="relative aspect-square w-full rounded-xl bg-[#1E2124] overflow-hidden flex items-center justify-center">
+          <div className="relative aspect-square w-full rounded-xl bg-stone-100 dark:bg-[#1E2124] overflow-hidden flex items-center justify-center">
             {prod.imageUrl ? (
               <img
                 src={prod.imageUrl}
@@ -707,13 +649,13 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                 e.stopPropagation();
                 if (onToggleFavorite) onToggleFavorite(prod._id);
               }}
-              className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-stone-300 hover:text-rose-500 transition-transform active:scale-90"
+              className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/80 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center text-stone-400 hover:text-rose-500 transition-transform active:scale-90 shadow-2xs"
               aria-label="Wishlist"
               title={isFav ? 'Remove from wishlist' : 'Add to wishlist'}
             >
               <Heart
                 className={`w-4 h-4 transition-colors ${
-                  isFav ? 'fill-rose-500 text-rose-500' : 'text-stone-300'
+                  isFav ? 'fill-rose-500 text-rose-500' : 'text-stone-400 hover:text-rose-500'
                 }`}
               />
             </button>
@@ -722,12 +664,12 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
             <button
               type="button"
               onClick={(e) => handleOpenPackSheet(prod, e)}
-              className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white flex items-center gap-1 shadow-sm hover:bg-black/90 transition-colors"
+              className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-stone-900/80 dark:bg-black/75 backdrop-blur-md border border-white/20 text-[10px] font-bold text-white flex items-center gap-1 shadow-sm hover:bg-black transition-colors"
             >
               <span>
                 {prod.packageSize} {prod.packageUnit}
               </span>
-              <ChevronDown className="w-2.5 h-2.5 text-stone-300" />
+              <ChevronDown className="w-2.5 h-2.5 text-stone-200" />
             </button>
           </div>
 
@@ -736,37 +678,37 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
             {/* Vegetarian Green Dot & Delivery ETA */}
             <div className="flex items-center justify-between text-[10px]">
               <div
-                className="w-3.5 h-3.5 rounded-xs border border-emerald-500 bg-white flex items-center justify-center shadow-xs shrink-0"
+                className="w-3.5 h-3.5 rounded-xs border border-emerald-600 bg-white flex items-center justify-center shadow-2xs shrink-0"
                 title="100% Vegetarian"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
               </div>
-              <span className="font-semibold text-emerald-400">Tomorrow</span>
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400">Tomorrow</span>
             </div>
 
             {/* Brand / Subcategory */}
-            <p className="text-[10px] text-[#9AA0A6] font-semibold tracking-wide uppercase line-clamp-1">
+            <p className="text-[10px] text-stone-500 dark:text-[#9AA0A6] font-semibold tracking-wide uppercase line-clamp-1">
               {prod.brand || prod.subCategory || 'Fresh Staple'}
             </p>
 
             {/* Product Title */}
-            <h4 className="font-heading font-semibold text-xs sm:text-sm text-[#F2F3F4] line-clamp-2 leading-snug group-hover:text-emerald-400 transition-colors">
+            <h4 className="font-heading font-semibold text-xs sm:text-sm text-stone-900 dark:text-[#F2F3F4] line-clamp-2 leading-snug group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
               {prod.name}
             </h4>
 
             {/* Rating & Stock Urgency */}
             <div className="flex items-center justify-between text-[10px] pt-0.5">
-              <div className="flex items-center gap-1 text-amber-400 font-semibold">
+              <div className="flex items-center gap-1 text-amber-500 dark:text-amber-400 font-semibold">
                 <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                 <span>{prod.rating || 4.8}</span>
-                <span className="text-[#9AA0A6] font-normal">
+                <span className="text-stone-400 dark:text-[#9AA0A6] font-normal">
                   ({prod.reviewCount || '1.1k'})
                 </span>
               </div>
 
               {isLowStock && (
-                <span className="inline-flex items-center gap-1 text-amber-400 font-bold text-[10px]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold text-[10px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                   Only {prod.availableStock} left
                 </span>
               )}
@@ -775,20 +717,20 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
         </div>
 
         {/* ── Pricing & CTA Button Block ── */}
-        <div className="mt-3 pt-2 border-t border-[#2A2D31] flex items-center justify-between gap-1.5">
+        <div className="mt-3 pt-2 border-t border-stone-100 dark:border-[#2A2D31] flex items-center justify-between gap-1.5">
           <div className="min-w-0">
             <div className="flex items-baseline gap-1">
-              <span className="font-heading font-extrabold text-sm sm:text-base text-[#F2F3F4] font-mono">
+              <span className="font-heading font-extrabold text-sm sm:text-base text-stone-900 dark:text-[#F2F3F4] font-mono">
                 ₹{priceRupees}
               </span>
               {origPrice > priceRupees && (
-                <span className="text-[10px] sm:text-[11px] text-[#9AA0A6] line-through font-mono">
+                <span className="text-[10px] sm:text-[11px] text-stone-400 dark:text-[#9AA0A6] line-through font-mono">
                   ₹{origPrice}
                 </span>
               )}
             </div>
             {origPrice > priceRupees && origPrice - priceRupees >= 10 && (
-              <p className="text-[9px] font-bold text-emerald-400">
+              <p className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400">
                 Save ₹{origPrice - priceRupees}
               </p>
             )}
@@ -802,8 +744,8 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                 onClick={(e) => handleToggleNotify(prod._id, e)}
                 className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all cursor-pointer ${
                   isNotified
-                    ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-400'
-                    : 'border-[#2A2D31] bg-[#1E2124] text-[#9AA0A6] hover:text-white hover:border-stone-500'
+                    ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                    : 'border-stone-200 dark:border-[#2A2D31] bg-stone-100 dark:bg-[#1E2124] text-stone-600 dark:text-[#9AA0A6] hover:text-stone-900 dark:hover:text-white'
                 }`}
               >
                 {isNotified ? 'Notified ✓' : 'Notify me'}
@@ -812,17 +754,17 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               <button
                 type="button"
                 onClick={() => onAddToCart(prod._id, 1)}
-                className="px-3.5 py-1.5 rounded-xl border border-[#22C55E] bg-[#22C55E]/10 hover:bg-[#22C55E] text-[#22C55E] hover:text-white font-heading font-extrabold text-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-sm"
+                className="px-3.5 py-1.5 rounded-xl border border-emerald-600 dark:border-[#22C55E] bg-emerald-50 dark:bg-[#22C55E]/10 hover:bg-emerald-600 dark:hover:bg-[#22C55E] text-emerald-700 dark:text-[#22C55E] hover:text-white font-heading font-extrabold text-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>ADD</span>
               </button>
             ) : (
-              <div className="flex items-center gap-1.5 bg-[#22C55E] text-white px-2 py-1 rounded-xl text-xs font-bold shadow-sm">
+              <div className="flex items-center gap-1.5 bg-emerald-600 dark:bg-[#22C55E] text-white px-2 py-1 rounded-xl text-xs font-bold shadow-xs">
                 <button
                   type="button"
                   onClick={() => onUpdateQuantity(prod._id, qty - 1)}
-                  className="p-0.5 hover:bg-emerald-600 rounded transition-colors active:scale-90 cursor-pointer"
+                  className="p-0.5 hover:bg-emerald-700 rounded transition-colors active:scale-90 cursor-pointer"
                   aria-label="Decrease quantity"
                 >
                   <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -833,7 +775,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => onUpdateQuantity(prod._id, qty + 1)}
-                  className="p-0.5 hover:bg-emerald-600 rounded transition-colors active:scale-90 cursor-pointer"
+                  className="p-0.5 hover:bg-emerald-700 rounded transition-colors active:scale-90 cursor-pointer"
                   aria-label="Increase quantity"
                 >
                   <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -847,18 +789,18 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
   };
 
   return (
-    <div className="flex-1 w-full min-h-screen bg-[#0E0F10] text-[#F2F3F4] flex flex-col relative select-none pb-24 lg:pb-8">
-      {/* ── 1. Top Sticky Bar (Scoped Category, Delivery Line, Search & Icons) ── */}
-      <header className="sticky top-0 z-30 bg-[#0E0F10]/95 backdrop-blur-md border-b border-[#2A2D31]">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 space-y-2">
-          {/* Top Row: Back, Title + Delivery Subtitle, Search/Wishlist/Cart Icons */}
+    <div className="h-full flex flex-col overflow-hidden bg-stone-50 dark:bg-[#0E0F10] text-stone-900 dark:text-[#F2F3F4] select-none">
+      {/* ── 1. Top Sticky Bar (Scoped Category, Search & Icons) ── */}
+      <header className="shrink-0 bg-white/95 dark:bg-[#0E0F10]/95 backdrop-blur-md border-b border-stone-200 dark:border-[#2A2D31] z-20">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 space-y-2">
+          {/* Top Row: Back, Title + Mobile Delivery Subtitle, Search/Wishlist/Cart Icons */}
           <div className="flex items-center justify-between gap-3">
             {/* Left: Back button & Title */}
             <div className="flex items-center gap-2.5 min-w-0">
               <button
                 type="button"
                 onClick={handleBackToAllCategories}
-                className="w-9 h-9 rounded-xl bg-[#16181A] border border-[#2A2D31] text-[#F2F3F4] hover:border-[#22C55E]/50 flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-95"
+                className="w-9 h-9 rounded-xl bg-stone-100 dark:bg-[#16181A] border border-stone-200 dark:border-[#2A2D31] text-stone-700 dark:text-[#F2F3F4] hover:border-emerald-500/50 dark:hover:border-[#22C55E]/50 flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-95"
                 title={isSingleCategoryMode ? 'Back to All Categories' : 'Back'}
                 aria-label="Back"
               >
@@ -867,37 +809,36 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
 
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <h1 className="font-heading font-extrabold text-sm sm:text-base text-white tracking-tight truncate">
-                    {isSingleCategoryMode
-                      ? currentCategoryDef.name
-                      : 'All Groceries'}
+                  <h1 className="font-heading font-extrabold text-sm sm:text-base text-stone-900 dark:text-white tracking-tight truncate">
+                    {isSingleCategoryMode ? currentCategoryDef.name : 'All Groceries'}
                   </h1>
                   {isSingleCategoryMode && (
-                    <span className="text-xs text-[#9AA0A6] font-normal">
+                    <span className="text-xs text-stone-500 dark:text-[#9AA0A6] font-normal">
                       ({singleCategoryProducts.length})
                     </span>
                   )}
                 </div>
 
-                {/* Delivery Location & Schedule Subtitle */}
-                <div className="flex items-center gap-2 text-[11px] text-[#9AA0A6] truncate">
+                {/* Mobile Delivery Location Subtitle (Hidden on Desktop because DesktopHeader already displays it) */}
+                <div className="flex lg:hidden items-center gap-2 text-[11px] text-stone-500 dark:text-[#9AA0A6] truncate">
                   <button
                     type="button"
                     onClick={onOpenAddresses}
-                    className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-medium truncate cursor-pointer"
+                    className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 hover:underline font-medium truncate cursor-pointer"
                   >
-                    <MapPin className="w-3 h-3 text-emerald-400 shrink-0" />
+                    <MapPin className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span className="truncate">
-                      {selectedAddress?.street
-                        ? `${selectedAddress.street}, ${selectedAddress.city || 'Patna'}`
-                        : 'Home: Boring Road, Patna'}
+                      {selectedAddress?.apartmentStreet ||
+                        selectedAddress?.areaLocality ||
+                        selectedAddress?.street ||
+                        'Lohia Nagar, Patna'}
                     </span>
-                    <ChevronDown className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                    <ChevronDown className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   </button>
 
-                  <span className="text-[#2A2D31] hidden sm:inline">|</span>
+                  <span className="text-stone-300 dark:text-[#2A2D31] hidden sm:inline">|</span>
 
-                  <div className="hidden sm:flex items-center gap-1 text-[#9AA0A6]">
+                  <div className="hidden sm:flex items-center gap-1 text-stone-500 dark:text-[#9AA0A6]">
                     <Clock className="w-3 h-3 text-stone-400 shrink-0" />
                     <span>{formattedDeliverySlot}</span>
                   </div>
@@ -917,8 +858,8 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                 }}
                 className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
                   isSearchExpanded || searchQuery
-                    ? 'border-[#22C55E] bg-[#22C55E]/15 text-[#22C55E]'
-                    : 'border-[#2A2D31] bg-[#16181A] text-[#F2F3F4] hover:border-stone-500'
+                    ? 'border-emerald-600 bg-emerald-50 dark:bg-[#22C55E]/15 text-emerald-700 dark:text-[#22C55E]'
+                    : 'border-stone-200 dark:border-[#2A2D31] bg-white dark:bg-[#16181A] text-stone-700 dark:text-[#F2F3F4] hover:border-stone-400'
                 }`}
                 title="Search"
                 aria-label="Search"
@@ -929,7 +870,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               <button
                 type="button"
                 onClick={onOpenWishlist}
-                className="w-9 h-9 rounded-xl border border-[#2A2D31] bg-[#16181A] text-[#F2F3F4] hover:border-rose-500/50 flex items-center justify-center transition-all cursor-pointer relative"
+                className="w-9 h-9 rounded-xl border border-stone-200 dark:border-[#2A2D31] bg-white dark:bg-[#16181A] text-stone-700 dark:text-[#F2F3F4] hover:border-rose-500/50 flex items-center justify-center transition-all cursor-pointer relative"
                 title="Wishlist"
                 aria-label="Wishlist"
               >
@@ -944,13 +885,13 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               <button
                 type="button"
                 onClick={onOpenCart}
-                className="w-9 h-9 rounded-xl border border-[#2A2D31] bg-[#16181A] text-[#F2F3F4] hover:border-[#22C55E]/50 flex items-center justify-center transition-all cursor-pointer relative"
+                className="w-9 h-9 rounded-xl border border-stone-200 dark:border-[#2A2D31] bg-white dark:bg-[#16181A] text-stone-700 dark:text-[#F2F3F4] hover:border-emerald-500/50 flex items-center justify-center transition-all cursor-pointer relative"
                 title="Cart"
                 aria-label="Cart"
               >
                 <ShoppingBag className="w-4 h-4" />
                 {(cart?.itemCount ?? 0) > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#22C55E] text-white font-mono text-[9px] font-bold flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-600 dark:bg-[#22C55E] text-white font-mono text-[9px] font-bold flex items-center justify-center">
                     {cart?.itemCount}
                   </span>
                 )}
@@ -960,9 +901,9 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
 
           {/* Expandable In-Place Search Bar with Scope Toggle */}
           {isSearchExpanded && (
-            <div className="pt-1 pb-1 animate-slide-down space-y-2">
+            <div className="pt-1 pb-1 space-y-2 animate-in fade-in duration-150">
               <div className="relative flex items-center">
-                <Search className="w-4 h-4 text-[#9AA0A6] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Search className="w-4 h-4 text-stone-400 dark:text-[#9AA0A6] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -973,12 +914,12 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                   }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-[#16181A] border border-[#2A2D31] text-xs text-[#F2F3F4] placeholder:text-[#9AA0A6] focus:outline-none focus:border-[#22C55E] focus:ring-1 focus:ring-[#22C55E]/30"
+                  className="w-full pl-10 pr-9 py-2 rounded-xl bg-stone-100 dark:bg-[#16181A] border border-stone-200 dark:border-[#2A2D31] text-xs text-stone-900 dark:text-[#F2F3F4] placeholder:text-stone-400 dark:placeholder:text-[#9AA0A6] focus:outline-none focus:border-emerald-600 dark:focus:border-[#22C55E] focus:ring-1 focus:ring-emerald-500/30"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9AA0A6] hover:text-white p-1"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 dark:hover:text-white p-1"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -988,14 +929,14 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               {/* Scoped toggle: Search in category vs everywhere */}
               {isSingleCategoryMode && (
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-[#9AA0A6]">Scope:</span>
+                  <span className="text-stone-500 dark:text-[#9AA0A6]">Scope:</span>
                   <button
                     type="button"
                     onClick={() => setSearchInCurrentOnly(true)}
                     className={`px-2.5 py-1 rounded-full font-medium transition-colors ${
                       searchInCurrentOnly
-                        ? 'bg-[#22C55E]/20 text-emerald-400 border border-[#22C55E]/40 font-bold'
-                        : 'bg-[#16181A] text-[#9AA0A6] border border-[#2A2D31]'
+                        ? 'bg-emerald-50 dark:bg-[#22C55E]/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500 dark:border-[#22C55E]/40 font-bold'
+                        : 'bg-white dark:bg-[#16181A] text-stone-600 dark:text-[#9AA0A6] border border-stone-200 dark:border-[#2A2D31]'
                     }`}
                   >
                     In {currentCategoryDef.shortName}
@@ -1005,8 +946,8 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                     onClick={() => setSearchInCurrentOnly(false)}
                     className={`px-2.5 py-1 rounded-full font-medium transition-colors ${
                       !searchInCurrentOnly
-                        ? 'bg-[#22C55E]/20 text-emerald-400 border border-[#22C55E]/40 font-bold'
-                        : 'bg-[#16181A] text-[#9AA0A6] border border-[#2A2D31]'
+                        ? 'bg-emerald-50 dark:bg-[#22C55E]/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500 dark:border-[#22C55E]/40 font-bold'
+                        : 'bg-white dark:bg-[#16181A] text-stone-600 dark:text-[#9AA0A6] border border-stone-200 dark:border-[#2A2D31]'
                     }`}
                   >
                     Search Everywhere
@@ -1017,21 +958,21 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
           )}
 
           {/* ── 2. Sticky Horizontal Filter Chips Bar ── */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth pb-1 pt-0.5">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth pb-0.5">
             {/* Filters Sheet Button */}
             <button
               type="button"
               onClick={() => setIsFilterSheetOpen(true)}
               className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 activeFilterCount > 0
-                  ? 'bg-[#22C55E] text-white shadow-xs'
-                  : 'bg-[#16181A] text-[#F2F3F4] border border-[#2A2D31] hover:border-stone-500'
+                  ? 'bg-emerald-600 dark:bg-[#22C55E] text-white shadow-xs'
+                  : 'bg-white dark:bg-[#16181A] text-stone-700 dark:text-[#F2F3F4] border border-stone-200 dark:border-[#2A2D31] hover:border-stone-400'
               }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>Filters</span>
               {activeFilterCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-white text-[#0E0F10] text-[10px] font-mono font-extrabold flex items-center justify-center ml-0.5">
+                <span className="w-4 h-4 rounded-full bg-white text-emerald-800 text-[10px] font-mono font-extrabold flex items-center justify-center ml-0.5">
                   {activeFilterCount}
                 </span>
               )}
@@ -1043,8 +984,8 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               onClick={() => setIsSortSheetOpen(true)}
               className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
                 sortBy !== 'relevance'
-                  ? 'border-[#22C55E]/60 bg-[#22C55E]/15 text-emerald-400 font-bold'
-                  : 'border-[#2A2D31] bg-[#16181A] text-[#F2F3F4] hover:border-stone-500'
+                  ? 'border-emerald-500 dark:border-[#22C55E]/60 bg-emerald-50 dark:bg-[#22C55E]/15 text-emerald-700 dark:text-emerald-400 font-bold'
+                  : 'border-stone-200 dark:border-[#2A2D31] bg-white dark:bg-[#16181A] text-stone-700 dark:text-[#F2F3F4] hover:border-stone-400'
               }`}
             >
               <span>
@@ -1058,7 +999,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                         ? 'Rating'
                         : 'Relevance'}
               </span>
-              <ChevronDown className="w-3 h-3 text-[#9AA0A6]" />
+              <ChevronDown className="w-3 h-3 text-stone-400 dark:text-[#9AA0A6]" />
             </button>
 
             {/* Price Filter Chips */}
@@ -1069,8 +1010,8 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               }
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
                 selectedPriceBucket === 'under50'
-                  ? 'border-[#22C55E]/60 bg-[#22C55E]/15 text-emerald-400 font-bold'
-                  : 'border-[#2A2D31] bg-[#16181A] text-[#9AA0A6] hover:text-[#F2F3F4]'
+                  ? 'border-emerald-500 dark:border-[#22C55E]/60 bg-emerald-50 dark:bg-[#22C55E]/15 text-emerald-700 dark:text-emerald-400 font-bold'
+                  : 'border-stone-200 dark:border-[#2A2D31] bg-white dark:bg-[#16181A] text-stone-700 dark:text-[#9AA0A6] hover:text-stone-900 dark:hover:text-[#F2F3F4]'
               }`}
             >
               Under ₹50
@@ -1083,8 +1024,8 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               }
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
                 selectedPriceBucket === '50to100'
-                  ? 'border-[#22C55E]/60 bg-[#22C55E]/15 text-emerald-400 font-bold'
-                  : 'border-[#2A2D31] bg-[#16181A] text-[#9AA0A6] hover:text-[#F2F3F4]'
+                  ? 'border-emerald-500 dark:border-[#22C55E]/60 bg-emerald-50 dark:bg-[#22C55E]/15 text-emerald-700 dark:text-emerald-400 font-bold'
+                  : 'border-stone-200 dark:border-[#2A2D31] bg-white dark:bg-[#16181A] text-stone-700 dark:text-[#9AA0A6] hover:text-stone-900 dark:hover:text-[#F2F3F4]'
               }`}
             >
               ₹50 – ₹100
@@ -1097,8 +1038,8 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               }
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
                 selectedPriceBucket === '100to200'
-                  ? 'border-[#22C55E]/60 bg-[#22C55E]/15 text-emerald-400 font-bold'
-                  : 'border-[#2A2D31] bg-[#16181A] text-[#9AA0A6] hover:text-[#F2F3F4]'
+                  ? 'border-emerald-500 dark:border-[#22C55E]/60 bg-emerald-50 dark:bg-[#22C55E]/15 text-emerald-700 dark:text-emerald-400 font-bold'
+                  : 'border-stone-200 dark:border-[#2A2D31] bg-white dark:bg-[#16181A] text-stone-700 dark:text-[#9AA0A6] hover:text-stone-900 dark:hover:text-[#F2F3F4]'
               }`}
             >
               ₹100 – ₹200
@@ -1110,16 +1051,16 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               onClick={() => setInStockOnly((prev) => !prev)}
               className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
                 inStockOnly
-                  ? 'border-[#22C55E]/60 bg-[#22C55E]/15 text-emerald-400 font-bold'
-                  : 'border-[#2A2D31] bg-[#16181A] text-[#9AA0A6] hover:text-[#F2F3F4]'
+                  ? 'border-emerald-500 dark:border-[#22C55E]/60 bg-emerald-50 dark:bg-[#22C55E]/15 text-emerald-700 dark:text-emerald-400 font-bold'
+                  : 'border-stone-200 dark:border-[#2A2D31] bg-white dark:bg-[#16181A] text-stone-700 dark:text-[#9AA0A6] hover:text-stone-900 dark:hover:text-[#F2F3F4]'
               }`}
             >
               <span>In Stock Only</span>
             </button>
 
             {/* Pure Veg Badge (Always Active & Guaranteed) */}
-            <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/40 border border-emerald-600/40 text-emerald-400 text-xs font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/40 text-emerald-800 dark:text-emerald-400 text-xs font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
               <span>100% Veg</span>
             </div>
 
@@ -1128,7 +1069,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 text-xs text-rose-400 hover:text-rose-300 font-semibold cursor-pointer underline"
+                className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 text-xs text-rose-500 hover:text-rose-600 font-semibold cursor-pointer underline"
               >
                 <RotateCcw className="w-3 h-3" />
                 <span>Clear all</span>
@@ -1138,7 +1079,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
 
           {/* Subcategory Pills Row (in Single Category Mode) */}
           {isSingleCategoryMode && currentCategoryDef.subCategories.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
               {currentCategoryDef.subCategories.map((sub) => {
                 const isSelected = selectedSubcategory === sub;
                 return (
@@ -1148,8 +1089,8 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                     onClick={() => setSelectedSubcategory(sub)}
                     className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-[#22C55E] text-white font-bold shadow-xs'
-                        : 'bg-[#16181A] text-[#9AA0A6] hover:text-white border border-[#2A2D31]'
+                        ? 'bg-emerald-600 dark:bg-[#22C55E] text-white font-bold shadow-2xs'
+                        : 'bg-white dark:bg-[#16181A] text-stone-600 dark:text-[#9AA0A6] hover:text-stone-900 dark:hover:text-white border border-stone-200 dark:border-[#2A2D31]'
                     }`}
                   >
                     {sub}
@@ -1161,10 +1102,10 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
         </div>
       </header>
 
-      {/* ── 3. Main Two-Pane Body (Left Category Rail + Continuous Right Product Pane) ── */}
-      <div className="flex-1 flex max-w-7xl mx-auto w-full min-h-[calc(100vh-140px)]">
+      {/* ── 3. Main Two-Pane Body (Left Category Rail + Independent Product Pane) ── */}
+      <div className="flex-1 min-h-0 flex w-full max-w-7xl mx-auto overflow-hidden">
         {/* ── Left Category Vertical Rail ── */}
-        <aside className="w-[76px] sm:w-[88px] lg:w-[108px] shrink-0 border-r border-[#2A2D31] bg-[#16181A] flex flex-col py-2 overflow-y-auto no-scrollbar overscroll-contain">
+        <aside className="w-[76px] sm:w-[88px] lg:w-[110px] shrink-0 h-full overflow-y-auto no-scrollbar overscroll-contain bg-white dark:bg-[#16181A] border-r border-stone-200 dark:border-[#2A2D31] py-2">
           <div className="space-y-1 px-1 sm:px-1.5">
             {BROWSE_CATEGORIES.map((cat) => {
               const isActive = isSingleCategoryMode
@@ -1179,16 +1120,16 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                   onClick={() => handleSelectCategoryFromRail(cat.id)}
                   className={`w-full rounded-xl py-2 px-1 flex flex-col items-center text-center transition-all cursor-pointer group relative ${
                     isActive
-                      ? 'bg-[#1E2124] text-white font-bold border-l-[3px] border-[#22C55E]'
-                      : 'text-[#9AA0A6] hover:text-white hover:bg-[#1E2124]/50'
+                      ? 'bg-emerald-50/80 dark:bg-[#1E2124] text-emerald-900 dark:text-white font-bold border-l-[3px] border-emerald-600 dark:border-[#22C55E]'
+                      : 'text-stone-600 dark:text-[#9AA0A6] hover:text-stone-900 dark:hover:text-white hover:bg-stone-100/60 dark:hover:bg-[#1E2124]/50'
                   }`}
                 >
                   {/* Category Thumbnail / Circular Icon */}
                   <div
                     className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center overflow-hidden mb-1.5 transition-transform group-hover:scale-105 border ${
                       isActive
-                        ? 'border-[#22C55E] bg-[#22C55E]/15 shadow-sm'
-                        : 'border-[#2A2D31] bg-[#0E0F10]'
+                        ? 'border-emerald-600 dark:border-[#22C55E] bg-emerald-100/60 dark:bg-[#22C55E]/15 shadow-2xs'
+                        : 'border-stone-200 dark:border-[#2A2D31] bg-stone-50 dark:bg-[#0E0F10]'
                     }`}
                   >
                     {cat.iconUrl ? (
@@ -1216,22 +1157,22 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
         {/* ── Right Product Pane ── */}
         <main
           ref={productPaneRef}
-          className="flex-1 min-w-0 p-3 sm:p-4 lg:p-5 overflow-y-auto"
+          className="flex-1 min-w-0 h-full overflow-y-auto overscroll-contain p-3 sm:p-4 lg:p-5"
         >
           {/* Case A: Single Category Dedicated View */}
           {isSingleCategoryMode ? (
             <div className="space-y-4">
-              {/* Category Header Banner */}
-              <div className="rounded-2xl bg-[#16181A] border border-[#2A2D31] p-3.5 sm:p-4 flex items-center justify-between gap-3">
+              {/* Category Header Banner with "‹ All Categories" button */}
+              <div className="rounded-2xl bg-white dark:bg-[#16181A] border border-stone-200 dark:border-[#2A2D31] p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-2xs">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-xl bg-[#1E2124] border border-[#2A2D31] flex items-center justify-center text-2xl shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-stone-100 dark:bg-[#1E2124] border border-stone-200 dark:border-[#2A2D31] flex items-center justify-center text-2xl shrink-0">
                     {currentCategoryDef.emoji}
                   </div>
                   <div className="min-w-0">
-                    <h2 className="font-heading font-extrabold text-base sm:text-lg text-white leading-tight truncate">
+                    <h2 className="font-heading font-extrabold text-base sm:text-lg text-stone-900 dark:text-white leading-tight truncate">
                       {currentCategoryDef.name}
                     </h2>
-                    <p className="text-xs text-[#9AA0A6] truncate mt-0.5">
+                    <p className="text-xs text-stone-500 dark:text-[#9AA0A6] truncate mt-0.5">
                       {currentCategoryDef.subtitle}
                     </p>
                   </div>
@@ -1240,9 +1181,9 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                 <button
                   type="button"
                   onClick={handleBackToAllCategories}
-                  className="px-3 py-1.5 rounded-xl border border-[#2A2D31] bg-[#1E2124] hover:border-stone-500 text-xs font-semibold text-[#F2F3F4] transition-colors shrink-0 cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl border border-stone-200 dark:border-[#2A2D31] bg-stone-100 dark:bg-[#1E2124] hover:border-emerald-500 text-xs font-semibold text-stone-700 dark:text-[#F2F3F4] transition-colors shrink-0 cursor-pointer"
                 >
-                  View All ›
+                  ‹ All Categories
                 </button>
               </div>
 
@@ -1250,29 +1191,29 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               {singleCategoryProducts.length === 0 ? (
                 <div className="py-16 text-center space-y-3">
                   <span className="text-4xl">🔍</span>
-                  <h3 className="font-heading font-bold text-base text-white">
+                  <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white">
                     No products found in this category
                   </h3>
-                  <p className="text-xs text-[#9AA0A6] max-w-xs mx-auto">
+                  <p className="text-xs text-stone-500 dark:text-[#9AA0A6] max-w-xs mx-auto">
                     Try adjusting your filters or search keywords to find what you need.
                   </p>
                   <button
                     type="button"
                     onClick={handleResetFilters}
-                    className="px-4 py-2 rounded-full bg-[#22C55E]/15 border border-[#22C55E]/40 text-emerald-400 text-xs font-bold hover:bg-[#22C55E] hover:text-white transition-all cursor-pointer"
+                    className="px-4 py-2 rounded-full bg-emerald-50 dark:bg-[#22C55E]/15 border border-emerald-500 dark:border-[#22C55E]/40 text-emerald-700 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all cursor-pointer"
                   >
                     Reset Filters
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3.5 pb-20 lg:pb-8">
                   {singleCategoryProducts.map(renderProductCard)}
                 </div>
               )}
             </div>
           ) : (
             /* Case B: Continuous Sequential Sections ("All" View) */
-            <div className="space-y-8">
+            <div className="space-y-8 pb-20 lg:pb-8">
               {continuousCategorySections.map(({ category, totalCount, previewProducts }) => (
                 <section
                   key={category.id}
@@ -1281,14 +1222,14 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                   className="space-y-3 pt-2"
                 >
                   {/* Category Section Header */}
-                  <div className="flex items-center justify-between pb-2 border-b border-[#2A2D31]">
+                  <div className="flex items-center justify-between pb-2 border-b border-stone-200 dark:border-[#2A2D31]">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="text-2xl shrink-0">{category.emoji}</span>
                       <div className="min-w-0">
-                        <h3 className="font-heading font-extrabold text-sm sm:text-base text-white leading-tight truncate">
+                        <h3 className="font-heading font-extrabold text-sm sm:text-base text-stone-900 dark:text-white leading-tight truncate">
                           {category.name}
                         </h3>
-                        <p className="text-[11px] text-[#9AA0A6] truncate">
+                        <p className="text-[11px] text-stone-500 dark:text-[#9AA0A6] truncate">
                           {category.subtitle}
                         </p>
                       </div>
@@ -1297,7 +1238,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenCategoryDedicatedView(category.id)}
-                      className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-0.5 shrink-0 transition-colors cursor-pointer"
+                      className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center gap-0.5 shrink-0 transition-colors cursor-pointer"
                     >
                       <span>See all ({totalCount})</span>
                       <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -1314,7 +1255,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenCategoryDedicatedView(category.id)}
-                      className="w-full py-2.5 rounded-xl border border-[#2A2D31] bg-[#16181A] hover:bg-[#1E2124] hover:border-[#22C55E]/50 text-xs font-bold text-emerald-400 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-[0.99]"
+                      className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-[#2A2D31] bg-white dark:bg-[#16181A] hover:bg-stone-50 dark:hover:bg-[#1E2124] hover:border-emerald-500/50 text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-[0.99]"
                     >
                       <span>
                         See all {totalCount} products in {category.name}
@@ -1328,17 +1269,17 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               {continuousCategorySections.length === 0 && (
                 <div className="py-20 text-center space-y-3">
                   <span className="text-4xl">🔍</span>
-                  <h3 className="font-heading font-bold text-base text-white">
+                  <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white">
                     No products matching your search
                   </h3>
-                  <p className="text-xs text-[#9AA0A6] max-w-xs mx-auto">
+                  <p className="text-xs text-stone-500 dark:text-[#9AA0A6] max-w-xs mx-auto">
                     We couldn't find any groceries matching "{searchQuery}". Try searching for
                     another staple or clear filters.
                   </p>
                   <button
                     type="button"
                     onClick={handleResetFilters}
-                    className="px-4 py-2 rounded-full bg-[#22C55E] text-white text-xs font-bold hover:bg-emerald-600 cursor-pointer"
+                    className="px-4 py-2 rounded-full bg-emerald-600 dark:bg-[#22C55E] text-white text-xs font-bold hover:bg-emerald-700 cursor-pointer"
                   >
                     Reset Filters
                   </button>
@@ -1355,7 +1296,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
           <button
             type="button"
             onClick={onOpenCart}
-            className="w-full bg-[#22C55E] hover:bg-[#1ea750] active:scale-[0.985] text-white px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-xl flex items-center justify-between transition-all border border-emerald-400/40 cursor-pointer"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.985] text-white px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-xl flex items-center justify-between transition-all border border-emerald-400/40 cursor-pointer"
           >
             <div className="flex items-center gap-3 min-w-0">
               {latestCartItem?.imageUrl ? (
@@ -1392,15 +1333,15 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
 
       {/* ── 5. Bottom Sheet: Comprehensive Filters Modal ── */}
       {isFilterSheetOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-          <div className="w-full sm:max-w-md max-h-[85vh] rounded-t-3xl sm:rounded-3xl bg-[#16181A] border border-[#2A2D31] flex flex-col shadow-2xl overflow-hidden animate-slide-up">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full sm:max-w-md max-h-[85vh] rounded-t-3xl sm:rounded-3xl bg-white dark:bg-[#16181A] border border-stone-200 dark:border-[#2A2D31] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
             {/* Modal Header */}
-            <div className="p-4 border-b border-[#2A2D31] flex items-center justify-between">
+            <div className="p-4 border-b border-stone-200 dark:border-[#2A2D31] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-emerald-400" />
-                <h3 className="font-heading font-bold text-base text-white">Filters</h3>
+                <Filter className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white">Filters</h3>
                 {activeFilterCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-400 font-mono text-xs font-bold">
                     {activeFilterCount} active
                   </span>
                 )}
@@ -1408,7 +1349,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsFilterSheetOpen(false)}
-                className="w-8 h-8 rounded-full bg-[#1E2124] text-[#9AA0A6] hover:text-white flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-stone-100 dark:bg-[#1E2124] text-stone-500 dark:text-[#9AA0A6] hover:text-stone-900 dark:hover:text-white flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1418,7 +1359,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
             <div className="p-4 overflow-y-auto space-y-5 flex-1">
               {/* Sort Section */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#9AA0A6] uppercase tracking-wider">
+                <label className="text-xs font-bold text-stone-500 dark:text-[#9AA0A6] uppercase tracking-wider">
                   Sort Products By
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -1435,8 +1376,8 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                       onClick={() => setSortBy(opt.id as SortOption)}
                       className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all cursor-pointer ${
                         sortBy === opt.id
-                          ? 'border-[#22C55E] bg-[#22C55E]/15 text-emerald-400'
-                          : 'border-[#2A2D31] bg-[#1E2124] text-[#9AA0A6] hover:text-white'
+                          ? 'border-emerald-600 bg-emerald-50 dark:bg-[#22C55E]/15 text-emerald-800 dark:text-emerald-400 font-bold'
+                          : 'border-stone-200 dark:border-[#2A2D31] bg-stone-50 dark:bg-[#1E2124] text-stone-600 dark:text-[#9AA0A6] hover:text-stone-900 dark:hover:text-white'
                       }`}
                     >
                       {opt.label}
@@ -1447,7 +1388,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
 
               {/* Price Range Section */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#9AA0A6] uppercase tracking-wider">
+                <label className="text-xs font-bold text-stone-500 dark:text-[#9AA0A6] uppercase tracking-wider">
                   Price Range
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -1464,8 +1405,8 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                       onClick={() => setSelectedPriceBucket(bucket.id as PriceBucket)}
                       className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all cursor-pointer ${
                         selectedPriceBucket === bucket.id
-                          ? 'border-[#22C55E] bg-[#22C55E]/15 text-emerald-400'
-                          : 'border-[#2A2D31] bg-[#1E2124] text-[#9AA0A6] hover:text-white'
+                          ? 'border-emerald-600 bg-emerald-50 dark:bg-[#22C55E]/15 text-emerald-800 dark:text-emerald-400 font-bold'
+                          : 'border-stone-200 dark:border-[#2A2D31] bg-stone-50 dark:bg-[#1E2124] text-stone-600 dark:text-[#9AA0A6] hover:text-stone-900 dark:hover:text-white'
                       }`}
                     >
                       {bucket.label}
@@ -1477,7 +1418,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               {/* Brands Section */}
               {availableBrands.length > 0 && (
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-[#9AA0A6] uppercase tracking-wider">
+                  <label className="text-xs font-bold text-stone-500 dark:text-[#9AA0A6] uppercase tracking-wider">
                     Select Brands
                   </label>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
@@ -1494,23 +1435,23 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                           }}
                           className={`w-full px-3 py-2 rounded-xl border flex items-center justify-between text-xs font-medium transition-colors cursor-pointer ${
                             isChecked
-                              ? 'border-[#22C55E]/60 bg-[#22C55E]/10 text-emerald-400'
-                              : 'border-[#2A2D31] bg-[#1E2124] text-[#F2F3F4] hover:border-stone-500'
+                              ? 'border-emerald-600 bg-emerald-50 dark:bg-[#22C55E]/10 text-emerald-800 dark:text-emerald-400 font-bold'
+                              : 'border-stone-200 dark:border-[#2A2D31] bg-stone-50 dark:bg-[#1E2124] text-stone-700 dark:text-[#F2F3F4] hover:border-stone-400'
                           }`}
                         >
                           <div className="flex items-center gap-2">
                             <div
                               className={`w-4 h-4 rounded border flex items-center justify-center ${
                                 isChecked
-                                  ? 'border-[#22C55E] bg-[#22C55E]'
-                                  : 'border-[#2A2D31] bg-black/30'
+                                  ? 'border-emerald-600 bg-emerald-600 text-white'
+                                  : 'border-stone-300 dark:border-[#2A2D31] bg-white dark:bg-black/30'
                               }`}
                             >
                               {isChecked && <Check className="w-3 h-3 text-white stroke-[3]" />}
                             </div>
                             <span>{name}</span>
                           </div>
-                          <span className="text-[#9AA0A6] font-mono text-[11px]">({count})</span>
+                          <span className="text-stone-400 dark:text-[#9AA0A6] font-mono text-[11px]">({count})</span>
                         </button>
                       );
                     })}
@@ -1520,11 +1461,11 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-[#2A2D31] flex items-center justify-between gap-3">
+            <div className="p-4 border-t border-stone-200 dark:border-[#2A2D31] flex items-center justify-between gap-3 bg-stone-50/50 dark:bg-transparent">
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-rose-400 hover:text-rose-300"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-rose-500 hover:text-rose-600 cursor-pointer"
               >
                 Reset All
               </button>
@@ -1532,7 +1473,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsFilterSheetOpen(false)}
-                className="px-6 py-2.5 rounded-xl bg-[#22C55E] hover:bg-emerald-600 text-white font-heading font-extrabold text-xs shadow-md transition-all cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-heading font-extrabold text-xs shadow-xs transition-all cursor-pointer"
               >
                 Apply Filters
               </button>
@@ -1543,14 +1484,14 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
 
       {/* ── 6. Bottom Sheet: Quick Sort Modal ── */}
       {isSortSheetOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-          <div className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl bg-[#16181A] border border-[#2A2D31] p-4 space-y-3 shadow-2xl animate-slide-up">
-            <div className="flex items-center justify-between pb-2 border-b border-[#2A2D31]">
-              <h3 className="font-heading font-bold text-sm text-white">Sort By</h3>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl bg-white dark:bg-[#16181A] border border-stone-200 dark:border-[#2A2D31] p-4 space-y-3 shadow-2xl animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between pb-2 border-b border-stone-200 dark:border-[#2A2D31]">
+              <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white">Sort By</h3>
               <button
                 type="button"
                 onClick={() => setIsSortSheetOpen(false)}
-                className="w-7 h-7 rounded-full bg-[#1E2124] text-[#9AA0A6] hover:text-white flex items-center justify-center"
+                className="w-7 h-7 rounded-full bg-stone-100 dark:bg-[#1E2124] text-stone-500 dark:text-[#9AA0A6] hover:text-stone-900 dark:hover:text-white flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1573,12 +1514,12 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                   }}
                   className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left border flex items-center justify-between transition-colors cursor-pointer ${
                     sortBy === opt.id
-                      ? 'border-[#22C55E] bg-[#22C55E]/15 text-emerald-400'
-                      : 'border-[#2A2D31] bg-[#1E2124] text-[#F2F3F4] hover:border-stone-500'
+                      ? 'border-emerald-600 bg-emerald-50 dark:bg-[#22C55E]/15 text-emerald-800 dark:text-emerald-400 font-bold'
+                      : 'border-stone-200 dark:border-[#2A2D31] bg-stone-50 dark:bg-[#1E2124] text-stone-700 dark:text-[#F2F3F4] hover:border-stone-400'
                   }`}
                 >
                   <span>{opt.label}</span>
-                  {sortBy === opt.id && <Check className="w-4 h-4 text-emerald-400 stroke-[2.5]" />}
+                  {sortBy === opt.id && <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />}
                 </button>
               ))}
             </div>
@@ -1588,14 +1529,14 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
 
       {/* ── 7. Mini Sheet: Pack Size & Variants Modal ── */}
       {isPackSheetOpen && packSheetProduct && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-          <div className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl bg-[#16181A] border border-[#2A2D31] p-4 space-y-4 shadow-2xl animate-slide-up">
-            <div className="flex items-center justify-between pb-2 border-b border-[#2A2D31]">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl bg-white dark:bg-[#16181A] border border-stone-200 dark:border-[#2A2D31] p-4 space-y-4 shadow-2xl animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between pb-2 border-b border-stone-200 dark:border-[#2A2D31]">
               <div className="min-w-0 pr-2">
-                <h3 className="font-heading font-bold text-sm text-white truncate">
+                <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white truncate">
                   {packSheetProduct.name}
                 </h3>
-                <p className="text-[11px] text-[#9AA0A6]">Select Pack Size / Quantity</p>
+                <p className="text-[11px] text-stone-500 dark:text-[#9AA0A6]">Select Pack Size / Quantity</p>
               </div>
               <button
                 type="button"
@@ -1603,7 +1544,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                   setIsPackSheetOpen(false);
                   setPackSheetProduct(null);
                 }}
-                className="w-7 h-7 rounded-full bg-[#1E2124] text-[#9AA0A6] hover:text-white flex items-center justify-center shrink-0"
+                className="w-7 h-7 rounded-full bg-stone-100 dark:bg-[#1E2124] text-stone-500 dark:text-[#9AA0A6] hover:text-stone-900 dark:hover:text-white flex items-center justify-center shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1611,17 +1552,17 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
 
             {/* Default Variant */}
             <div className="space-y-2">
-              <div className="p-3 rounded-2xl bg-[#1E2124] border border-[#22C55E]/60 flex items-center justify-between">
+              <div className="p-3 rounded-2xl bg-stone-50 dark:bg-[#1E2124] border border-emerald-500/60 dark:border-[#22C55E]/60 flex items-center justify-between">
                 <div>
-                  <span className="font-heading font-bold text-sm text-white">
+                  <span className="font-heading font-bold text-sm text-stone-900 dark:text-white">
                     {packSheetProduct.packageSize} {packSheetProduct.packageUnit}
                   </span>
                   <div className="flex items-baseline gap-1.5 mt-0.5">
-                    <span className="font-mono font-bold text-emerald-400 text-sm">
+                    <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400 text-sm">
                       ₹{Math.round(packSheetProduct.pricePaise / 100)}
                     </span>
                     {packSheetProduct.mrpPaise && (
-                      <span className="text-[10px] text-[#9AA0A6] line-through font-mono">
+                      <span className="text-[10px] text-stone-400 dark:text-[#9AA0A6] line-through font-mono">
                         ₹{Math.round(packSheetProduct.mrpPaise / 100)}
                       </span>
                     )}
@@ -1633,12 +1574,12 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => onAddToCart(packSheetProduct._id, 1)}
-                      className="px-3.5 py-1.5 rounded-xl bg-[#22C55E] text-white font-heading font-extrabold text-xs shadow-sm hover:bg-emerald-600 transition-colors"
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-heading font-extrabold text-xs shadow-xs transition-colors cursor-pointer"
                     >
                       ADD
                     </button>
                   ) : (
-                    <div className="flex items-center gap-1.5 bg-[#22C55E] text-white px-2 py-1 rounded-xl text-xs font-bold shadow-sm">
+                    <div className="flex items-center gap-1.5 bg-emerald-600 text-white px-2 py-1 rounded-xl text-xs font-bold shadow-xs">
                       <button
                         type="button"
                         onClick={() =>
@@ -1647,7 +1588,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                             getCartQuantity(packSheetProduct._id) - 1
                           )
                         }
-                        className="p-0.5"
+                        className="p-0.5 cursor-pointer"
                       >
                         <Minus className="w-3.5 h-3.5" />
                       </button>
@@ -1662,7 +1603,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                             getCartQuantity(packSheetProduct._id) + 1
                           )
                         }
-                        className="p-0.5"
+                        className="p-0.5 cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </button>
@@ -1672,7 +1613,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               </div>
             </div>
 
-            <p className="text-[10px] text-[#9AA0A6] text-center pt-1">
+            <p className="text-[10px] text-stone-500 dark:text-[#9AA0A6] text-center pt-1">
               Standard farm fresh packaging with 100% vegetarian quality guarantee.
             </p>
           </div>

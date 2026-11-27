@@ -1609,7 +1609,7 @@ export const ShopperWorkspace: React.FC = () => {
       {/* ── Main Screen Viewport Switching ──────────────────────────────────── */}
       <div
         className={`flex-1 flex min-w-0 w-full relative ${
-          activeMobileTab === 'chat'
+          activeMobileTab === 'chat' || activeMobileTab === 'browse'
             ? 'min-h-0 overflow-hidden'
             : activeMobileTab === 'cart'
               ? 'min-h-0 lg:overflow-hidden'
@@ -1621,11 +1621,13 @@ export const ShopperWorkspace: React.FC = () => {
           className={`flex-1 flex flex-col min-w-0 w-full ${
             activeMobileTab === 'chat'
               ? 'min-h-0 overflow-hidden pb-0'
-              : activeMobileTab === 'cart'
-                ? 'min-h-0 lg:overflow-hidden pb-16 lg:pb-0'
-                : activeMobileTab === 'account'
-                  ? 'pb-[72px] lg:pb-6'
-                  : 'pb-20 lg:pb-0'
+              : activeMobileTab === 'browse'
+                ? 'min-h-0 overflow-hidden pb-16 lg:pb-0'
+                : activeMobileTab === 'cart'
+                  ? 'min-h-0 lg:overflow-hidden pb-16 lg:pb-0'
+                  : activeMobileTab === 'account'
+                    ? 'pb-[72px] lg:pb-6'
+                    : 'pb-20 lg:pb-0'
           }`}
         >
           {activeMobileTab === 'home' && (

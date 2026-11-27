@@ -52,7 +52,7 @@ export const SEED_MERCHANTS = [
 ];
 
 export const SEED_PRODUCTS_FRESH_GREENS: SeedProductInput[] = [
-  // ── DAIRY ────────────────────────────────────────────────────────
+  // ── DAIRY & BREAKFAST ──────────────────────────────────────────
   {
     name: 'Fresh Malai Paneer',
     slug: 'fresh-malai-paneer-200g',
@@ -105,6 +105,23 @@ export const SEED_PRODUCTS_FRESH_GREENS: SeedProductInput[] = [
     imageUrl: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=500',
   },
   {
+    name: 'Amul Gold Full Cream Milk',
+    slug: 'amul-gold-milk-1l',
+    description: 'Rich full cream pasteurized milk with 6% fat, perfect for tea, coffee, and desserts.',
+    category: 'DAIRY',
+    brand: 'Amul Gold',
+    subCategory: 'Milk',
+    pricePaise: 7200, // ₹72.00
+    mrpPaise: 7800, // ₹78.00
+    packageSize: 1,
+    packageUnit: 'L',
+    availableStock: 80,
+    rating: 4.9,
+    reviewCount: 2450,
+    aliases: ['amul gold', 'full cream milk', 'creamy milk', 'doodh amul'],
+    imageUrl: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500',
+  },
+  {
     name: 'Set Dahi / Curd (Pouch)',
     slug: 'set-dahi-curd-400g',
     description: 'Thick, creamy, traditional probiotic curd prepared with active cultures.',
@@ -139,6 +156,23 @@ export const SEED_PRODUCTS_FRESH_GREENS: SeedProductInput[] = [
     imageUrl: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=500',
   },
   {
+    name: 'Amul Butter (Family Pack)',
+    slug: 'amul-salted-butter-500g',
+    description: '500g economy family tub of iconic Indian salted butter.',
+    category: 'DAIRY',
+    brand: 'Amul',
+    subCategory: 'Butter & Cheese',
+    pricePaise: 27500, // ₹275.00
+    mrpPaise: 29500, // ₹295.00
+    packageSize: 500,
+    packageUnit: 'G',
+    availableStock: 40,
+    rating: 4.9,
+    reviewCount: 1600,
+    aliases: ['amul butter 500g', 'makhan 500g', 'big butter'],
+    imageUrl: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=500',
+  },
+  {
     name: 'Amul Processed Cheese Slices',
     slug: 'amul-cheese-slices-200g',
     description: 'Individually wrapped cheese slices crafted from pure milk. 10 slices.',
@@ -157,6 +191,42 @@ export const SEED_PRODUCTS_FRESH_GREENS: SeedProductInput[] = [
   },
 
   // ── FRESH VEGETABLES ─────────────────────────────────────────────
+  {
+    name: 'Fresh Button Mushrooms',
+    slug: 'fresh-button-mushrooms-200g',
+    description: 'Firm, clean, whole white button mushrooms packed with umami flavor. 100% vegetarian.',
+    category: 'VEGETABLES',
+    brand: 'Fresho',
+    subCategory: 'Exotics & Veg',
+    pricePaise: 5000, // ₹50.00
+    mrpPaise: 6500, // ₹65.00
+    packageSize: 200,
+    packageUnit: 'G',
+    availableStock: 40,
+    rating: 4.8,
+    reviewCount: 590,
+    aliases: ['mushroom', 'mushrooms', 'khumbi', 'button mushroom', 'white mushroom'],
+    // 100% verified white button mushrooms photo (NOT steak!)
+    imageUrl: 'https://images.unsplash.com/photo-1506806732259-39c2d0268443?w=500',
+  },
+  {
+    name: 'Fresh Ginger Root (Adrak)',
+    slug: 'fresh-ginger-root-250g',
+    description: 'Aromatic, spicy, pesticide-free fresh ginger root rhizome for rich Indian tea and curries.',
+    category: 'VEGETABLES',
+    brand: 'Fresho',
+    subCategory: 'Chillies & Garlic',
+    pricePaise: 3000, // ₹30.00
+    mrpPaise: 4000, // ₹40.00
+    packageSize: 250,
+    packageUnit: 'G',
+    availableStock: 40,
+    rating: 4.7,
+    reviewCount: 820,
+    aliases: ['adrak', 'ginger', 'fresh ginger', 'ginger root', 'saunth'],
+    // 100% verified real ginger root photo (NOT broccoli!)
+    imageUrl: 'https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=500',
+  },
   {
     name: 'Farm Fresh Green Peas',
     slug: 'farm-fresh-green-peas-500g',
@@ -224,23 +294,6 @@ export const SEED_PRODUCTS_FRESH_GREENS: SeedProductInput[] = [
     reviewCount: 3100,
     aliases: ['tamatar', 'tomato', 'tomatoes', 'nati tamatar'],
     imageUrl: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500',
-  },
-  {
-    name: 'Fresh Ginger Root',
-    slug: 'fresh-ginger-root-250g',
-    description: 'Aromatic, spicy, pesticide-free fresh ginger root.',
-    category: 'VEGETABLES',
-    brand: 'Fresho',
-    subCategory: 'Chillies & Garlic',
-    pricePaise: 3000, // ₹30.00
-    mrpPaise: 4000, // ₹40.00
-    packageSize: 250,
-    packageUnit: 'G',
-    availableStock: 40,
-    rating: 4.6,
-    reviewCount: 420,
-    aliases: ['adrak', 'ginger', 'fresh ginger', 'saunth'],
-    imageUrl: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=500',
   },
   {
     name: 'Organic Garlic Bulbs',
@@ -362,21 +415,55 @@ export const SEED_PRODUCTS_FRESH_GREENS: SeedProductInput[] = [
     imageUrl: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=500',
   },
   {
-    name: 'Fresh Button Mushrooms',
-    slug: 'fresh-button-mushrooms-200g',
-    description: 'Firm, clean white button mushrooms packed with umami flavor.',
+    name: 'Fresh Cauliflower (Phool Gobi)',
+    slug: 'fresh-cauliflower-1pc',
+    description: 'Tender, dense white cauliflower head fresh from local farms.',
     category: 'VEGETABLES',
     brand: 'Fresho',
     subCategory: 'Exotics & Veg',
-    pricePaise: 5000, // ₹50.00
-    mrpPaise: 6500, // ₹65.00
-    packageSize: 200,
+    pricePaise: 4000, // ₹40.00
+    mrpPaise: 5000, // ₹50.00
+    packageSize: 1,
+    packageUnit: 'PIECE',
+    availableStock: 50,
+    rating: 4.7,
+    reviewCount: 430,
+    aliases: ['cauliflower', 'gobi', 'phool gobi', 'gobhi'],
+    imageUrl: 'https://images.unsplash.com/photo-1568584711075-3d021a7c3ca3?w=500',
+  },
+  {
+    name: 'Fresh Green Capsicum (Shimla Mirch)',
+    slug: 'fresh-green-capsicum-500g',
+    description: 'Crisp bell peppers rich in vitamins, great for kadai paneer and noodles.',
+    category: 'VEGETABLES',
+    brand: 'Fresho',
+    subCategory: 'Exotics & Veg',
+    pricePaise: 4500, // ₹45.00
+    mrpPaise: 6000, // ₹60.00
+    packageSize: 500,
     packageUnit: 'G',
     availableStock: 40,
-    rating: 4.6,
-    reviewCount: 390,
-    aliases: ['mushroom', 'mushrooms', 'khumbi', 'button mushroom'],
-    imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=500',
+    rating: 4.8,
+    reviewCount: 510,
+    aliases: ['capsicum', 'shimla mirch', 'green pepper', 'bell pepper'],
+    imageUrl: 'https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=500',
+  },
+  {
+    name: 'Fresh Juicy Lemons (Pack of 4)',
+    slug: 'fresh-juicy-lemons-4pcs',
+    description: 'Zesty, vitamin C-packed yellow lemons for salads, dal, and lemonade.',
+    category: 'VEGETABLES',
+    brand: 'Fresho',
+    subCategory: 'Tomatoes',
+    pricePaise: 2000, // ₹20.00
+    mrpPaise: 3000, // ₹30.00
+    packageSize: 4,
+    packageUnit: 'PIECE',
+    availableStock: 70,
+    rating: 4.8,
+    reviewCount: 880,
+    aliases: ['nimbu', 'lemon', 'lemons', 'citrus nimbu'],
+    imageUrl: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=500',
   },
 
   // ── FRESH FRUITS ─────────────────────────────────────────────────
@@ -574,24 +661,7 @@ export const SEED_PRODUCTS_FRESH_GREENS: SeedProductInput[] = [
 ];
 
 export const SEED_PRODUCTS_DESI_KIRANA: SeedProductInput[] = [
-  // ── GRAINS & ATTA ────────────────────────────────────────────────
-  {
-    name: 'Royal Aged Basmati Rice',
-    slug: 'royal-aged-basmati-rice-1kg',
-    description: 'Extra-long grain aromatic aged basmati rice for pulao and biryani.',
-    category: 'GRAINS',
-    brand: 'India Gate',
-    subCategory: 'Basmati Rice',
-    pricePaise: 14000, // ₹140.00
-    mrpPaise: 17500, // ₹175.00
-    packageSize: 1,
-    packageUnit: 'KG',
-    availableStock: 120,
-    rating: 4.9,
-    reviewCount: 3100,
-    aliases: ['chawal', 'biryani rice', 'basmati', 'pulao rice', 'rice', 'long grain rice'],
-    imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500',
-  },
+  // ── ATTA, SATTU, BESAN, MAIDA, RICE & DALS (Staples) ─────────────
   {
     name: 'Chakki Whole Wheat Atta',
     slug: 'chakki-whole-wheat-atta-5kg',
@@ -608,6 +678,91 @@ export const SEED_PRODUCTS_DESI_KIRANA: SeedProductInput[] = [
     reviewCount: 4200,
     aliases: ['atta', 'gehun atta', 'wheat flour', 'chakki atta', 'roti flour', 'aashirvaad atta'],
     imageUrl: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=500',
+  },
+  {
+    name: 'Pure Chana Sattu (Bihari Style)',
+    slug: 'pure-chana-sattu-500g',
+    description: 'Authentic stone-ground roasted Bengal gram flour, superfood for summer sherbet and litti.',
+    category: 'GRAINS',
+    brand: 'Desi Naturals',
+    subCategory: 'Whole Wheat Atta',
+    pricePaise: 9500, // ₹95.00
+    mrpPaise: 12000, // ₹120.00
+    packageSize: 500,
+    packageUnit: 'G',
+    availableStock: 55,
+    rating: 4.9,
+    reviewCount: 1850,
+    aliases: ['sattu', 'chana sattu', 'roasted gram flour', 'sattu powder', 'bihari sattu'],
+    imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500',
+  },
+  {
+    name: 'Pure Chana Besan (Super Fine)',
+    slug: 'pure-chana-besan-500g',
+    description: '100% pure unadulterated split chickpea flour for pakodas, kadhi, and laddoos.',
+    category: 'GRAINS',
+    brand: 'Fortune',
+    subCategory: 'Whole Wheat Atta',
+    pricePaise: 6500, // ₹65.00
+    mrpPaise: 8000, // ₹80.00
+    packageSize: 500,
+    packageUnit: 'G',
+    availableStock: 65,
+    rating: 4.8,
+    reviewCount: 1400,
+    aliases: ['besan', 'chana besan', 'gram flour', 'chickpea flour'],
+    imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500',
+  },
+  {
+    name: 'Premium Maida (All-Purpose Flour)',
+    slug: 'premium-maida-flour-1kg',
+    description: 'Finely milled refined wheat flour for crisp samosas, bhature, and baking.',
+    category: 'GRAINS',
+    brand: 'Fortune',
+    subCategory: 'Whole Wheat Atta',
+    pricePaise: 4800, // ₹48.00
+    mrpPaise: 5800, // ₹58.00
+    packageSize: 1,
+    packageUnit: 'KG',
+    availableStock: 50,
+    rating: 4.7,
+    reviewCount: 890,
+    aliases: ['maida', 'refined flour', 'all purpose flour', 'maida flour'],
+    imageUrl: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=500',
+  },
+  {
+    name: 'Roasted Sooji / Rava (Semolina)',
+    slug: 'roasted-sooji-rava-500g',
+    description: 'Coarse durum wheat semolina roasted to golden perfection for halwa and upma.',
+    category: 'GRAINS',
+    brand: 'Fortune',
+    subCategory: 'Whole Wheat Atta',
+    pricePaise: 4500, // ₹45.00
+    mrpPaise: 5500, // ₹55.00
+    packageSize: 500,
+    packageUnit: 'G',
+    availableStock: 60,
+    rating: 4.8,
+    reviewCount: 740,
+    aliases: ['sooji', 'suji', 'rava', 'semolina'],
+    imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500',
+  },
+  {
+    name: 'Royal Aged Basmati Rice',
+    slug: 'royal-aged-basmati-rice-1kg',
+    description: 'Extra-long grain aromatic aged basmati rice for pulao and biryani.',
+    category: 'GRAINS',
+    brand: 'India Gate',
+    subCategory: 'Basmati Rice',
+    pricePaise: 14000, // ₹140.00
+    mrpPaise: 17500, // ₹175.00
+    packageSize: 1,
+    packageUnit: 'KG',
+    availableStock: 120,
+    rating: 4.9,
+    reviewCount: 3100,
+    aliases: ['chawal', 'biryani rice', 'basmati', 'pulao rice', 'rice', 'long grain rice'],
+    imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500',
   },
   {
     name: 'Thick Poha (Flattened Rice)',
@@ -627,7 +782,7 @@ export const SEED_PRODUCTS_DESI_KIRANA: SeedProductInput[] = [
     imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500',
   },
 
-  // ── PULSES & DALS ────────────────────────────────────────────────
+  // ── DALS & PULSES ────────────────────────────────────────────────
   {
     name: 'Unpolished Toor Dal',
     slug: 'unpolished-toor-dal-1kg',
@@ -679,6 +834,57 @@ export const SEED_PRODUCTS_DESI_KIRANA: SeedProductInput[] = [
     aliases: ['chana dal', 'bengal gram', 'split chickpeas', 'dal chana'],
     imageUrl: 'https://images.unsplash.com/photo-1514733670139-4d87a1941d55?w=500',
   },
+  {
+    name: 'Dhuli Urad Dal (White Split)',
+    slug: 'dhuli-urad-dal-1kg',
+    description: 'Husked split black gram dal for crispy medu vada, dosa batter, and dal makhani.',
+    category: 'PULSES',
+    brand: 'Tata Sampann',
+    subCategory: 'Toor & Moong Dal',
+    pricePaise: 14500, // ₹145.00
+    mrpPaise: 17000, // ₹170.00
+    packageSize: 1,
+    packageUnit: 'KG',
+    availableStock: 50,
+    rating: 4.8,
+    reviewCount: 920,
+    aliases: ['urad dal', 'white urad', 'urad dhuli', 'split black gram'],
+    imageUrl: 'https://images.unsplash.com/photo-1585994192701-f1a505c817ea?w=500',
+  },
+  {
+    name: 'Desi Kala Chana (Brown Chickpeas)',
+    slug: 'desi-kala-chana-1kg',
+    description: 'High-protein small brown chickpeas ideal for spicy sukha chana and prasad.',
+    category: 'PULSES',
+    brand: 'Tata Sampann',
+    subCategory: 'Toor & Moong Dal',
+    pricePaise: 10500, // ₹105.00
+    mrpPaise: 12500, // ₹125.00
+    packageSize: 1,
+    packageUnit: 'KG',
+    availableStock: 60,
+    rating: 4.8,
+    reviewCount: 1100,
+    aliases: ['kala chana', 'black chana', 'brown chickpeas', 'chana'],
+    imageUrl: 'https://images.unsplash.com/photo-1514733670139-4d87a1941d55?w=500',
+  },
+  {
+    name: 'Chitra Rajma (Himalayan Red Beans)',
+    slug: 'chitra-rajma-1kg',
+    description: 'Speckled Kashmiri rajma beans that melt in your mouth for iconic Rajma Chawal.',
+    category: 'PULSES',
+    brand: 'Tata Sampann',
+    subCategory: 'Toor & Moong Dal',
+    pricePaise: 18000, // ₹180.00
+    mrpPaise: 21500, // ₹215.00
+    packageSize: 1,
+    packageUnit: 'KG',
+    availableStock: 50,
+    rating: 4.9,
+    reviewCount: 1950,
+    aliases: ['rajma', 'red kidney beans', 'chitra rajma', 'rajma beans'],
+    imageUrl: 'https://images.unsplash.com/photo-1514733670139-4d87a1941d55?w=500',
+  },
 
   // ── OILS & GHEE ──────────────────────────────────────────────────
   {
@@ -715,8 +921,25 @@ export const SEED_PRODUCTS_DESI_KIRANA: SeedProductInput[] = [
     aliases: ['sarson tel', 'mustard oil', 'kachi ghani', 'cooking oil'],
     imageUrl: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=500',
   },
+  {
+    name: 'Fortune Sunlite Refined Sunflower Oil',
+    slug: 'fortune-sunflower-oil-1l',
+    description: 'Light, healthy refined sunflower oil enriched with vitamins A & D for daily cooking.',
+    category: 'OILS',
+    brand: 'Fortune',
+    subCategory: 'Mustard Oil',
+    pricePaise: 14500, // ₹145.00
+    mrpPaise: 17000, // ₹170.00
+    packageSize: 1,
+    packageUnit: 'L',
+    availableStock: 55,
+    rating: 4.7,
+    reviewCount: 1600,
+    aliases: ['sunflower oil', 'refined oil', 'cooking oil', 'tel'],
+    imageUrl: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=500',
+  },
 
-  // ── SPICES ───────────────────────────────────────────────────────
+  // ── SPICES & SALTS ───────────────────────────────────────────────
   {
     name: 'Whole Cumin Seeds (Jeera)',
     slug: 'whole-cumin-seeds-100g',
@@ -784,6 +1007,57 @@ export const SEED_PRODUCTS_DESI_KIRANA: SeedProductInput[] = [
     reviewCount: 1560,
     aliases: ['garam masala', 'khada masala', 'pulao masala', 'biryani masala', 'all spice blend'],
     imageUrl: 'https://images.unsplash.com/photo-1532336414038-cf19250c5757?w=500',
+  },
+  {
+    name: 'Tata Salt Vacuum Evaporated Iodized Salt',
+    slug: 'tata-salt-iodized-1kg',
+    description: 'Desh ka namak, vacuum evaporated pure white iodized salt for good health.',
+    category: 'SPICES',
+    brand: 'Tata Salt',
+    subCategory: 'Organic Staples',
+    pricePaise: 2800, // ₹28.00
+    mrpPaise: 3000, // ₹30.00
+    packageSize: 1,
+    packageUnit: 'KG',
+    availableStock: 120,
+    rating: 4.9,
+    reviewCount: 6500,
+    aliases: ['namak', 'salt', 'tata namak', 'iodized salt'],
+    imageUrl: 'https://images.unsplash.com/photo-1518110925495-5fe2fda0442c?w=500',
+  },
+  {
+    name: 'Pink Himalayan Rock Salt (Sendha Namak)',
+    slug: 'pink-himalayan-rock-salt-1kg',
+    description: 'Unrefined mineral-rich crushed rock salt ideal for daily cooking and fasting.',
+    category: 'SPICES',
+    brand: 'Tata Salt',
+    subCategory: 'Organic Staples',
+    pricePaise: 6500, // ₹65.00
+    mrpPaise: 8500, // ₹85.00
+    packageSize: 1,
+    packageUnit: 'KG',
+    availableStock: 80,
+    rating: 4.8,
+    reviewCount: 1800,
+    aliases: ['salt', 'sendha namak', 'rock salt', 'pink salt', 'namak'],
+    imageUrl: 'https://images.unsplash.com/photo-1518110925495-5fe2fda0442c?w=500',
+  },
+  {
+    name: 'Pure Raw Forest Honey',
+    slug: 'pure-raw-forest-honey-250g',
+    description: 'Unpasteurized wild multifloral organic honey straight from Himalayan hives.',
+    category: 'SPICES',
+    brand: 'Organic India',
+    subCategory: 'Organic Staples',
+    pricePaise: 19500, // ₹195.00
+    mrpPaise: 24000, // ₹240.00
+    packageSize: 250,
+    packageUnit: 'G',
+    availableStock: 40,
+    rating: 4.9,
+    reviewCount: 1200,
+    aliases: ['honey', 'shahad', 'madhu', 'raw honey', 'forest honey'],
+    imageUrl: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=500',
   },
 
   // ── SNACKS & DRY FRUITS ───────────────────────────────────────────
@@ -942,40 +1216,21 @@ export const SEED_PRODUCTS_DESI_KIRANA: SeedProductInput[] = [
     aliases: ['sweet corn', 'corn', 'frozen corn', 'bhutta', 'makai dana'],
     imageUrl: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=500',
   },
-
-  // ── ORGANICS & PANTRY ESSENTIALS ──────────────────────────────────
   {
-    name: 'Pure Raw Forest Honey',
-    slug: 'pure-raw-forest-honey-250g',
-    description: 'Unpasteurized wild multifloral organic honey straight from Himalayan hives.',
-    category: 'SPICES',
-    brand: 'Organic India',
-    subCategory: 'Organic Staples',
-    pricePaise: 19500, // ₹195.00
-    mrpPaise: 24000, // ₹240.00
-    packageSize: 250,
+    name: 'Maggi 2-Minute Masala Noodles (Pack of 4)',
+    slug: 'maggi-masala-noodles-4pack',
+    description: 'Classic Indian spice blend noodles made with quality roasted spices. 100% vegetarian.',
+    category: 'INSTANT_FROZEN_FOOD',
+    brand: 'Nestle Maggi',
+    subCategory: 'Frozen Veg',
+    pricePaise: 5600, // ₹56.00
+    mrpPaise: 6000, // ₹60.00
+    packageSize: 280,
     packageUnit: 'G',
-    availableStock: 40,
+    availableStock: 90,
     rating: 4.9,
-    reviewCount: 1200,
-    aliases: ['honey', 'shahad', 'madhu', 'raw honey', 'forest honey'],
-    imageUrl: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=500',
-  },
-  {
-    name: 'Pink Himalayan Rock Salt (Sendha Namak)',
-    slug: 'pink-himalayan-rock-salt-1kg',
-    description: 'Unrefined mineral-rich crushed rock salt ideal for daily cooking and fasting.',
-    category: 'SPICES',
-    brand: 'Tata Salt',
-    subCategory: 'Organic Staples',
-    pricePaise: 6500, // ₹65.00
-    mrpPaise: 8500, // ₹85.00
-    packageSize: 1,
-    packageUnit: 'KG',
-    availableStock: 80,
-    rating: 4.8,
-    reviewCount: 1800,
-    aliases: ['salt', 'sendha namak', 'rock salt', 'pink salt', 'namak'],
-    imageUrl: 'https://images.unsplash.com/photo-1518110925495-5fe2fda0442c?w=500',
+    reviewCount: 6800,
+    aliases: ['maggi', 'noodles', 'instant noodles', 'maggi masala', '2 minute noodles'],
+    imageUrl: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?w=500',
   },
 ];

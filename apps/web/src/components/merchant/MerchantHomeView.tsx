@@ -168,7 +168,7 @@ export const MerchantHomeView: React.FC<MerchantHomeViewProps> = ({
 
       return {
         id: o._id,
-        orderIdDisplay: o.orderNumber ? `#${o.orderNumber}` : `#${o._id.slice(-6).toUpperCase()}`,
+        orderIdDisplay: o.orderNumber ? `#${o.orderNumber}` : (o._id ? `#${String(o._id).slice(-6).toUpperCase()}` : '#NEW'),
         initials,
         customerName,
         itemsCount: `${itemCount} items`,

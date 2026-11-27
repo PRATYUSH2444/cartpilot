@@ -72,7 +72,7 @@ export const MerchantOrderDetailDrawer: React.FC<OrderDetailDrawerProps> = ({
   else if (order.status === 'OUT_FOR_DELIVERY' || order.status === 'DISPATCHED') nextActionLabel = 'Confirm Delivery';
   else if (order.status === 'DELIVERED') nextActionLabel = 'Order Completed';
 
-  const orderNum = order.orderNumber || order._id.slice(-6).toUpperCase();
+  const orderNum = order.orderNumber || (order._id ? String(order._id).slice(-6).toUpperCase() : 'NEW');
   const subtotalPaise = order.pricingSnapshot?.subtotalPaise || 0;
   const deliveryPaise = order.pricingSnapshot?.deliveryFeePaise || 0;
   const platformPaise = order.pricingSnapshot?.platformFeePaise || 0;

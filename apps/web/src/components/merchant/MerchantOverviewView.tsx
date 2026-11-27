@@ -422,7 +422,7 @@ export const MerchantOverviewView: React.FC<OverviewViewProps> = ({
                     },
                   ]
               ).map((o, idx) => {
-                const orderId = o.orderNumber || o._id.slice(-6).toUpperCase();
+                const orderId = o.orderNumber || (o._id ? String(o._id).slice(-6).toUpperCase() : 'NEW');
                 const totalPaise = o.pricingSnapshot?.totalPaise || 62800;
                 const status = o.status || 'CONFIRMED';
                 const customerNames = ['Priya Sharma', 'Amit Kumar', 'Sneha Reddy', 'Vikram Singh'];

@@ -143,7 +143,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                     : 'bg-[--surface-2] text-[--mut] hover:text-[--ink]'
                 }`}
               >
-                {f.charAt(0) + f.slice(1).toLowerCase()}
+                {f ? (f.charAt(0) + f.slice(1).toLowerCase()) : ''}
               </button>
             ))}
           </div>

@@ -63,8 +63,8 @@ export const MerchantNotificationsDrawer: React.FC<NotificationsDrawerProps> = (
         id: `notif-order-${order._id}`,
         type: 'order',
         title: isNew
-          ? `New Order #${order.orderNumber || order._id.slice(-6).toUpperCase()}`
-          : `Order #${order.orderNumber || order._id.slice(-6).toUpperCase()} updated to ${order.status}`,
+          ? `New Order #${order.orderNumber || (order._id ? String(order._id).slice(-6).toUpperCase() : 'NEW')}`
+          : `Order #${order.orderNumber || (order._id ? String(order._id).slice(-6).toUpperCase() : 'NEW')} updated to ${order.status}`,
         description: `Customer order with ${order.items?.length || 1} items for ₹${(
           (order.pricingSnapshot?.totalPaise || 0) / 100
         ).toFixed(2)}`,

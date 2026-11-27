@@ -174,7 +174,7 @@ export const MerchantFulfilmentView: React.FC<FulfilmentViewProps> = ({
             {/* Orders Cards in this column */}
             <div className="flex-1 overflow-y-auto space-y-3 pt-3">
               {col.orders.map((o, idx) => {
-                const orderId = o.orderNumber || o._id.slice(-6).toUpperCase();
+                const orderId = o.orderNumber || (o._id ? String(o._id).slice(-6).toUpperCase() : 'NEW');
                 const totalPaise = o.pricingSnapshot?.totalPaise || 22900;
                 const itemsCount = o.items?.length || 2;
 

@@ -294,7 +294,7 @@ export const MerchantOrdersView: React.FC<OrdersViewProps> = ({
                 </tr>
               ) : (
                 filteredOrders.map((o) => {
-                  const orderId = o.orderNumber || o._id.slice(-6).toUpperCase();
+                  const orderId = o.orderNumber || (o._id ? String(o._id).slice(-6).toUpperCase() : 'NEW');
                   const totalPaise = o.pricingSnapshot?.totalPaise || 0;
                   const custName = (o.shippingAddressSnapshot as any)?.name || o.deliveryNote?.replace(/^Merchant direct order:? */, '') || 'Verified Customer';
                   const custPhone = (o.shippingAddressSnapshot as any)?.phone || 'Direct';
