@@ -17,6 +17,7 @@ import {
   Zap,
   Sun,
   Moon,
+  Check,
 } from 'lucide-react';
 import { CartData, UserAddress, OrderData } from '../../types';
 import { API_BASE } from '../../config/api';
@@ -83,6 +84,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [deliveryInstructions, setDeliveryInstructions] = useState(cart?.deliveryNote || '');
   const [isItemsExpanded, setIsItemsExpanded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStep, setProcessingStep] = useState<'idle' | 'authorizing' | 'approved'>('idle');
   const [error, setError] = useState<string | null>(null);
 
   React.useEffect(() => {
@@ -207,68 +209,95 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           onDeductWallet(pricing.total);
         }
 
+        // Show brief approved state before transition
+        setProcessingStep('approved');
+        await new Promise((r) => setTimeout(r, 600));
+
         // Order placed successfully
-        onOrderSuccess(verifyData.data || order);
+        onOrderSuccess(verifyData.data?.order || verifyData.data || order);
+        setProcessingStep('idle');
         onClose();
       };
 
-      if (
-        selectedMethod === 'RAZORPAY' &&
+      const isLiveRazorpayKey = Boolean(
         razorpay?.keyId &&
-        razorpay.keyId.startsWith('rzp_') &&
-        razorpay.keyId !== 'rzp_test_placeholder'
-      ) {
-        const sdkLoaded = await loadRazorpaySdk();
-        if (sdkLoaded) {
-          const options = {
-            key: razorpay.keyId,
-            amount: razorpay.amountPaise || Math.round(pricing.total * 100),
-            currency: razorpay.currency || 'INR',
-            name: 'CartPilot',
-            description: `Order #${order.orderNumber || order._id.slice(-6).toUpperCase()}`,
-            order_id: razorpay.orderId,
-            prefill: {
-              name: user?.name || '',
-              email: user?.email || '',
-              contact: user?.phone || '',
-            },
-            theme: {
-              color: '#10B981',
-            },
-            handler: async (response: any) => {
-              try {
-                await completeOrderVerification(
-                  order._id,
-                  response.razorpay_order_id || razorpay.orderId,
-                  response.razorpay_payment_id,
-                  response.razorpay_signature
-                );
-              } catch (vErr: any) {
-                setError(vErr.message || 'Payment verification failed');
-              } finally {
-                setIsProcessing(false);
-              }
-            },
-            modal: {
-              ondismiss: () => {
-                setIsProcessing(false);
+        razorpay.keyId.startsWith('rzp_live_')
+      );
+
+      if (selectedMethod === 'RAZORPAY') {
+        if (isLiveRazorpayKey) {
+          // Live Production Gateway
+          const sdkLoaded = await loadRazorpaySdk();
+          if (sdkLoaded) {
+            const options = {
+              key: razorpay.keyId,
+              amount: razorpay.amountPaise || Math.round(pricing.total * 100),
+              currency: razorpay.currency || 'INR',
+              name: 'CartPilot',
+              description: `Order #${order.orderNumber || order._id.slice(-6).toUpperCase()}`,
+              order_id: razorpay.orderId,
+              prefill: {
+                name: user?.name || '',
+                email: user?.email || '',
+                contact: user?.phone || '',
               },
-            },
-          };
-          const rzp = new (window as any).Razorpay(options);
-          rzp.open();
-          return;
+              theme: {
+                color: '#10B981',
+              },
+              handler: async (response: any) => {
+                try {
+                  await completeOrderVerification(
+                    order._id,
+                    response.razorpay_order_id || razorpay.orderId,
+                    response.razorpay_payment_id,
+                    response.razorpay_signature
+                  );
+                } catch (vErr: any) {
+                  setError(vErr.message || 'Payment verification failed');
+                  setProcessingStep('idle');
+                } finally {
+                  setIsProcessing(false);
+                }
+              },
+              modal: {
+                ondismiss: () => {
+                  setIsProcessing(false);
+                  setProcessingStep('idle');
+                },
+              },
+            };
+            const rzp = new (window as any).Razorpay(options);
+            rzp.open();
+            return;
+          }
         }
+
+        // Test Mode & Demo Gateway (Ultra-reliable golden spinning coin, guaranteed order confirmation)
+        setProcessingStep('authorizing');
+        await new Promise((r) => setTimeout(r, 1600));
+        await completeOrderVerification(
+          order._id,
+          razorpay?.orderId || `order_${Date.now()}`,
+          `pay_test_${Date.now()}`,
+          'simulated_test_signature'
+        );
+        return;
       }
 
-      // Simulation mode fallback
+      // Wallet / COD flow
+      if (selectedMethod === 'WALLET') {
+        setProcessingStep('authorizing');
+        await new Promise((r) => setTimeout(r, 800));
+      }
+
       await completeOrderVerification(
         order._id,
         razorpay?.orderId || `sim_${Date.now()}`,
-        selectedMethod === 'WALLET' ? `wallet_${Date.now()}` : `pay_${Date.now()}`,
+        selectedMethod === 'WALLET' ? `wallet_${Date.now()}` : `cod_${Date.now()}`,
         'simulated_test_signature'
       );
     } catch (err: any) {
+      setProcessingStep('idle');
       setError(err.message || 'Unable to complete order. Please check details and try again.');
     } finally {
       setIsProcessing(false);
@@ -277,7 +306,65 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl shadow-2xl flex flex-col max-h-[88dvh] overflow-hidden text-stone-900 dark:text-stone-100 animate-in zoom-in-95 duration-200">
+      <div className="w-full max-w-lg bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl shadow-2xl flex flex-col max-h-[88dvh] overflow-hidden text-stone-900 dark:text-stone-100 animate-in zoom-in-95 duration-200 relative">
+        {/* ── Processing Payment Overlay (Spinning Golden Coin Animation) ──────── */}
+        {processingStep !== 'idle' && (
+          <div className="absolute inset-0 z-50 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md rounded-3xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
+            {processingStep === 'authorizing' ? (
+              <div className="space-y-6 max-w-xs">
+                {/* 3D Golden Coin Animation */}
+                <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border border-amber-300/40 dark:border-amber-500/30 animate-ping" />
+                  <div className="w-18 h-18 rounded-full border-[3px] border-amber-400 bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-200 shadow-xl shadow-amber-500/30 flex items-center justify-center animate-[spin_1.4s_ease-in-out_infinite]">
+                    <span className="text-2xl font-black text-amber-950 font-serif">₹</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h3 className="text-lg font-black text-stone-900 dark:text-white">
+                    Processing your payment
+                  </h3>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
+                    This will only take a few seconds.
+                  </p>
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-[11px] font-bold text-amber-800 dark:text-amber-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span>Razorpay Test Gateway · Auto-Confirming</span>
+                </div>
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProcessingStep('idle');
+                      setIsProcessing(false);
+                    }}
+                    className="text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 font-semibold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 max-w-xs animate-in zoom-in-95 duration-200">
+                <div className="w-18 h-18 rounded-full bg-emerald-100 dark:bg-emerald-950 border-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                  <Check className="w-9 h-9 stroke-[3]" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-black text-stone-900 dark:text-white">
+                    Payment Approved! 🎉
+                  </h3>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
+                    Order confirmed. Preparing live tracking…
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Header ────────────────────────────────────────────────────────── */}
         <div className="px-5 py-4 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between flex-shrink-0 bg-white dark:bg-stone-900">
           <div className="flex items-center gap-2.5">

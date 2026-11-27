@@ -79,6 +79,7 @@ export interface CartData {
   pricing: PricingBreakdown;
   itemCount: number;
   deliveryNote?: string;
+  deliverySlot?: string;
   deliveryEstimate?: CartDeliveryEstimate;
 }
 
@@ -231,6 +232,7 @@ export interface OrderData {
     postalCode: string;
   };
   deliveryNote?: string;
+  deliverySlot?: string;
   approvalSnapshot?: {
     approvalId: string;
     approvalHash: string;

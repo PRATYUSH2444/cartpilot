@@ -42,8 +42,8 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
                 Live Tracking
               </span>
             </h2>
-            <p className="text-[10px] text-[--mut] font-mono">
-              Estimated Delivery: 20 minutes from confirmation
+            <p className="text-[10px] text-[--mut] font-medium">
+              Scheduled Slot: {order.deliverySlot || 'Next-Day Morning Shift (6:00 AM – 9:00 AM)'}
             </p>
           </div>
           <div className="flex items-center gap-1">
