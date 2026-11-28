@@ -48,6 +48,7 @@ interface HomeScreenProps {
   onOpenWishlist?: () => void;
   onOpenNotifications?: () => void;
   unreadNotificationsCount?: number;
+  primaryNotificationType?: 'order' | 'wallet' | 'mandate' | 'catalog' | 'general';
   onOpenRules?: () => void;
 }
 
@@ -138,6 +139,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenWishlist,
   onOpenNotifications,
   unreadNotificationsCount = 0,
+  primaryNotificationType = 'general',
   onOpenRules,
 }) => {
   const deliveryWindow = getDeliveryWindowInfo();
@@ -238,13 +240,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <button
                 type="button"
                 onClick={onOpenNotifications || (() => onSelectTab('account'))}
-                className="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 flex items-center justify-center transition-colors relative cursor-pointer"
+                className="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 flex items-center justify-center transition-colors relative cursor-pointer overflow-visible"
                 title="Notifications"
                 aria-label="Notifications"
               >
                 <Bell className="w-4 h-4" />
                 {unreadNotificationsCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  <span
+                    className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white dark:border-stone-900 shadow-2xs ${
+                      primaryNotificationType === 'order'
+                        ? 'bg-emerald-500'
+                        : primaryNotificationType === 'wallet'
+                        ? 'bg-sky-500'
+                        : primaryNotificationType === 'mandate'
+                        ? 'bg-rose-500'
+                        : 'bg-purple-500'
+                    } animate-pulse`}
+                  />
                 )}
               </button>
 
@@ -253,15 +265,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 type="button"
                 data-tour="account"
                 onClick={onOpenProfile}
-                className="w-8 h-8 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shadow-xs cursor-pointer overflow-hidden border border-emerald-600/40"
+                className="relative w-8 h-8 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shadow-xs cursor-pointer border border-emerald-600/40 active:scale-95 overflow-visible"
                 title="Profile & Settings"
                 aria-label="Account"
               >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Account" className="w-full h-full object-cover" />
-                ) : (
-                  userInitial
-                )}
+                <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center bg-emerald-700">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Account" className="w-full h-full object-cover" />
+                  ) : (
+                    userInitial
+                  )}
+                </div>
               </button>
             </div>
           </div>

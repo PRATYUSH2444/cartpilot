@@ -432,6 +432,11 @@ export const ShopperWorkspace: React.FC = () => {
     return dynamicNotifications.filter((n: NotificationItem) => !n.read).length;
   }, [dynamicNotifications]);
 
+  const primaryNotificationType = useMemo<'order' | 'wallet' | 'mandate' | 'catalog' | 'general'>(() => {
+    const unread = dynamicNotifications.find((n: NotificationItem) => !n.read);
+    return unread ? unread.type : 'general';
+  }, [dynamicNotifications]);
+
   const handleMarkAllNotificationsRead = useCallback(() => {
     const allIds = dynamicNotifications.map((n: NotificationItem) => n.id);
     setReadNotificationIds(allIds);
@@ -1753,6 +1758,7 @@ export const ShopperWorkspace: React.FC = () => {
         walletBalance={walletBalance}
         favoritesCount={favorites.length}
         unreadNotificationsCount={unreadNotificationsCount}
+        primaryNotificationType={primaryNotificationType}
         isDark={isDark}
         onToggleTheme={toggleTheme}
       />
@@ -1830,6 +1836,7 @@ export const ShopperWorkspace: React.FC = () => {
               onOpenWishlist={() => setIsWishlistOpen(true)}
               onOpenNotifications={() => setIsNotificationsOpen(true)}
               unreadNotificationsCount={unreadNotificationsCount}
+              primaryNotificationType={primaryNotificationType}
               onOpenRules={() => setIsRulesSheetOpen(true)}
               onSelectProduct={(p) => {
                 setSelectedProduct(p);

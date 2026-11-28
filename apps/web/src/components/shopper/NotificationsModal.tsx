@@ -120,11 +120,24 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                   {getIcon(item.type)}
                 </div>
 
-                <div className="flex-1 min-w-0 space-y-0.5">
+                <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-extrabold text-xs text-stone-900 dark:text-white truncate">
-                      {item.title}
-                    </h4>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider font-mono border ${
+                        item.type === 'order'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                          : item.type === 'wallet'
+                          ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border-sky-300 dark:border-sky-800'
+                          : item.type === 'mandate'
+                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                          : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-300 dark:border-purple-800'
+                      }`}>
+                        {item.type === 'mandate' ? 'Security' : item.type === 'catalog' ? 'Store' : item.type}
+                      </span>
+                      <h4 className="font-extrabold text-xs text-stone-900 dark:text-white truncate">
+                        {item.title}
+                      </h4>
+                    </div>
                     <span className="text-[10px] text-stone-400 font-medium whitespace-nowrap">
                       {item.time}
                     </span>

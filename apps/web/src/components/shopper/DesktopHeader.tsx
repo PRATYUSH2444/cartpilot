@@ -19,6 +19,8 @@ import {
 import { TabKey } from './BottomTabBar';
 import { CartData, UserAddress } from '../../types';
 
+export type NotificationType = 'order' | 'wallet' | 'mandate' | 'catalog' | 'general';
+
 interface DesktopHeaderProps {
   activeTab: TabKey;
   onSelectTab: (tab: TabKey, categoryId?: string) => void;
@@ -30,6 +32,7 @@ interface DesktopHeaderProps {
   onOpenWallet: () => void;
   onOpenNotifications: () => void;
   unreadNotificationsCount?: number;
+  primaryNotificationType?: NotificationType;
   onOpenRules: () => void;
   onOpenOrders: () => void;
   onOpenProfile: () => void;
@@ -54,6 +57,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   onOpenWallet,
   onOpenNotifications,
   unreadNotificationsCount = 0,
+  primaryNotificationType = 'general',
   onOpenRules,
   onOpenOrders,
   onOpenProfile,
@@ -102,6 +106,40 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   const formattedWallet = new Intl.NumberFormat('en-IN', {
     maximumFractionDigits: 0,
   }).format(Math.round(walletBalance));
+
+  // Dynamic status tag styling based on notification category
+  const badgeConfig = {
+    order: {
+      bg: 'bg-emerald-500',
+      ping: 'bg-emerald-400',
+      tagBg: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+      label: 'Order',
+    },
+    mandate: {
+      bg: 'bg-rose-500',
+      ping: 'bg-rose-400',
+      tagBg: 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+      label: 'Security',
+    },
+    wallet: {
+      bg: 'bg-sky-500',
+      ping: 'bg-sky-400',
+      tagBg: 'bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300 border-sky-200 dark:border-sky-800',
+      label: 'Wallet',
+    },
+    catalog: {
+      bg: 'bg-purple-500',
+      ping: 'bg-purple-400',
+      tagBg: 'bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+      label: 'Store',
+    },
+    general: {
+      bg: 'bg-rose-500',
+      ping: 'bg-rose-400',
+      tagBg: 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+      label: 'Alert',
+    },
+  }[primaryNotificationType];
 
   return (
     <header className="hidden lg:block shrink-0 sticky top-0 z-40 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-b border-stone-200/80 dark:border-stone-800 shadow-2xs transition-colors duration-200">
@@ -186,7 +224,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           </button>
         </div>
 
-        {/* ── Right: Balanced, Consistent Action Controls (No disappearing loose icons) ── */}
+        {/* ── Right: Balanced, Consistent Action Controls ── */}
         <div className="flex items-center gap-2 xl:gap-2.5 flex-shrink-0">
           {/* Quick Nav Links Segmented Toggle */}
           <nav
@@ -292,30 +330,47 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
 
           {/* ── User Profile Control Hub (Consolidated Hamburger / Account Menu) ── */}
           <div className="relative" ref={profileMenuRef}>
+            {/* The outer button has relative and overflow-visible so the badge floats cleanly outside */}
             <button
               type="button"
               data-tour="account"
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-              className="w-9 h-9 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shadow-2xs cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition-all overflow-hidden border border-emerald-600/40 relative active:scale-95"
+              className="relative w-9 h-9 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shadow-2xs cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition-all border border-emerald-600/40 active:scale-95 overflow-visible"
               title={`${userName} (Account Controls & Settings)`}
               aria-label="Open profile and settings menu"
               aria-expanded={isProfileMenuOpen}
             >
-              {avatarUrl ? (
-                <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
-              ) : (
-                userInitial
-              )}
-              {/* Notification ping badge when unread alerts exist */}
+              {/* Inner Avatar Container: rounded-full overflow-hidden keeps the avatar image circular */}
+              <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center bg-emerald-700">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
+                ) : (
+                  userInitial
+                )}
+              </div>
+
+              {/* Floating Status Notification Tag (Positioned outside the avatar circle, never clipped) */}
               {unreadNotificationsCount > 0 && (
-                <span className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-stone-900 animate-pulse" />
+                <span
+                  className={`absolute -top-1 -right-1 z-30 flex items-center justify-center rounded-full border-2 border-white dark:border-stone-900 shadow-md transition-transform pointer-events-none ${
+                    unreadNotificationsCount > 1
+                      ? 'min-w-[18px] h-[18px] px-1 text-[10px] font-mono font-black text-white'
+                      : 'w-3.5 h-3.5'
+                  } ${badgeConfig.bg}`}
+                >
+                  {unreadNotificationsCount > 1 ? (
+                    unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount
+                  ) : (
+                    <span className={`w-1.5 h-1.5 rounded-full ${badgeConfig.ping} animate-ping opacity-75`} />
+                  )}
+                </span>
               )}
             </button>
 
             {/* Consolidated Dropdown Menu: Clean, Non-Repetitive, Premium UX */}
             {isProfileMenuOpen && (
               <div
-                className="absolute right-0 top-12 w-68 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-150 select-none"
+                className="absolute right-0 top-12 w-70 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-150 select-none"
               >
                 {/* User Header */}
                 <div className="px-4 py-3 border-b border-stone-100 dark:border-stone-800 flex items-center gap-3">
@@ -390,7 +445,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                     <span>Spending Mandates</span>
                   </button>
 
-                  {/* Notifications Center inside Control Hub */}
+                  {/* Notifications Center inside Control Hub with colorful tag */}
                   <button
                     type="button"
                     onClick={() => {
@@ -400,13 +455,30 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                     className="w-full px-4 py-2 flex items-center justify-between text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white font-medium cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-2.5">
-                      <Bell className="w-4 h-4 text-amber-500" />
+                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                        primaryNotificationType === 'order'
+                          ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400'
+                          : primaryNotificationType === 'wallet'
+                          ? 'bg-sky-100 dark:bg-sky-950/80 text-sky-600 dark:text-sky-400'
+                          : primaryNotificationType === 'mandate'
+                          ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400'
+                          : 'bg-purple-100 dark:bg-purple-950/80 text-purple-600 dark:text-purple-400'
+                      }`}>
+                        <Bell className="w-3.5 h-3.5" />
+                      </div>
                       <span>Notifications Center</span>
                     </div>
-                    {unreadNotificationsCount > 0 && (
-                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full font-mono">
-                        {unreadNotificationsCount}
-                      </span>
+                    {unreadNotificationsCount > 0 ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase border ${badgeConfig.tagBg}`}>
+                          {badgeConfig.label}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono text-white ${badgeConfig.bg}`}>
+                          {unreadNotificationsCount}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-stone-400 font-mono">0 new</span>
                     )}
                   </button>
 
