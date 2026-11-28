@@ -21,7 +21,7 @@ In your Vercel Dashboard, go to **Settings > Environment Variables** and configu
 |---|---|---|---|
 | `VITE_API_URL` | **Yes** | `https://cartpilot-api.onrender.com/api/v1` | Your deployed Render API service URL |
 | `VITE_CLERK_PUBLISHABLE_KEY` | **Yes** | `pk_test_...` or `pk_live_...` | [Clerk Dashboard](https://dashboard.clerk.com) > API Keys |
-| `VITE_ADMIN_SUPPORT_EMAIL` | **Yes** | `prakash.extra20@gmail.com` | The administrator email address shown in the UI |
+| `VITE_PUBLIC_SUPPORT_EMAIL` | **Optional** | `support@cartpilot.app` | The official support email shown in the UI |
 
 ---
 
@@ -53,7 +53,7 @@ CartPilot supports **Brevo** or **Resend**. Choose at least one:
 3. Generate a new API Key (starts with `xkeysib-...`).
 4. Set in Render:
    - `BREVO_API_KEY`: `xkeysib-...`
-   - `SUPPORT_TO_EMAIL`: `prakash.extra20@gmail.com`
+   - `SUPPORT_TO_EMAIL`: `praka.extra28@gmail.com`
    - `SUPPORT_FROM_EMAIL`: `CartPilot Support <your-verified-brevo-sender@domain.com>`
 
 #### Option 2: Resend
@@ -61,7 +61,7 @@ CartPilot supports **Brevo** or **Resend**. Choose at least one:
 2. Go to **API Keys** and generate a key (starts with `re_...`).
 3. Set in Render:
    - `RESEND_API_KEY`: `re_...`
-   - `SUPPORT_TO_EMAIL`: `prakash.extra20@gmail.com`
+   - `SUPPORT_TO_EMAIL`: `praka.extra28@gmail.com`
    - `RESEND_FROM_EMAIL`: `CartPilot <onboarding@resend.dev>` (or your custom domain)
    - `SUPPORT_FROM_EMAIL`: `CartPilot Support <onboarding@resend.dev>`
 
@@ -88,7 +88,7 @@ CartPilot supports **Brevo** or **Resend**. Choose at least one:
 1. **User submits inquiry**: User selects a category (e.g. `📦 Order & Delivery`, `💳 Payment & Wallet`, `🥬 Item Quality`, `❓ General Question`) and enters their message in the Shopper portal (`/shopper`).
 2. **Instant MongoDB Persistence**: The backend validates the input (topic enum, message length 1–1000 chars, HTML sanitization, rate limit 5/hour per user) and immediately generates a unique ticket (e.g. `TICK-M1A2B-7F49`) saved in the `support_tickets` collection.
 3. **HTTPS API Dispatch**: The backend makes a direct HTTPS POST request to Brevo/Resend.
-   - **Recipient**: Fixed on the server to `SUPPORT_TO_EMAIL` (`prakash.extra20@gmail.com`).
+   - **Recipient**: Fixed on the server to `SUPPORT_TO_EMAIL` (`praka.extra28@gmail.com`).
    - **Reply-To**: Automatically populated with the customer's email address and name. When the admin clicks "Reply" in their email app (Gmail, Outlook, etc.), it directly addresses the customer!
 4. **Resilient Fallback**: If outbound email fails (e.g., temporary API downtime or invalid key), the ticket is saved with status `EMAIL_FAILED`, and the customer is still issued their valid ticket ID. No inquiries are ever dropped.
 5. **Zero SMTP**: Operates 100% cleanly on cloud platforms that restrict SMTP egress.

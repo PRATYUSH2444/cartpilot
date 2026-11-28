@@ -2,6 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../errors/app-error.js';
 import { logger } from '../logging/logger.js';
 import { env } from '../../config/env.config.js';
+import { emailAdapter } from '../../integrations/email/email-adapter.js';
+
+let lastAlertTimestamp = 0;
+const ALERT_THROTTLE_MS = 60 * 1000; // Throttle: At most 1 critical email alert every 60 seconds
 
 export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction): void {
   const isAppError = err instanceof AppError;
@@ -22,6 +26,28 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
       },
       'Server-side processing error'
     );
+
+    // Asynchronously dispatch system incident alert to the configured backend admin email (praka.extra28@gmail.com)
+    const now = Date.now();
+    if (now - lastAlertTimestamp > ALERT_THROTTLE_MS) {
+      lastAlertTimestamp = now;
+      emailAdapter
+        .sendSystemAlertEmail({
+          title: `HTTP 500: ${req.method} ${req.originalUrl}`,
+          message: err.message || 'An unexpected server exception was caught by errorHandler.',
+          level: 'ERROR',
+          stack: err.stack,
+          context: {
+            method: req.method,
+            url: req.originalUrl,
+            ip: req.ip,
+            requestId: (req as Request & { id?: string }).id,
+          },
+        })
+        .catch((alertErr) => {
+          logger.warn({ alertErr }, 'Failed to dispatch system incident alert email');
+        });
+    }
   } else {
     logger.warn(
       {

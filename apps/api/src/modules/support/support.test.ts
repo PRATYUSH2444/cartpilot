@@ -136,7 +136,7 @@ describe('SupportService & HttpsEmailService', () => {
           'https://api.resend.com/emails',
           expect.objectContaining({
             method: 'POST',
-            body: expect.stringContaining('"to":["prakash.extra20@gmail.com"]'),
+            body: expect.stringContaining(`"to":["${env.SUPPORT_TO_EMAIL || 'praka.extra28@gmail.com'}"]`),
           })
         );
         expect(mockFetch).toHaveBeenCalledWith(

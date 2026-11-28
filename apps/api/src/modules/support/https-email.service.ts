@@ -24,7 +24,7 @@ export class HttpsEmailService {
    * Completely avoids SMTP (Render free tier blocks ports 25, 465, 587).
    */
   async sendSupportNotification(params: SendSupportEmailParams): Promise<EmailDispatchResult> {
-    const adminToEmail = env.SUPPORT_TO_EMAIL || 'prakash.extra20@gmail.com';
+    const adminToEmail = env.SUPPORT_TO_EMAIL || 'praka.extra28@gmail.com';
     const fromEmail = env.SUPPORT_FROM_EMAIL || env.RESEND_FROM_EMAIL || 'CartPilot Support <onboarding@resend.dev>';
     const subject = `[CartPilot Support: ${params.topic}] Ticket #${params.ticketId} from ${params.name}`;
 

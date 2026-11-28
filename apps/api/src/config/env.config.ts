@@ -35,7 +35,7 @@ const envSchema = z
     RESEND_API_KEY: z.string().optional(),
     RESEND_FROM_EMAIL: z.string().default('CartPilot <onboarding@resend.dev>'),
     BREVO_API_KEY: z.string().optional(),
-    SUPPORT_TO_EMAIL: z.string().email().default('prakash.extra20@gmail.com'),
+    SUPPORT_TO_EMAIL: z.string().email().default('praka.extra28@gmail.com'),
     SUPPORT_FROM_EMAIL: z.string().default('CartPilot Support <onboarding@resend.dev>'),
 
     TWILIO_ACCOUNT_SID: z.string().optional(),

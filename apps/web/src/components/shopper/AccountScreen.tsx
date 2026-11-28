@@ -102,7 +102,10 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   const [supportError, setSupportError] = useState<string | null>(null);
   const [emailCopied, setEmailCopied] = useState(false);
 
-  const adminEmail = (import.meta.env.VITE_ADMIN_SUPPORT_EMAIL as string) || 'prakash.extra20@gmail.com';
+  const supportEmail =
+    (import.meta.env.VITE_PUBLIC_SUPPORT_EMAIL as string) ||
+    (import.meta.env.VITE_ADMIN_SUPPORT_EMAIL as string) ||
+    'support@cartpilot.app';
 
   const { authFetch, sendEmailVerification, verifyEmail: verifyEmailAction, setUserProfile } = useAuth();
 
@@ -917,7 +920,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
               </button>
             </div>
 
-            {/* Direct Admin Email Card */}
+            {/* CartPilot Official Support Desk Card */}
             <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center flex-shrink-0">
@@ -925,10 +928,10 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                    Direct Email Support
+                    CartPilot Support Desk
                   </p>
                   <p className="text-xs sm:text-sm font-semibold text-stone-900 dark:text-stone-100 truncate">
-                    {adminEmail}
+                    {supportEmail}
                   </p>
                 </div>
               </div>
@@ -937,12 +940,12 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText(adminEmail);
+                    navigator.clipboard.writeText(supportEmail);
                     setEmailCopied(true);
                     setTimeout(() => setEmailCopied(false), 2000);
                   }}
                   className="px-3 py-1.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs font-bold text-stone-700 dark:text-stone-200 hover:border-emerald-500 flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="Copy admin email"
+                  title="Copy support email"
                 >
                   {emailCopied ? (
                     <>
@@ -1048,7 +1051,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                     <span>Ticket #{supportTicketId} Created Successfully!</span>
                   </div>
                   <p className="text-[11.5px] text-emerald-700 dark:text-emerald-300/90 leading-relaxed">
-                    Your inquiry has been recorded and delivered to <strong>{adminEmail}</strong>. Our team will review your ticket and reply directly to <strong>{user?.email || 'your registered email'}</strong>.
+                    Your inquiry has been recorded and dispatched to the CartPilot Support Desk (<strong>{supportEmail}</strong>). Our team will review your ticket and reply directly to <strong>{user?.email || 'your registered contact'}</strong>.
                   </p>
                 </div>
               )}
