@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Plus, Minus, MessageSquare, Star, ShieldCheck, Sparkles, Heart } from 'lucide-react';
+import { X, Plus, Minus, Star, ShieldCheck, Sparkles, Heart } from 'lucide-react';
 import { Product, PopulatedCartItem } from '../../types';
 
 interface ProductSheetProps {
@@ -21,12 +21,7 @@ export const ProductSheet: React.FC<ProductSheetProps> = ({
   onUpdateQuantity,
   onViewInChat,
 }) => {
-  const [selectedQty, setSelectedQty] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
-
-  useEffect(() => {
-    setSelectedQty(1);
-  }, [product]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -168,71 +163,65 @@ export const ProductSheet: React.FC<ProductSheetProps> = ({
         </div>
 
         {/* Sticky Action Footer */}
-        <div className="p-4 border-t border-line bg-surface flex items-center gap-3">
-          {/* Stepper */}
-          <div className="flex items-center border border-line rounded-xl bg-surface-2 p-1">
-            <button
-              onClick={() => {
-                if (currentInCart > 0) {
-                  onUpdateQuantity(product._id, currentInCart - 1);
-                } else if (selectedQty > 1) {
-                  setSelectedQty((q) => q - 1);
-                }
-              }}
-              className="p-2 hover:bg-surface text-ink rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
-              aria-label="Decrease quantity"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-            <span className="font-mono text-sm font-bold text-ink px-3 min-w-[32px] text-center">
-              {currentInCart > 0 ? currentInCart : selectedQty}
-            </span>
-            <button
-              onClick={() => {
-                if (currentInCart > 0) {
-                  onUpdateQuantity(product._id, currentInCart + 1);
-                } else {
-                  setSelectedQty((q) => q + 1);
-                }
-              }}
-              disabled={(currentInCart > 0 ? currentInCart : selectedQty) >= product.availableStock}
-              className="p-2 hover:bg-surface text-ink rounded-lg transition-colors disabled:opacity-40 min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
-              aria-label="Increase quantity"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Main Action Button */}
+        <div className="p-4 border-t border-line bg-surface flex items-center gap-2.5">
+          {/* Main Cart Action: Dynamic Morph between Add to Cart & Interactive Stepper */}
           {currentInCart > 0 ? (
-            <button
-              onClick={() => onUpdateQuantity(product._id, currentInCart + 1)}
-              disabled={currentInCart >= product.availableStock}
-              className="flex-1 py-3 px-4 rounded-xl bg-brand hover:bg-brand-dark text-white font-heading font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
-            >
-              <span>Added to Cart ({currentInCart})</span>
-            </button>
+            <div className="flex-1 flex items-center justify-between border-2 border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl p-1 text-emerald-900 dark:text-emerald-200">
+              <button
+                type="button"
+                onClick={() => onUpdateQuantity(product._id, currentInCart - 1)}
+                className="w-9 h-9 rounded-xl bg-white dark:bg-stone-900 border border-emerald-300 dark:border-emerald-700/60 flex items-center justify-center text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer shadow-2xs active:scale-95"
+                aria-label="Decrease quantity"
+              >
+                <Minus className="w-4 h-4 stroke-[2.5]" />
+              </button>
+
+              <div className="flex flex-col items-center px-2">
+                <span className="font-heading font-extrabold text-xs sm:text-sm text-emerald-950 dark:text-white leading-tight">
+                  {currentInCart} in Cart
+                </span>
+                <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
+                  ₹{Math.round((product.pricePaise * currentInCart) / 100)} total
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onUpdateQuantity(product._id, currentInCart + 1)}
+                disabled={currentInCart >= product.availableStock}
+                className="w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center transition-colors disabled:opacity-40 cursor-pointer shadow-2xs active:scale-95"
+                aria-label="Increase quantity"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            </div>
           ) : (
             <button
-              onClick={() => onAddToCart(product._id, selectedQty)}
+              type="button"
+              onClick={() => onAddToCart(product._id, 1)}
               disabled={isOutOfStock}
-              className="flex-1 py-3 px-4 rounded-xl bg-brand hover:bg-brand-dark text-white font-heading font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-40 cursor-pointer"
+              className="flex-1 py-3 px-4 rounded-2xl bg-emerald-700 hover:bg-emerald-800 active:scale-[0.985] text-white font-heading font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-40 cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add to Cart · ₹{((product.pricePaise * selectedQty) / 100).toFixed(2)}</span>
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>
+                {isOutOfStock ? 'Out of Stock' : `Add to Cart · ₹${priceRupees}`}
+              </span>
             </button>
           )}
 
-          {/* View in chat button */}
+          {/* Ask AI about this item Button */}
           <button
+            type="button"
             onClick={() => {
               onClose();
               onViewInChat(product);
             }}
-            title="Ask AI about this item"
-            className="p-3 rounded-xl border border-line bg-surface-2 hover:bg-surface text-ink transition-colors cursor-pointer"
+            title="Ask AI Assistant for recipes and nutrition advice"
+            aria-label="Ask AI Assistant about this item"
+            className="px-3.5 py-3 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 flex items-center gap-1.5 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer shrink-0"
           >
-            <MessageSquare className="w-4 h-4 text-brand" />
+            <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400 stroke-[2.2]" />
+            <span className="hidden sm:inline">Ask AI</span>
           </button>
         </div>
       </div>

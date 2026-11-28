@@ -41,8 +41,8 @@ import { WalletModal } from '../../components/shopper/WalletModal';
 import { CouponsModal } from '../../components/shopper/CouponsModal';
 import { validateAndComputeCoupon } from '../../config/couponConfig';
 import { NotificationsModal } from '../../components/shopper/NotificationsModal';
+import { DynamicIsland } from '../../components/shopper/DynamicIsland';
 import { useScrollLock } from '../../hooks/useScrollLock';
-import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { updateCartOptimistically, calculateOptimisticPricing } from '../../utils/optimisticCart';
 
 interface ServerChatMessage {
@@ -900,6 +900,7 @@ export const ShopperWorkspace: React.FC = () => {
       setCart((prev) =>
         updateCartOptimistically(prev, prod || { _id: productId }, targetQty, user?.id || 'shopper')
       );
+      showBanner('success', `Added ${prod?.name || 'item'} to cart`);
 
       // 2. Debounce background synchronization (300ms)
       const existingTimer = debounceTimersRef.current.get(productId);
@@ -933,6 +934,7 @@ export const ShopperWorkspace: React.FC = () => {
       setCart((prev) =>
         updateCartOptimistically(prev, prod || { _id: productId }, targetQty, user?.id || 'shopper')
       );
+      showBanner('success', `Added ${prod?.name || 'item'} to cart`);
 
       // 2. Debounce background synchronization (300ms)
       const existingTimer = debounceTimersRef.current.get(productId);
@@ -1933,8 +1935,9 @@ export const ShopperWorkspace: React.FC = () => {
         onUpdateQuantity={handleUpdateQuantity}
         onViewInChat={(p) => {
           setIsProductSheetOpen(false);
-          setActiveMobileTab('chat');
-          setComposerText(`Tell me recipe ideas and nutrition for ${p.name}`);
+          handleTriggerCookingPrompt(
+            `Tell me recipe ideas, nutrition facts, and chef recommendations for ${p.name}`
+          );
         }}
       />
 
@@ -2016,37 +2019,15 @@ export const ShopperWorkspace: React.FC = () => {
         token={token}
       />
 
-      {/* ── Feedback Banner ───────────────────────────────────────────────── */}
-      {feedbackBanner && (
-        <div
-          role="status"
-          aria-live="polite"
-          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2.5 shadow-lg backdrop-blur-md transition-all animate-in fade-in duration-150 ${
-            feedbackBanner.type === 'success'
-              ? 'bg-[--brand-soft] border-[--go]/30 text-[--go]'
-              : 'bg-red-50 dark:bg-red-900/20 border-[--stop]/30 text-[--stop]'
-          }`}
-        >
-          {feedbackBanner.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-          ) : (
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          )}
-          <span className="flex-1">{feedbackBanner.message}</span>
-          {feedbackBanner.action && (
-            <button
-              type="button"
-              onClick={() => {
-                feedbackBanner.action?.onClick();
-                setFeedbackBanner(null);
-              }}
-              className="ml-1 px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-[11px] font-bold cursor-pointer transition-all shadow-2xs"
-            >
-              {feedbackBanner.action.label}
-            </button>
-          )}
-        </div>
-      )}
+      {/* ── Bottom Floating Dynamic Island (Unified Action Toasts & Proportional Cart Pill) ── */}
+      <DynamicIsland
+        notification={feedbackBanner}
+        onDismissNotification={() => setFeedbackBanner(null)}
+        cart={cart}
+        activeTab={activeMobileTab}
+        isAnyModalOpen={isAnyModalOpen}
+        onOpenCart={() => handleSelectTab('cart')}
+      />
     </div>
   );
 };

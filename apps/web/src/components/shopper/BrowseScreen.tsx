@@ -395,12 +395,6 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
     [cart]
   );
 
-  // Latest added item in cart for the floating pill
-  const latestCartItem = useMemo(() => {
-    if (!cart || !cart.items || cart.items.length === 0) return null;
-    return cart.items[cart.items.length - 1];
-  }, [cart]);
-
   // Format delivery slot text cleanly without 10-mins
   const formattedDeliverySlot = useMemo(() => {
     return selectedDeliverySlot === 'evening'
@@ -1291,47 +1285,6 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
           )}
         </div>
       </div>
-
-      {/* ── 4. Floating "View Cart" Bottom Pill ── */}
-      {cart && cart.items && cart.items.length > 0 && (
-        <div className="fixed bottom-[74px] lg:bottom-5 left-3 right-3 sm:left-6 sm:right-6 max-w-md mx-auto z-40 animate-slide-up">
-          <button
-            type="button"
-            onClick={onOpenCart}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.985] text-white px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-xl flex items-center justify-between transition-all border border-emerald-400/40 cursor-pointer"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              {latestCartItem?.imageUrl ? (
-                <img
-                  src={latestCartItem.imageUrl}
-                  alt={latestCartItem.name}
-                  className="w-10 h-10 rounded-xl object-cover bg-black/20 shrink-0 border border-white/20"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-xl bg-black/20 flex items-center justify-center shrink-0">
-                  <ShoppingBag className="w-5 h-5 text-white" />
-                </div>
-              )}
-              <div className="text-left min-w-0">
-                <p className="font-heading font-extrabold text-sm text-white leading-tight">
-                  {cart.itemCount} {cart.itemCount === 1 ? 'item' : 'items'} · ₹
-                  {Math.round((cart.pricing?.totalPaise ?? 0) / 100)}
-                </p>
-                <p className="text-[11px] text-emerald-100 font-medium truncate">
-                  {latestCartItem?.name
-                    ? `Added ${latestCartItem.name}`
-                    : 'Next-day delivery guaranteed'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 font-bold text-xs uppercase tracking-wider bg-white/20 px-3 py-1.5 rounded-xl shrink-0 backdrop-blur-xs">
-              <span>View Cart</span>
-              <ChevronRight className="w-4 h-4 stroke-[2.5]" />
-            </div>
-          </button>
-        </div>
-      )}
 
       {/* ── 5. Bottom Sheet: Comprehensive Filters Modal ── */}
       {isFilterSheetOpen && (
