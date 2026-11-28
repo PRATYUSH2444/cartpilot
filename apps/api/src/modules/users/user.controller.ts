@@ -84,4 +84,31 @@ export class UserController {
       next(err);
     }
   }
+
+  public static async markNotificationsRead(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { readIds } = req.body;
+      const updatedIds = await UserService.markNotificationsRead(
+        req.user!.userId,
+        Array.isArray(readIds) ? readIds : []
+      );
+
+      // Instantaneous real-time broadcast to all active sessions & devices of this user
+      const { realtimeService } = await import('../realtime/websocket.service.js');
+      realtimeService.emitNotificationsRead(req.user!.userId, updatedIds);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          readNotificationIds: updatedIds,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }

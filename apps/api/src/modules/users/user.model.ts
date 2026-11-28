@@ -46,6 +46,8 @@ export interface IUser extends Document {
   themePreference?: 'LIGHT' | 'DARK';
   hasSeenTour?: boolean;
   experienceRating?: number;
+  readNotificationIds?: string[];
+  lastNotificationReadAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -210,6 +212,14 @@ const UserSchema = new Schema<IUser>(
       min: 1,
       max: 5,
       default: undefined,
+    },
+    readNotificationIds: {
+      type: [String],
+      default: [],
+    },
+    lastNotificationReadAt: {
+      type: Date,
+      default: null,
     },
   },
   {

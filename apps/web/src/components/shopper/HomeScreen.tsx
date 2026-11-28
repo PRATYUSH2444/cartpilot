@@ -252,10 +252,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   )}
                 </div>
 
-                {/* Floating Status Notification Tag (Category-Aware) */}
+                {/* Floating Status Notification Indicator Dot (Category-aware, zero numbers) */}
                 {unreadNotificationsCount > 0 && (
                   <span
-                    className={`absolute -top-1 -right-1 translate-x-1/4 -translate-y-1/4 z-30 flex items-center justify-center rounded-full ring-2 ring-white dark:ring-stone-900 transition-transform pointer-events-none ${
+                    className={`absolute -top-1 -right-1 translate-x-1/4 -translate-y-1/4 z-30 w-3 h-3 rounded-full ring-2 ring-white dark:ring-stone-900 transition-all pointer-events-none ${
                       primaryNotificationType === 'order'
                         ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
                         : primaryNotificationType === 'wallet'
@@ -263,17 +263,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                         : primaryNotificationType === 'mandate'
                         ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'
                         : 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]'
-                    } ${
-                      unreadNotificationsCount > 1
-                        ? 'min-w-[16px] h-[16px] px-1 text-[9px] font-mono font-black text-white'
-                        : 'w-3 h-3'
                     }`}
                   >
-                    {unreadNotificationsCount > 1 ? (
-                      unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount
-                    ) : (
-                      <span className="w-1 h-1 rounded-full bg-white animate-ping opacity-75" />
-                    )}
+                    <span className="absolute inset-0 rounded-full bg-white animate-ping opacity-75" />
                   </span>
                 )}
               </button>

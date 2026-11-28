@@ -65,6 +65,7 @@ export class UserService {
       isPhoneVerified: Boolean(user.isPhoneVerified && user.phone),
       hasSeenTour: Boolean(user.hasSeenTour),
       experienceRating: user.experienceRating ?? null,
+      readNotificationIds: user.readNotificationIds || [],
       defaultAddress,
       createdAt: user.createdAt,
     };
@@ -200,5 +201,29 @@ export class UserService {
       bonusPaise: 0,
       currency: 'INR',
     };
+  }
+
+  public static async markNotificationsRead(
+    userId: string,
+    notificationIds: string[]
+  ): Promise<string[]> {
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const user = await UserModel.findById(userObjectId);
+    if (!user) {
+      throw new NotFoundError('User profile not found');
+    }
+
+    const existing = new Set<string>(user.readNotificationIds || []);
+    (notificationIds || []).forEach((id) => {
+      if (typeof id === 'string' && id.trim()) {
+        existing.add(id.trim());
+      }
+    });
+
+    user.readNotificationIds = Array.from(existing);
+    user.lastNotificationReadAt = new Date();
+    await user.save();
+
+    return user.readNotificationIds;
   }
 }

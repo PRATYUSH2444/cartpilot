@@ -161,6 +161,20 @@ export class RealtimeService {
       cart,
     });
   }
+
+  public emitNotificationsRead(userId: string, readNotificationIds: string[]): void {
+    this.emitToUser(userId, 'notifications:read', {
+      type: 'NOTIFICATIONS_READ',
+      readNotificationIds,
+    });
+  }
+
+  public emitNewNotification(userId: string, notification: any): void {
+    this.emitToUser(userId, 'notification:new', {
+      type: 'NEW_NOTIFICATION',
+      notification,
+    });
+  }
 }
 
 export const realtimeService = RealtimeService.getInstance();

@@ -29,14 +29,14 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
     setLocalItems(notifications);
   }, [notifications]);
 
-  if (!isOpen) return null;
-
-  const handleMarkAllRead = () => {
-    setLocalItems((prev) => prev.map((item) => ({ ...item, read: true })));
-    if (onMarkAllRead) {
+  // Automatically mark notifications as viewed when opened
+  React.useEffect(() => {
+    if (isOpen && onMarkAllRead) {
       onMarkAllRead();
     }
-  };
+  }, [isOpen, onMarkAllRead]);
+
+  if (!isOpen) return null;
 
   const getIcon = (type: NotificationItem['type']) => {
     switch (type) {
@@ -71,15 +71,10 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleMarkAllRead}
-              className="text-[11px] font-bold text-emerald-600 hover:underline cursor-pointer flex items-center gap-1"
-              title="Mark all as read"
-            >
-              <CheckCheck className="w-3.5 h-3.5" />
-              <span>Mark read</span>
-            </button>
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 select-none">
+              <CheckCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>All Viewed</span>
+            </span>
 
             <button
               type="button"

@@ -354,20 +354,12 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                 )}
               </div>
 
-              {/* Floating Status Notification Tag (Positioned outside the avatar circle, never clipped) */}
+              {/* Floating Status Notification Indicator Dot (Category-aware, luminous glow, zero numbers) */}
               {unreadNotificationsCount > 0 && (
                 <span
-                  className={`absolute -top-1 -right-1 translate-x-1/4 -translate-y-1/4 z-30 flex items-center justify-center rounded-full ring-2 ring-white dark:ring-stone-900 shadow-md transition-transform pointer-events-none ${badgeConfig.glow} ${
-                    unreadNotificationsCount > 1
-                      ? 'min-w-[18px] h-[18px] px-1 text-[10px] font-mono font-black text-white'
-                      : 'w-3.5 h-3.5'
-                  } ${badgeConfig.bg}`}
+                  className={`absolute -top-1 -right-1 translate-x-1/4 -translate-y-1/4 z-30 w-3 h-3 rounded-full ring-2 ring-white dark:ring-stone-900 shadow-md transition-all pointer-events-none ${badgeConfig.glow} ${badgeConfig.bg}`}
                 >
-                  {unreadNotificationsCount > 1 ? (
-                    unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount
-                  ) : (
-                    <span className={`w-1.5 h-1.5 rounded-full ${badgeConfig.ping} animate-ping opacity-75`} />
-                  )}
+                  <span className={`absolute inset-0 rounded-full ${badgeConfig.ping} animate-ping opacity-75`} />
                 </span>
               )}
             </button>

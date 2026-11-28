@@ -66,6 +66,7 @@ export interface AuthUserDTO {
   isMfaVerified?: boolean;
   experienceRating?: number;
   hasSeenTour?: boolean;
+  readNotificationIds?: string[];
 }
 
 export interface AuthResult {
@@ -390,6 +391,7 @@ export class AuthService {
         staffPermissions,
         mustChangePassword: user.mustChangePassword,
         isEmailVerified: user.isEmailVerified,
+        readNotificationIds: user.readNotificationIds || [],
       },
       accessToken,
       refreshToken,
@@ -583,6 +585,7 @@ export class AuthService {
         staffPermissions,
         mustChangePassword: user.mustChangePassword,
         isEmailVerified: user.isEmailVerified,
+        readNotificationIds: user.readNotificationIds || [],
       },
       accessToken,
       refreshToken: newRefreshToken,
@@ -1234,6 +1237,7 @@ export class AuthService {
       isEmailVerified: user.isEmailVerified,
       experienceRating: user.experienceRating,
       hasSeenTour: user.hasSeenTour,
+      readNotificationIds: user.readNotificationIds || [],
     };
   }
 
@@ -1314,6 +1318,7 @@ export class AuthService {
       isEmailVerified: user.isEmailVerified,
       experienceRating: user.experienceRating,
       hasSeenTour: user.hasSeenTour,
+      readNotificationIds: user.readNotificationIds || [],
     };
   }
 

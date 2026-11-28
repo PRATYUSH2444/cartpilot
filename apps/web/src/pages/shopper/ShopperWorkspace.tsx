@@ -42,6 +42,7 @@ import { WalletModal } from '../../components/shopper/WalletModal';
 import { CouponsModal } from '../../components/shopper/CouponsModal';
 import { validateAndComputeCoupon } from '../../config/couponConfig';
 import { NotificationsModal, NotificationItem } from '../../components/shopper/NotificationsModal';
+import { NotificationToast } from '../../components/shopper/NotificationToast';
 import { DynamicIsland } from '../../components/shopper/DynamicIsland';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { updateCartOptimistically, calculateOptimisticPricing } from '../../utils/optimisticCart';
@@ -312,6 +313,17 @@ export const ShopperWorkspace: React.FC = () => {
               lastConfirmedCartRef.current = msg.data.cart;
               setCart(msg.data.cart);
             }
+          } else if (msg.event === 'notifications:read' && msg.data?.readNotificationIds && isMounted) {
+            const incomingIds: string[] = msg.data.readNotificationIds;
+            setReadNotificationIds((prev) => {
+              const merged = Array.from(new Set([...prev, ...incomingIds]));
+              try {
+                localStorage.setItem(userReadNotificationsKey, JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
+          } else if (msg.event === 'notification:new' && msg.data?.notification && isMounted) {
+            setActiveToastNotification(msg.data.notification);
           }
         } catch {}
       };
@@ -356,24 +368,30 @@ export const ShopperWorkspace: React.FC = () => {
     }
   }, [userFavoritesKey]);
 
-  // Dynamic user-scoped notifications
+  // Dynamic user-scoped notifications with full multi-device database persistence
   const [readNotificationIds, setReadNotificationIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem(userReadNotificationsKey);
-      return saved ? JSON.parse(saved) : [];
+      const localIds = saved ? JSON.parse(saved) : [];
+      const serverIds = user?.readNotificationIds || [];
+      return Array.from(new Set([...localIds, ...serverIds]));
     } catch {
-      return [];
+      return user?.readNotificationIds || [];
     }
   });
 
+  // Re-sync whenever user profile loads from server (ensures Laptop and Phone match immediately)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(userReadNotificationsKey);
-      setReadNotificationIds(saved ? JSON.parse(saved) : []);
+      const localIds = saved ? JSON.parse(saved) : [];
+      const serverIds = user?.readNotificationIds || [];
+      const merged = Array.from(new Set([...localIds, ...serverIds]));
+      setReadNotificationIds(merged);
     } catch {
-      setReadNotificationIds([]);
+      setReadNotificationIds(user?.readNotificationIds || []);
     }
-  }, [userReadNotificationsKey]);
+  }, [userReadNotificationsKey, user?.readNotificationIds]);
 
   const dynamicNotifications = useMemo<NotificationItem[]>(() => {
     const list: NotificationItem[] = [];
@@ -452,7 +470,29 @@ export const ShopperWorkspace: React.FC = () => {
     try {
       localStorage.setItem(userReadNotificationsKey, JSON.stringify(allIds));
     } catch {}
-  }, [dynamicNotifications, userReadNotificationsKey]);
+
+    // Persist to backend database so all devices (Laptop, Phone, etc.) sync in real time
+    if (token) {
+      authFetch(`${API_BASE}/users/notifications/read`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ readIds: allIds }),
+      }).catch(() => {});
+    }
+  }, [dynamicNotifications, userReadNotificationsKey, token, authFetch]);
+
+  // Real-time humble bottom drawer toast popup for newly arriving notifications
+  const [activeToastNotification, setActiveToastNotification] = useState<NotificationItem | null>(null);
+  const seenToastIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    // Only popup for true unread notifications that haven't been shown in toast during this session
+    const unread = dynamicNotifications.find((n) => !n.read);
+    if (unread && !seenToastIdsRef.current.has(unread.id)) {
+      seenToastIdsRef.current.add(unread.id);
+      setActiveToastNotification(unread);
+    }
+  }, [dynamicNotifications]);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isCouponsOpen, setIsCouponsOpen] = useState(false);
@@ -2084,6 +2124,16 @@ export const ShopperWorkspace: React.FC = () => {
         onClose={() => setIsNotificationsOpen(false)}
         notifications={dynamicNotifications}
         onMarkAllRead={handleMarkAllNotificationsRead}
+      />
+
+      {/* ── Real-Time Bottom Drawer Notification Toast ─────────────────────── */}
+      <NotificationToast
+        notification={activeToastNotification}
+        onOpenNotifications={() => {
+          setIsNotificationsOpen(true);
+          setActiveToastNotification(null);
+        }}
+        onDismiss={() => setActiveToastNotification(null)}
       />
 
       {/* ── Live Tracking Modal (Screen 13) ─────────────────────────────────── */}
