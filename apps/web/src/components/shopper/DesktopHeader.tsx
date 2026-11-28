@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Leaf,
   MapPin,
@@ -67,6 +67,30 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   onToggleTheme,
 }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close profile dropdown on click outside or Escape key
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    if (isProfileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isProfileMenuOpen]);
 
   const cartCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) ?? (cart?.itemCount || 0);
   const addressTypeLabel = selectedAddress?.addressType || 'Delivery to';
@@ -80,15 +104,15 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   }).format(Math.round(walletBalance));
 
   return (
-    <header className="hidden lg:block shrink-0 sticky top-0 z-40 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-b border-stone-200/80 dark:border-stone-800 shadow-2xs">
-      <div className="page-container h-16 lg:h-18 flex items-center justify-between gap-3 lg:gap-4 xl:gap-6">
+    <header className="hidden lg:block shrink-0 sticky top-0 z-40 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-b border-stone-200/80 dark:border-stone-800 shadow-2xs transition-colors duration-200">
+      <div className="page-container h-16 lg:h-18 flex items-center justify-between gap-3 lg:gap-4 xl:gap-5">
         {/* ── Left: Brand Identity & Location Chip ── */}
-        <div className="flex items-center gap-3 xl:gap-5 flex-shrink-0">
+        <div className="flex items-center gap-3 xl:gap-4 flex-shrink-0">
           {/* Logo */}
           <button
             type="button"
             onClick={() => onSelectTab('home')}
-            className="flex items-center gap-2.5 cursor-pointer text-left group"
+            className="flex items-center gap-2.5 cursor-pointer text-left group select-none"
             aria-label="CartPilot Home"
           >
             <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-xl bg-emerald-700 flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform flex-shrink-0">
@@ -106,7 +130,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             type="button"
             data-tour="delivery-location"
             onClick={onOpenAddressModal}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-stone-850 hover:bg-stone-200/80 dark:hover:bg-stone-800 border border-stone-200 dark:border-stone-750 text-xs font-semibold text-stone-800 dark:text-stone-200 transition-all cursor-pointer max-w-[240px] xl:max-w-[320px] shadow-2xs"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-stone-850 hover:bg-stone-200/80 dark:hover:bg-stone-800 border border-stone-200 dark:border-stone-750 text-xs font-semibold text-stone-800 dark:text-stone-200 transition-all cursor-pointer max-w-[190px] xl:max-w-[260px] 2xl:max-w-[300px] shadow-2xs"
             title="Change Delivery Location"
           >
             <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-700 dark:text-emerald-400 flex-shrink-0">
@@ -130,7 +154,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
         </div>
 
         {/* ── Center: Clean Search Bar + Dedicated Standalone AI Assistant Button ── */}
-        <div className="flex-1 max-w-2xl min-w-0 flex items-center gap-2">
+        <div className="flex-1 max-w-xl xl:max-w-2xl min-w-0 flex items-center gap-2">
           {/* Search Input Box */}
           <div
             data-tour="search"
@@ -162,13 +186,13 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           </button>
         </div>
 
-        {/* ── Right: Priority-Collapsed Actions (Never overflows viewport) ── */}
-        <div className="flex items-center gap-2 xl:gap-3 flex-shrink-0">
-          {/* Quick Nav Links Segmented Toggle (Desktop View) with Smooth Sliding & Color Fill Animation */}
+        {/* ── Right: Balanced, Consistent Action Controls (No disappearing loose icons) ── */}
+        <div className="flex items-center gap-2 xl:gap-2.5 flex-shrink-0">
+          {/* Quick Nav Links Segmented Toggle */}
           <nav
             role="tablist"
             aria-label="Store navigation"
-            className="hidden lg:relative lg:inline-flex items-center p-1 rounded-full bg-stone-100 dark:bg-stone-800/80 border border-stone-200/90 dark:border-stone-700/70 shadow-2xs select-none"
+            className="relative inline-flex items-center p-1 rounded-full bg-stone-100 dark:bg-stone-800/80 border border-stone-200/90 dark:border-stone-700/70 shadow-2xs select-none"
           >
             {/* Sliding Pill Active Backdrop */}
             <span
@@ -211,11 +235,11 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             </button>
           </nav>
 
-          {/* Wishlist Button (Visible on xl: 1280px+) */}
+          {/* Wishlist Button */}
           <button
             type="button"
             onClick={onOpenWishlist}
-            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 text-xs font-bold transition-colors cursor-pointer relative"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 text-xs font-bold transition-colors cursor-pointer relative"
             title="Wishlist & Favorites"
           >
             <Heart
@@ -225,7 +249,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                   : 'text-stone-500 dark:text-stone-400'
               }`}
             />
-            <span>Wishlist</span>
+            <span className="hidden xl:inline">Wishlist</span>
             {favoritesCount > 0 && (
               <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-mono font-bold flex items-center justify-center">
                 {favoritesCount > 99 ? '99+' : favoritesCount}
@@ -233,7 +257,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             )}
           </button>
 
-          {/* Wallet Balance Chip (Always visible on Desktop) */}
+          {/* Wallet Balance Chip */}
           <button
             type="button"
             data-tour="wallet"
@@ -245,7 +269,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             <span>Wallet: ₹{formattedWallet}</span>
           </button>
 
-          {/* Cart Button with Count Badge (Always visible on Desktop) */}
+          {/* Cart Button with Count Badge */}
           <button
             type="button"
             data-tour="cart"
@@ -258,7 +282,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             title="View Cart"
           >
             <ShoppingBag className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden sm:inline">Cart</span>
+            <span>Cart</span>
             {cartCount > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-emerald-500 text-white text-[10px] font-mono font-bold min-w-[16px] text-center">
                 {cartCount > 99 ? '99+' : cartCount}
@@ -266,55 +290,36 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             )}
           </button>
 
-          {/* Notifications Bell (Visible on 2xl: 1440px+) */}
-          <button
-            type="button"
-            onClick={onOpenNotifications}
-            className="hidden 2xl:flex w-9 h-9 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white items-center justify-center transition-colors relative cursor-pointer"
-            title="Notifications"
-            aria-label="Notifications"
-          >
-            <Bell className="w-4 h-4" />
-            {unreadNotificationsCount > 0 && (
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-stone-800 animate-pulse" />
-            )}
-          </button>
-
-          {/* Theme Toggle (Visible on 2xl: 1440px+) */}
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            className="hidden 2xl:flex w-9 h-9 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white items-center justify-center transition-colors cursor-pointer"
-            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            aria-label="Toggle theme"
-          >
-            {isDark ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4" />}
-          </button>
-
-          {/* User Profile Avatar with Comprehensive Dropdown */}
-          <div className="relative">
+          {/* ── User Profile Control Hub (Consolidated Hamburger / Account Menu) ── */}
+          <div className="relative" ref={profileMenuRef}>
             <button
               type="button"
               data-tour="account"
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-              className="w-9 h-9 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shadow-2xs cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition-all overflow-hidden border border-emerald-600/40"
-              title={userName}
-              aria-label="Open profile menu"
+              className="w-9 h-9 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shadow-2xs cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition-all overflow-hidden border border-emerald-600/40 relative active:scale-95"
+              title={`${userName} (Account Controls & Settings)`}
+              aria-label="Open profile and settings menu"
+              aria-expanded={isProfileMenuOpen}
             >
               {avatarUrl ? (
                 <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
               ) : (
                 userInitial
               )}
+              {/* Notification ping badge when unread alerts exist */}
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-stone-900 animate-pulse" />
+              )}
             </button>
 
+            {/* Consolidated Dropdown Menu: Clean, Non-Repetitive, Premium UX */}
             {isProfileMenuOpen && (
               <div
-                onMouseLeave={() => setIsProfileMenuOpen(false)}
-                className="absolute right-0 top-12 w-64 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xl py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-150"
+                className="absolute right-0 top-12 w-68 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-150 select-none"
               >
-                <div className="px-4 py-2.5 border-b border-stone-100 dark:border-stone-800 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-700 text-white font-extrabold text-sm flex items-center justify-center overflow-hidden shrink-0 border border-stone-200 dark:border-stone-700">
+                {/* User Header */}
+                <div className="px-4 py-3 border-b border-stone-100 dark:border-stone-800 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-700 text-white font-extrabold text-sm flex items-center justify-center overflow-hidden shrink-0 border border-stone-200 dark:border-stone-700 shadow-inner">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
                     ) : (
@@ -322,24 +327,24 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-extrabold text-stone-900 dark:text-white truncate text-sm">
+                    <p className="font-extrabold text-stone-900 dark:text-white truncate text-sm leading-tight">
                       {userName}
                     </p>
-                    <p className="text-[11px] text-stone-400">Customer Account</p>
+                    <p className="text-[11px] text-stone-400 mt-0.5">Customer Account</p>
                   </div>
                 </div>
 
-                <div className="py-1">
+                <div className="py-1.5 space-y-0.5">
                   <button
                     type="button"
                     onClick={() => {
                       setIsProfileMenuOpen(false);
                       onOpenProfile();
                     }}
-                    className="w-full px-4 py-2 flex items-center gap-2.5 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 font-medium cursor-pointer"
+                    className="w-full px-4 py-2 flex items-center gap-2.5 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white font-medium cursor-pointer transition-colors"
                   >
                     <User className="w-4 h-4 text-stone-400" />
-                    <span>My Profile & Settings</span>
+                    <span>My Profile &amp; Settings</span>
                   </button>
 
                   <button
@@ -348,7 +353,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                       setIsProfileMenuOpen(false);
                       onOpenOrders();
                     }}
-                    className="w-full px-4 py-2 flex items-center gap-2.5 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 font-medium cursor-pointer"
+                    className="w-full px-4 py-2 flex items-center gap-2.5 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white font-medium cursor-pointer transition-colors"
                   >
                     <Package className="w-4 h-4 text-stone-400" />
                     <span>Order History</span>
@@ -360,14 +365,14 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                       setIsProfileMenuOpen(false);
                       onOpenWishlist();
                     }}
-                    className="w-full px-4 py-2 flex items-center justify-between text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 font-medium cursor-pointer"
+                    className="w-full px-4 py-2 flex items-center justify-between text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white font-medium cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-2.5">
                       <Heart className="w-4 h-4 text-rose-500" />
-                      <span>Wishlist & Favorites</span>
+                      <span>Wishlist &amp; Favorites</span>
                     </div>
                     {favoritesCount > 0 && (
-                      <span className="text-[10px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950 px-2 py-0.5 rounded-full font-mono">
                         {favoritesCount}
                       </span>
                     )}
@@ -379,47 +384,63 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                       setIsProfileMenuOpen(false);
                       onOpenRules();
                     }}
-                    className="w-full px-4 py-2 flex items-center gap-2.5 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 font-medium cursor-pointer"
+                    className="w-full px-4 py-2 flex items-center gap-2.5 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white font-medium cursor-pointer transition-colors"
                   >
                     <Shield className="w-4 h-4 text-purple-600" />
                     <span>Spending Mandates</span>
                   </button>
 
+                  {/* Notifications Center inside Control Hub */}
                   <button
                     type="button"
                     onClick={() => {
                       setIsProfileMenuOpen(false);
                       onOpenNotifications();
                     }}
-                    className="w-full px-4 py-2 flex items-center gap-2.5 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 font-medium cursor-pointer"
+                    className="w-full px-4 py-2 flex items-center justify-between text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white font-medium cursor-pointer transition-colors"
                   >
-                    <Bell className="w-4 h-4 text-amber-600" />
-                    <span>Notifications Center</span>
+                    <div className="flex items-center gap-2.5">
+                      <Bell className="w-4 h-4 text-amber-500" />
+                      <span>Notifications Center</span>
+                    </div>
+                    {unreadNotificationsCount > 0 && (
+                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full font-mono">
+                        {unreadNotificationsCount}
+                      </span>
+                    )}
                   </button>
 
+                  {/* Dark & Light Theme Switcher inside Control Hub */}
                   <button
                     type="button"
                     onClick={() => {
                       onToggleTheme();
                     }}
-                    className="w-full px-4 py-2 flex items-center justify-between text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 font-medium cursor-pointer"
+                    className="w-full px-4 py-2 flex items-center justify-between text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-white font-medium cursor-pointer transition-colors group"
                   >
                     <div className="flex items-center gap-2.5">
-                      {isDark ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-stone-400" />}
+                      {isDark ? (
+                        <Sun className="w-4 h-4 text-amber-500 group-hover:rotate-45 transition-transform" />
+                      ) : (
+                        <Moon className="w-4 h-4 text-stone-400 group-hover:-rotate-12 transition-transform" />
+                      )}
                       <span>{isDark ? 'Light Theme' : 'Dark Theme'}</span>
                     </div>
-                    <span className="text-[10px] text-stone-400">Toggle</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700">
+                      Toggle
+                    </span>
                   </button>
                 </div>
 
-                <div className="pt-1 border-t border-stone-100 dark:border-stone-800">
+                {/* Sign Out Action */}
+                <div className="pt-1.5 mt-1 border-t border-stone-100 dark:border-stone-800">
                   <button
                     type="button"
                     onClick={() => {
                       setIsProfileMenuOpen(false);
                       onLogout();
                     }}
-                    className="w-full px-4 py-2 flex items-center gap-2.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 font-bold cursor-pointer"
+                    className="w-full px-4 py-2 flex items-center gap-2.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 font-bold cursor-pointer transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Sign Out</span>
