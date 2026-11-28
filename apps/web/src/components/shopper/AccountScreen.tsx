@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, isPlaceholderEmail } from '../../context/AuthContext';
 import {
   ShoppingBag,
   MapPin,
@@ -44,6 +44,10 @@ interface AccountScreenProps {
     phone?: string;
     role?: string;
     isEmailVerified?: boolean;
+    isPhoneVerified?: boolean;
+    hasRealEmail?: boolean;
+    displayEmail?: string;
+    hasPhone?: boolean;
     experienceRating?: number;
   } | null;
   orders: OrderData[];
@@ -139,9 +143,10 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
 
     // 2. Update user state in AuthContext
     if (user && setUserProfile) {
+      const isPlaceholder = isPlaceholderEmail(user.email);
       setUserProfile({
         id: user.id || 'usr_current',
-        email: user.email || 'shopper@cartpilot.local',
+        email: isPlaceholder ? '' : (user.email || ''),
         name: user.name || 'Shopper',
         role: (user.role as any) || 'CUSTOMER',
         ...user,
@@ -210,6 +215,10 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   }, [resendTimer]);
 
   const handleSendEmailCode = async () => {
+    if (!hasRealEmail) {
+      onOpenProfileModal();
+      return;
+    }
     setIsSendingCode(true);
     setVerifyMessage(null);
     const res = await sendEmailVerification();
@@ -245,7 +254,8 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
     (o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED' && o.status !== 'FAILED'
   ).length;
 
-  const displayName = user?.name || (user?.email ? user.email.split('@')[0] : 'Shopper');
+  const hasRealEmail = Boolean(user?.email && !isPlaceholderEmail(user.email));
+  const displayName = user?.name || (hasRealEmail && user?.email ? user.email.split('@')[0] : 'Shopper');
   const displayPhone = user?.phone || '';
   const displayLocality = selectedAddress
     ? selectedAddress.areaLocality || selectedAddress.apartmentStreet || selectedAddress.city
@@ -345,40 +355,59 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                       <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 font-medium truncate">
                         <Smartphone className="w-3.5 h-3.5 flex-shrink-0 text-stone-400" />
                         <span className="truncate">{displayPhone}</span>
+                        {user?.isPhoneVerified && (
+                          <span className="text-[9px] font-bold text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded-full border border-emerald-300 dark:border-emerald-700">
+                            Verified
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <button
                         type="button"
                         onClick={onOpenProfileModal}
-                        className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer font-semibold"
+                        className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white cursor-pointer font-semibold group transition-colors"
                       >
-                        <Smartphone className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span>No phone linked</span>
-                        <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                          + Add
+                        <Smartphone className="w-3.5 h-3.5 flex-shrink-0 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-300" />
+                        <span className="text-stone-500 dark:text-stone-400">No phone linked</span>
+                        <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors">
+                          + Add Phone
                         </span>
                       </button>
                     )}
-                    <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 font-medium truncate">
-                      <Mail className="w-3.5 h-3.5 flex-shrink-0 text-stone-400" />
-                      <span className="truncate">{user?.email || 'shopper@cartpilot.local'}</span>
-                      {user?.isEmailVerified ? (
-                        <span className="text-[9px] font-bold text-stone-800 dark:text-stone-200 bg-stone-100 dark:bg-stone-800 px-1.5 py-0.2 rounded-full border border-stone-300 dark:border-stone-700">
-                          Verified
+                    {hasRealEmail ? (
+                      <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 font-medium truncate">
+                        <Mail className="w-3.5 h-3.5 flex-shrink-0 text-stone-400" />
+                        <span className="truncate">{user?.email}</span>
+                        {user?.isEmailVerified ? (
+                          <span className="text-[9px] font-bold text-stone-800 dark:text-stone-200 bg-stone-100 dark:bg-stone-800 px-1.5 py-0.2 rounded-full border border-stone-300 dark:border-stone-700">
+                            Verified
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEmailModalOpen(true);
+                              handleSendEmailCode();
+                            }}
+                            className="text-[9px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-1.5 py-0.2 rounded-full border border-amber-300 dark:border-amber-700 hover:underline cursor-pointer"
+                          >
+                            Verify
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={onOpenProfileModal}
+                        className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white cursor-pointer font-medium group transition-colors"
+                      >
+                        <Mail className="w-3.5 h-3.5 flex-shrink-0 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-300" />
+                        <span className="text-stone-500 dark:text-stone-400">No email linked</span>
+                        <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors">
+                          + Add Email
                         </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsEmailModalOpen(true);
-                            handleSendEmailCode();
-                          }}
-                          className="text-[9px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-1.5 py-0.2 rounded-full border border-amber-300 dark:border-amber-700 hover:underline cursor-pointer"
-                        >
-                          Verify
-                        </button>
-                      )}
-                    </div>
+                      </button>
+                    )}
                     <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 font-medium truncate">
                       <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-stone-400" />
                       <span className="truncate">{displayLocality}</span>

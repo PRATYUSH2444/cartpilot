@@ -7,6 +7,7 @@ import { NotFoundError, BadRequestError, UnauthorizedError } from '../../common/
 
 export interface UpdateProfileDTO {
   name?: string;
+  email?: string;
   phone?: string;
   avatarUrl?: string;
   dateOfBirth?: string | Date;
@@ -32,12 +33,24 @@ export class UserService {
       defaultAddress = await AddressModel.findOne({ userId: user._id, isDefault: true });
     }
 
+    const isSyntheticEmail = Boolean(
+      user.email &&
+      (user.email.endsWith('@cartpilot.local') ||
+       user.email.endsWith('@phone.cartpilot.com') ||
+       user.email.endsWith('.local') ||
+       user.email === 'shopper@cartpilot.local' ||
+       user.email.includes('@phone.'))
+    );
+
     return {
       id: user._id.toString(),
       email: user.email,
+      displayEmail: isSyntheticEmail ? '' : user.email,
+      hasRealEmail: !isSyntheticEmail,
       name: user.name,
       role: user.role,
       phone: user.phone || '',
+      hasPhone: Boolean(user.phone && user.phone.trim()),
       avatarUrl: user.avatarUrl || '',
       dateOfBirth: user.dateOfBirth,
       gender: user.gender,
@@ -48,8 +61,8 @@ export class UserService {
         push: true,
         inApp: true,
       },
-      isEmailVerified: user.isEmailVerified,
-      isPhoneVerified: user.isPhoneVerified,
+      isEmailVerified: user.isEmailVerified && !isSyntheticEmail,
+      isPhoneVerified: Boolean(user.isPhoneVerified && user.phone),
       hasSeenTour: Boolean(user.hasSeenTour),
       experienceRating: user.experienceRating ?? null,
       defaultAddress,
@@ -62,6 +75,24 @@ export class UserService {
     const user = await UserModel.findById(userObjectId);
     if (!user || !user.isActive || user.isSuspended) {
       throw new NotFoundError('User profile not found');
+    }
+
+    if (input.email !== undefined) {
+      const cleanEmail = input.email.trim().toLowerCase();
+      if (cleanEmail && !cleanEmail.endsWith('@cartpilot.local') && !cleanEmail.endsWith('@phone.cartpilot.com') && !cleanEmail.endsWith('.local')) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(cleanEmail)) {
+          throw new BadRequestError('Please enter a valid email address');
+        }
+        if (cleanEmail !== user.email.toLowerCase()) {
+          const conflict = await UserModel.findOne({ email: cleanEmail, _id: { $ne: user._id } });
+          if (conflict) {
+            throw new BadRequestError('This email is already associated with another account');
+          }
+          user.email = cleanEmail;
+          user.isEmailVerified = false;
+        }
+      }
     }
 
     if (input.name !== undefined) {

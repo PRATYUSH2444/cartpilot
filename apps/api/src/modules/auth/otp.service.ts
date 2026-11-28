@@ -223,15 +223,28 @@ export class OtpService {
     const { AuthService } = await import('./auth.service.js');
     const { accessToken, refreshToken } = await AuthService.createSessionTokens(user, context);
 
+    const isSyntheticEmail = Boolean(
+      user.email &&
+      (user.email.endsWith('@cartpilot.local') ||
+       user.email.endsWith('@phone.cartpilot.com') ||
+       user.email.endsWith('.local') ||
+       user.email === 'shopper@cartpilot.local' ||
+       user.email.includes('@phone.'))
+    );
+
     return {
       user: {
         id: user._id.toString(),
         email: user.email,
+        displayEmail: isSyntheticEmail ? '' : user.email,
+        hasRealEmail: !isSyntheticEmail,
         name: user.name,
         role: user.role,
         phone: user.phone,
+        hasPhone: Boolean(user.phone && user.phone.trim()),
         mustChangePassword: false,
-        isEmailVerified: user.isEmailVerified,
+        isEmailVerified: user.isEmailVerified && !isSyntheticEmail,
+        isPhoneVerified: Boolean(user.isPhoneVerified && user.phone),
       },
       accessToken,
       refreshToken,

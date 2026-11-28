@@ -53,11 +53,15 @@ export interface AuthUserDTO {
   name: string;
   role: UserRole;
   phone?: string;
+  hasPhone?: boolean;
   merchantId?: string;
   isStaff?: boolean;
   staffPermissions?: MerchantPermission[];
   mustChangePassword?: boolean;
   isEmailVerified?: boolean;
+  isPhoneVerified?: boolean;
+  hasRealEmail?: boolean;
+  displayEmail?: string;
   isMfaVerified?: boolean;
   experienceRating?: number;
   hasSeenTour?: boolean;
@@ -1413,6 +1417,18 @@ export class AuthService {
         message: 'Email is already verified',
         expiresInSeconds: 0,
       };
+    }
+
+    const isSyntheticEmail = Boolean(
+      user.email &&
+      (user.email.endsWith('@cartpilot.local') ||
+       user.email.endsWith('@phone.cartpilot.com') ||
+       user.email.endsWith('.local') ||
+       user.email === 'shopper@cartpilot.local' ||
+       user.email.includes('@phone.'))
+    );
+    if (isSyntheticEmail) {
+      throw new BadRequestError('Please link a valid email address to your account before requesting verification.');
     }
 
     // Generate 6-digit verification code

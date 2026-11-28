@@ -47,14 +47,35 @@ export interface UserProfile {
   name: string;
   role: UserRole;
   phone?: string;
+  hasPhone?: boolean;
   clerkUserId?: string;
   merchantId?: string;
   isStaff?: boolean;
   staffPermissions?: string[];
   mustChangePassword?: boolean;
   isEmailVerified?: boolean;
+  isPhoneVerified?: boolean;
+  hasRealEmail?: boolean;
+  displayEmail?: string;
   hasSeenTour?: boolean;
   experienceRating?: number;
+}
+
+/**
+ * Checks whether an email address is a synthetic or dummy placeholder
+ * generated for phone-only logins (e.g. 918093896133@cartpilot.local).
+ */
+export function isPlaceholderEmail(email?: string | null): boolean {
+  if (!email) return true;
+  const lower = email.toLowerCase().trim();
+  return (
+    lower === '' ||
+    lower.endsWith('@cartpilot.local') ||
+    lower.endsWith('@phone.cartpilot.com') ||
+    lower.endsWith('.local') ||
+    lower === 'shopper@cartpilot.local' ||
+    lower.includes('@phone.')
+  );
 }
 
 export interface AuthContextType {
@@ -558,17 +579,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await res.json();
       if (res.ok && data.success) {
         const accessToken = data.data.accessToken;
+        const isPlaceholder = isPlaceholderEmail(data.data.user.email);
         const profile: UserProfile = {
           id: data.data.user.id || data.data.user.userId,
           email: data.data.user.email,
+          displayEmail: isPlaceholder ? '' : data.data.user.email,
+          hasRealEmail: !isPlaceholder,
           name: data.data.user.name,
           role: data.data.user.role,
           phone: data.data.user.phone,
+          hasPhone: Boolean(data.data.user.phone && data.data.user.phone.trim()),
+          isPhoneVerified: Boolean(data.data.user.isPhoneVerified ?? true),
           merchantId: data.data.user.merchantId,
           isStaff: data.data.user.isStaff,
           staffPermissions: data.data.user.staffPermissions,
           mustChangePassword: data.data.user.mustChangePassword,
-          isEmailVerified: data.data.user.isEmailVerified,
+          isEmailVerified: Boolean(data.data.user.isEmailVerified && !isPlaceholder),
         };
 
         latestTokenRef.current = accessToken;
@@ -648,17 +674,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await res.json();
       if (res.ok && data.success) {
         const accessToken = data.data.accessToken;
+        const isPlaceholder = isPlaceholderEmail(data.data.user.email);
         const profile: UserProfile = {
           id: data.data.user.id || data.data.user.userId,
           email: data.data.user.email,
+          displayEmail: isPlaceholder ? '' : data.data.user.email,
+          hasRealEmail: !isPlaceholder,
           name: data.data.user.name,
           role: data.data.user.role,
           phone: data.data.user.phone,
+          hasPhone: Boolean(data.data.user.phone && data.data.user.phone.trim()),
+          isPhoneVerified: Boolean(data.data.user.isPhoneVerified ?? true),
           merchantId: data.data.user.merchantId,
           isStaff: data.data.user.isStaff,
           staffPermissions: data.data.user.staffPermissions,
           mustChangePassword: data.data.user.mustChangePassword,
-          isEmailVerified: data.data.user.isEmailVerified,
+          isEmailVerified: Boolean(data.data.user.isEmailVerified && !isPlaceholder),
         };
 
         latestTokenRef.current = accessToken;

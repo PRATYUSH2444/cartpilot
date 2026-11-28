@@ -406,6 +406,7 @@ export interface UserProfile {
   name: string;
   role: string;
   phone?: string;
+  hasPhone?: boolean;
   avatarUrl?: string;
   dateOfBirth?: string;
   gender?: UserGender;
@@ -413,6 +414,8 @@ export interface UserProfile {
   notificationPreferences: INotificationPreferences;
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
+  hasRealEmail?: boolean;
+  displayEmail?: string;
   defaultAddress?: UserAddress | null;
   createdAt: string;
 }

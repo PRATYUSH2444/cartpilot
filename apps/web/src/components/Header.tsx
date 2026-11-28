@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { DecisionLamp } from './DecisionLamp';
 import { LampStatus, CartData } from '../types';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, isPlaceholderEmail } from '../context/AuthContext';
 
 interface HeaderProps {
   cart?: CartData | null;
@@ -160,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {user.name}
                 </span>
                 <span className="text-[10px] text-mut block truncate max-w-[120px]">
-                  {user.email}
+                  {isPlaceholderEmail(user.email) ? (user.phone || 'Shopper') : user.email}
                 </span>
               </div>
             </Link>
