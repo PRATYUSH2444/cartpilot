@@ -420,7 +420,31 @@ export interface UserProfile {
   createdAt: string;
 }
 
+export interface DeliverySlotInfo {
+  id: string;
+  label: string;
+  cutoffTime: string;
+  startHour: number;
+  endHour: number;
+}
+
+export interface LocalityLabelInfo {
+  label: string;
+  subLabel: string;
+  locality: string;
+  city: string;
+  district: string;
+  state: string;
+  pincode: string;
+  lat?: number;
+  lng?: number;
+  source?: string;
+  placeId?: string;
+}
+
 export interface ServiceabilityInfo {
+  status: 'serviceable' | 'not_serviceable';
+  enforcement: 'off' | 'report_only' | 'on';
   isServiceable: boolean;
   pincode?: string;
   estimatedMinutes?: number;
@@ -428,6 +452,11 @@ export interface ServiceabilityInfo {
   freeDeliveryThresholdPaise?: number;
   message?: string;
   distanceKm?: number;
+  serviceAreaId?: string;
+  storeId?: string;
+  waitlistCount?: number;
+  demandCount?: number;
+  deliverySlots?: DeliverySlotInfo[];
   nearestMerchant?: {
     id: string;
     businessName: string;

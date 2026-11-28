@@ -825,7 +825,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                       {selectedAddress?.apartmentStreet ||
                         selectedAddress?.areaLocality ||
                         selectedAddress?.street ||
-                        'Lohia Nagar, Patna'}
+                        'Select Delivery Location'}
                     </span>
                     <ChevronDown className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   </button>

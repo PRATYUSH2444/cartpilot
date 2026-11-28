@@ -30,6 +30,7 @@ import { PhoneLoginModal } from '../../components/shopper/PhoneLoginModal';
 import { ProductSheet } from '../../components/shopper/ProductSheet';
 import { AddressModal } from '../../components/shopper/AddressModal';
 import { UnserviceableModal } from '../../components/shopper/UnserviceableModal';
+import { ComingSoonScreen } from '../../components/shopper/ComingSoonScreen';
 import { OrdersSheet } from '../../components/shopper/OrdersSheet';
 import { RulesSheet } from '../../components/shopper/RulesSheet';
 import { ProfileModal } from '../../components/shopper/ProfileModal';
@@ -110,7 +111,13 @@ export const ShopperWorkspace: React.FC = () => {
     isAddressModalOpen,
     openAddressModal,
     closeAddressModal,
+    serviceability,
+    currentLocation,
+    isCelebrationBannerVisible,
+    dismissCelebrationBanner,
   } = useLocation();
+
+  const [isExploringPreview, setIsExploringPreview] = useState(false);
 
   // Cart & Checkout configuration state
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountPaise: number } | null>(null);
@@ -1750,16 +1757,50 @@ export const ShopperWorkspace: React.FC = () => {
         onToggleTheme={toggleTheme}
       />
 
-      {/* ── Main Screen Viewport Switching ──────────────────────────────────── */}
-      <div
-        className={`flex-1 flex min-w-0 w-full relative ${
-          activeMobileTab === 'chat' || activeMobileTab === 'browse'
-            ? 'min-h-0 overflow-hidden'
-            : activeMobileTab === 'cart'
-              ? 'min-h-0 overflow-y-auto lg:overflow-hidden'
-              : ''
-        }`}
-      >
+      {/* ── Real-time Celebration Banner when area is activated live ───────── */}
+      {isCelebrationBannerVisible && (
+        <div className="bg-emerald-600 text-white px-4 py-2.5 text-xs font-bold flex items-center justify-between shadow-md z-50 animate-pulse">
+          <div className="flex items-center space-x-2">
+            <span>🎉</span>
+            <span>Great news! Farm-fresh delivery is now LIVE in {currentLocation?.label || 'your area'}!</span>
+          </div>
+          <button
+            onClick={dismissCelebrationBanner}
+            className="text-white hover:text-emerald-100 font-extrabold text-sm ml-4 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* ── Catalog Preview Mode Indicator Banner ──────────────────────────── */}
+      {isExploringPreview && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-500 px-4 py-2 text-xs font-semibold flex items-center justify-between z-40">
+          <span>👁️ Preview Mode: Browsing catalog for {currentLocation?.locality || 'your area'}. Deliveries opening soon!</span>
+          <button
+            onClick={() => setIsExploringPreview(false)}
+            className="underline text-amber-400 font-bold ml-2 cursor-pointer"
+          >
+            Return to Waitlist
+          </button>
+        </div>
+      )}
+
+      {/* ── Dynamic Serviceability Check: Full "Coming Soon" Experience or Store ── */}
+      {serviceability?.status === 'not_serviceable' &&
+      serviceability?.enforcement === 'on' &&
+      !isExploringPreview ? (
+        <ComingSoonScreen onExplorePreview={() => setIsExploringPreview(true)} />
+      ) : (
+        <div
+          className={`flex-1 flex min-w-0 w-full relative ${
+            activeMobileTab === 'chat' || activeMobileTab === 'browse'
+              ? 'min-h-0 overflow-hidden'
+              : activeMobileTab === 'cart'
+                ? 'min-h-0 overflow-y-auto lg:overflow-hidden'
+                : ''
+          }`}
+        >
         {/* Active Tab Screen */}
         <main
           className={`flex-1 flex flex-col min-w-0 w-full ${
@@ -1930,6 +1971,7 @@ export const ShopperWorkspace: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* ── Static Bottom 5-Destination Navigation Bar (Visible only on mobile/tablet) ────── */}
       <div

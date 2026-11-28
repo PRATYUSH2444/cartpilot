@@ -176,8 +176,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   const addressTypeLabel = selectedAddress?.addressType || 'Delivery to';
   const addressLocalityLabel = selectedAddress
-    ? `${selectedAddress.areaLocality || selectedAddress.apartmentStreet || 'Boring Road'}, ${selectedAddress.city || 'Patna'}`
-    : 'Boring Road, Patna';
+    ? `${selectedAddress.areaLocality || selectedAddress.apartmentStreet || selectedAddress.city || 'Delivery Point'}${selectedAddress.city ? ', ' + selectedAddress.city : ''}`
+    : 'Select Delivery Location';
 
   const bestSellers = products.slice(0, 10);
 

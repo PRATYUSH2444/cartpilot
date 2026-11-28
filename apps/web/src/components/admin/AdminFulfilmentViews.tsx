@@ -99,7 +99,7 @@ export const AdminTodayBoardView: React.FC<AdminFulfilmentViewsProps & { onNavig
               CartPilot Central Dark Store Hub
             </h2>
             <span className="text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-300 dark:border-zinc-700 px-2.5 py-0.5 rounded-full uppercase">
-              Patna Primary Facility #01
+              Dark-Store Fulfillment Hub #01
             </span>
           </div>
           <p className="text-xs text-mut">

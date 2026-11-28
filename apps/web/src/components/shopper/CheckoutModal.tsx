@@ -160,9 +160,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         body: JSON.stringify({
           shippingAddress: {
             street: selectedAddress.areaLocality || selectedAddress.apartmentStreet || selectedAddress.houseFlat || 'Address',
-            city: selectedAddress.city || 'Patna',
-            state: selectedAddress.state || 'Bihar',
-            postalCode: selectedAddress.pincode || '560001',
+            city: selectedAddress.city || '',
+            state: selectedAddress.state || '',
+            postalCode: selectedAddress.pincode || '',
           },
           deliveryNote: deliveryInstructions.trim() || undefined,
           deliverySlot: fullSlotString,
@@ -435,11 +435,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   {selectedAddress.isServiceable ? (
                     <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      Serviceable in Patna (Next-Day Slot)
+                      Serviceable (Next-Day Scheduled Delivery)
                     </span>
                   ) : (
                     <span className="text-[11px] font-bold text-amber-600 flex items-center gap-1">
-                      Outside Patna Delivery Radius
+                      Outside Active Delivery Radius
                     </span>
                   )}
                 </div>

@@ -1,6 +1,7 @@
 import { env } from '../../config/env.config.js';
 import { logger } from '../../common/logging/logger.js';
-import { MerchantModel } from '../merchants/merchant.model.js';
+import { GeocodeCacheModel } from './models.js';
+import { buildLocalityLabel } from './label-builder.js';
 
 export interface GeocodeResult {
   latitude: number;
@@ -15,7 +16,9 @@ export interface GeocodeResult {
   pincode?: string;
   country?: string;
   placeId?: string;
-  source: 'google' | 'openstreetmap';
+  source: 'google' | 'openstreetmap' | 'cache';
+  label?: string;
+  subLabel?: string;
 }
 
 export interface PlaceAutocompleteItem {
@@ -44,16 +47,34 @@ export interface ServiceabilityCheckResult {
 
 export class MapsService {
   /**
-   * Geocodes an address or location query into geographic coordinates.
+   * Geocodes an address, place name, or PIN code into geographic coordinates.
+   * Caches results in MongoDB with 30-day TTL to avoid repeated external API requests.
    */
   public static async geocode(query: string): Promise<GeocodeResult | null> {
     const cleanQuery = query.trim();
     if (!cleanQuery) return null;
 
+    const cacheKey = `geo:${cleanQuery.toLowerCase()}`;
+
+    // 0. Check TTL-indexed MongoDB cache
+    try {
+      const cached = await GeocodeCacheModel.findOne({ key: cacheKey }).lean();
+      if (cached && cached.normalisedResult) {
+        return {
+          ...(cached.normalisedResult as GeocodeResult),
+          source: 'cache',
+        };
+      }
+    } catch {
+      // Non-fatal cache lookup miss
+    }
+
+    let result: GeocodeResult | null = null;
+
     // 1. Google Maps Platform Geocoding API if configured
     if (env.GOOGLE_MAPS_API_KEY && env.GOOGLE_MAPS_API_KEY !== 'your_google_maps_key_here') {
       try {
-        const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cleanQuery)}&key=${env.GOOGLE_MAPS_API_KEY}`;
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cleanQuery)}&components=country:IN&key=${env.GOOGLE_MAPS_API_KEY}`;
         const res = await fetch(url);
         if (res.ok) {
           const data = (await res.json()) as any;
@@ -62,6 +83,8 @@ export class MapsService {
             const loc = first.geometry.location;
             const components = first.address_components || [];
 
+            let houseFlat = '';
+            let street = '';
             let locality = '';
             let city = '';
             let district = '';
@@ -70,7 +93,11 @@ export class MapsService {
             let country = 'India';
 
             components.forEach((c: any) => {
-              if (c.types.includes('sublocality') || c.types.includes('neighborhood')) locality = c.long_name;
+              if (c.types.includes('street_number')) houseFlat = c.long_name;
+              if (c.types.includes('route')) street = c.long_name;
+              if (c.types.includes('sublocality') || c.types.includes('neighborhood') || c.types.includes('sublocality_level_1')) {
+                locality = c.long_name;
+              }
               if (c.types.includes('locality')) city = c.long_name;
               if (c.types.includes('administrative_area_level_2')) district = c.long_name;
               if (c.types.includes('administrative_area_level_1')) state = c.long_name;
@@ -78,18 +105,37 @@ export class MapsService {
               if (c.types.includes('country')) country = c.long_name;
             });
 
-            return {
+            const labels = buildLocalityLabel(
+              {
+                houseFlat,
+                street,
+                locality,
+                city,
+                district,
+                state,
+                pincode,
+                country,
+                rawFormatted: first.formatted_address,
+              },
+              first.formatted_address
+            );
+
+            result = {
               latitude: loc.lat,
               longitude: loc.lng,
               formattedAddress: first.formatted_address,
-              locality: locality || city,
-              city: city || district || 'Patna',
-              district,
-              state: state || 'Bihar',
-              pincode,
+              houseFlat,
+              street,
+              locality: labels.locality,
+              city: labels.city,
+              district: labels.district,
+              state: labels.state,
+              pincode: labels.pincode,
               country,
               placeId: first.place_id,
               source: 'google',
+              label: labels.label,
+              subLabel: labels.subLabel,
             };
           }
         }
@@ -98,57 +144,108 @@ export class MapsService {
       }
     }
 
-    // 2. OpenStreetMap Nominatim (Open, reliable, zero secret required)
-    try {
-      const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanQuery + ', Patna, Bihar')}&format=json&addressdetails=1&limit=1`;
-      const res = await fetch(osmUrl, {
-        headers: {
-          'User-Agent': 'CartPilot-AgenticCommerce/1.0',
-        },
-      });
+    // 2. OpenStreetMap Nominatim with India country filter
+    if (!result) {
+      try {
+        const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanQuery)}&countrycodes=in&format=json&addressdetails=1&limit=1`;
+        const res = await fetch(osmUrl, {
+          headers: {
+            'User-Agent': 'CartPilot-AgenticCommerce/1.0',
+          },
+        });
 
-      if (res.ok) {
-        const list = (await res.json()) as any[];
-        if (list && list.length > 0) {
-          const item = list[0];
-          const addr = item.address || {};
-          return {
-            latitude: parseFloat(item.lat),
-            longitude: parseFloat(item.lon),
-            formattedAddress: item.display_name,
-            street: addr.road || addr.street,
-            locality: addr.suburb || addr.neighbourhood || addr.subdivision || addr.residential || 'Patna',
-            city: addr.city || addr.town || addr.village || 'Patna',
-            district: addr.county || addr.state_district || 'Patna',
-            state: addr.state || 'Bihar',
-            pincode: addr.postcode || '800001',
-            country: addr.country || 'India',
-            placeId: item.place_id?.toString(),
-            source: 'openstreetmap',
-          };
+        if (res.ok) {
+          const list = (await res.json()) as any[];
+          if (list && list.length > 0) {
+            const item = list[0];
+            const addr = item.address || {};
+            const locality = addr.suburb || addr.neighbourhood || addr.subdivision || addr.residential || addr.road || '';
+            const city = addr.city || addr.town || addr.village || addr.municipality || '';
+            const district = addr.county || addr.state_district || '';
+            const state = addr.state || '';
+            const pincode = addr.postcode || '';
+
+            const labels = buildLocalityLabel(
+              {
+                houseFlat: addr.house_number || addr.building,
+                street: addr.road || addr.street,
+                locality,
+                city,
+                district,
+                state,
+                pincode,
+                country: addr.country || 'India',
+                rawFormatted: item.display_name,
+              },
+              item.display_name
+            );
+
+            result = {
+              latitude: parseFloat(item.lat),
+              longitude: parseFloat(item.lon),
+              formattedAddress: item.display_name,
+              houseFlat: addr.house_number || addr.building || '',
+              street: addr.road || addr.street || '',
+              locality: labels.locality,
+              city: labels.city,
+              district: labels.district,
+              state: labels.state,
+              pincode: labels.pincode,
+              country: addr.country || 'India',
+              placeId: item.place_id?.toString(),
+              source: 'openstreetmap',
+              label: labels.label,
+              subLabel: labels.subLabel,
+            };
+          }
         }
+      } catch (err) {
+        logger.warn({ err, cleanQuery }, 'OpenStreetMap Nominatim geocoding failed');
       }
-    } catch (err) {
-      logger.warn({ err, cleanQuery }, 'OpenStreetMap Nominatim geocoding failed');
     }
 
-    // Default safe fallback if network offline (Patna Central)
-    return {
-      latitude: 25.5941,
-      longitude: 85.1376,
-      formattedAddress: `${cleanQuery}, Patna, Bihar`,
-      city: 'Patna',
-      state: 'Bihar',
-      pincode: '800001',
-      country: 'India',
-      source: 'openstreetmap',
-    };
+    // Cache valid result in MongoDB
+    if (result) {
+      try {
+        await GeocodeCacheModel.updateOne(
+          { key: cacheKey },
+          { $set: { normalisedResult: result, provider: result.source, createdAt: new Date() } },
+          { upsert: true }
+        );
+      } catch {
+        // Non-fatal cache write failure
+      }
+    }
+
+    return result;
   }
 
   /**
    * Reverse-geocodes latitude and longitude coordinates into a human-readable address.
+   * Returns locality-friendly labels with granular unit details (tower, flat, floor) stripped.
    */
   public static async reverseGeocode(lat: number, lng: number): Promise<GeocodeResult | null> {
+    if (isNaN(lat) || isNaN(lng)) return null;
+
+    // Cache key rounded to ~4 decimal places (~11m precision)
+    const latRounded = Math.round(lat * 10000) / 10000;
+    const lngRounded = Math.round(lng * 10000) / 10000;
+    const cacheKey = `rev:${latRounded},${lngRounded}`;
+
+    try {
+      const cached = await GeocodeCacheModel.findOne({ key: cacheKey }).lean();
+      if (cached && cached.normalisedResult) {
+        return {
+          ...(cached.normalisedResult as GeocodeResult),
+          source: 'cache',
+        };
+      }
+    } catch {
+      // Non-fatal cache lookup miss
+    }
+
+    let result: GeocodeResult | null = null;
+
     // 1. Google Maps Platform Reverse Geocoding if key configured
     if (env.GOOGLE_MAPS_API_KEY && env.GOOGLE_MAPS_API_KEY !== 'your_google_maps_key_here') {
       try {
@@ -172,7 +269,9 @@ export class MapsService {
             components.forEach((c: any) => {
               if (c.types.includes('street_number')) houseFlat = c.long_name;
               if (c.types.includes('route')) street = c.long_name;
-              if (c.types.includes('sublocality') || c.types.includes('neighborhood')) locality = c.long_name;
+              if (c.types.includes('sublocality') || c.types.includes('neighborhood') || c.types.includes('sublocality_level_1')) {
+                locality = c.long_name;
+              }
               if (c.types.includes('locality')) city = c.long_name;
               if (c.types.includes('administrative_area_level_2')) district = c.long_name;
               if (c.types.includes('administrative_area_level_1')) state = c.long_name;
@@ -180,20 +279,37 @@ export class MapsService {
               if (c.types.includes('country')) country = c.long_name;
             });
 
-            return {
+            const labels = buildLocalityLabel(
+              {
+                houseFlat,
+                street,
+                locality,
+                city,
+                district,
+                state,
+                pincode,
+                country,
+                rawFormatted: first.formatted_address,
+              },
+              first.formatted_address
+            );
+
+            result = {
               latitude: lat,
               longitude: lng,
               formattedAddress: first.formatted_address,
               houseFlat,
               street,
-              locality: locality || street || city,
-              city: city || district || 'Patna',
-              district,
-              state: state || 'Bihar',
-              pincode,
+              locality: labels.locality,
+              city: labels.city,
+              district: labels.district,
+              state: labels.state,
+              pincode: labels.pincode,
               country,
               placeId: first.place_id,
               source: 'google',
+              label: labels.label,
+              subLabel: labels.subLabel,
             };
           }
         }
@@ -203,60 +319,98 @@ export class MapsService {
     }
 
     // 2. OpenStreetMap Nominatim
-    try {
-      const osmUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`;
-      const res = await fetch(osmUrl, {
-        headers: {
-          'User-Agent': 'CartPilot-AgenticCommerce/1.0',
-        },
-      });
+    if (!result) {
+      try {
+        const osmUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`;
+        const res = await fetch(osmUrl, {
+          headers: {
+            'User-Agent': 'CartPilot-AgenticCommerce/1.0',
+          },
+        });
 
-      if (res.ok) {
-        const item = (await res.json()) as any;
-        if (item && item.lat && item.lon) {
-          const addr = item.address || {};
-          const locality = addr.suburb || addr.neighbourhood || addr.residential || addr.subdivision || addr.road || '';
-          const city = addr.city || addr.town || addr.village || addr.municipality || 'Patna';
-          const district = addr.county || addr.state_district || 'Patna';
-          const state = addr.state || 'Bihar';
-          const pincode = addr.postcode || '800001';
+        if (res.ok) {
+          const item = (await res.json()) as any;
+          if (item && item.lat && item.lon) {
+            const addr = item.address || {};
+            const locality = addr.suburb || addr.neighbourhood || addr.residential || addr.subdivision || addr.road || '';
+            const city = addr.city || addr.town || addr.village || addr.municipality || '';
+            const district = addr.county || addr.state_district || '';
+            const state = addr.state || '';
+            const pincode = addr.postcode || '';
 
-          return {
-            latitude: parseFloat(item.lat),
-            longitude: parseFloat(item.lon),
-            formattedAddress: item.display_name,
-            houseFlat: addr.house_number || addr.building || '',
-            street: addr.road || addr.street || '',
-            locality: locality || city,
-            city,
-            district,
-            state,
-            pincode,
-            country: addr.country || 'India',
-            placeId: item.place_id?.toString(),
-            source: 'openstreetmap',
-          };
+            const labels = buildLocalityLabel(
+              {
+                houseFlat: addr.house_number || addr.building,
+                street: addr.road || addr.street,
+                locality,
+                city,
+                district,
+                state,
+                pincode,
+                country: addr.country || 'India',
+                rawFormatted: item.display_name,
+              },
+              item.display_name
+            );
+
+            result = {
+              latitude: parseFloat(item.lat),
+              longitude: parseFloat(item.lon),
+              formattedAddress: item.display_name,
+              houseFlat: addr.house_number || addr.building || '',
+              street: addr.road || addr.street || '',
+              locality: labels.locality,
+              city: labels.city,
+              district: labels.district,
+              state: labels.state,
+              pincode: labels.pincode,
+              country: addr.country || 'India',
+              placeId: item.place_id?.toString(),
+              source: 'openstreetmap',
+              label: labels.label,
+              subLabel: labels.subLabel,
+            };
+          }
         }
+      } catch (err) {
+        logger.warn({ err, lat, lng }, 'Reverse geocoding failed');
       }
-    } catch (err) {
-      logger.warn({ err, lat, lng }, 'Reverse geocoding failed');
     }
 
-    // Return safe coordinates representation
-    return {
-      latitude: lat,
-      longitude: lng,
-      formattedAddress: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)} (Patna, Bihar)`,
-      city: 'Patna',
-      state: 'Bihar',
-      pincode: '800001',
-      country: 'India',
-      source: 'openstreetmap',
-    };
+    // Fallback if network offline or no place found
+    if (!result) {
+      result = {
+        latitude: lat,
+        longitude: lng,
+        formattedAddress: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
+        locality: 'Current Location',
+        city: '',
+        district: '',
+        state: '',
+        pincode: '',
+        country: 'India',
+        source: 'openstreetmap',
+        label: 'Current Location',
+        subLabel: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+      };
+    }
+
+    // Write to cache
+    try {
+      await GeocodeCacheModel.updateOne(
+        { key: cacheKey },
+        { $set: { normalisedResult: result, provider: result.source, createdAt: new Date() } },
+        { upsert: true }
+      );
+    } catch {
+      // Non-fatal cache write failure
+    }
+
+    return result;
   }
 
   /**
-   * Places typeahead autocomplete for quick address lookup.
+   * Autocomplete search for address and landmark suggestions across India
    */
   public static async autocomplete(query: string): Promise<PlaceAutocompleteItem[]> {
     const cleanQuery = query.trim();
@@ -269,23 +423,23 @@ export class MapsService {
         const res = await fetch(url);
         if (res.ok) {
           const data = (await res.json()) as any;
-          if (data.predictions && Array.isArray(data.predictions)) {
+          if (data.predictions && data.predictions.length > 0) {
             return data.predictions.map((p: any) => ({
               placeId: p.place_id,
               description: p.description,
-              mainText: p.structured_formatting?.main_text || p.description.split(',')[0],
+              mainText: p.structured_formatting?.main_text || p.description,
               secondaryText: p.structured_formatting?.secondary_text || '',
             }));
           }
         }
       } catch (err) {
-        logger.warn({ err }, 'Google Places autocomplete failed, falling back to OSM');
+        logger.warn({ err, cleanQuery }, 'Google Places autocomplete failed, falling back to OSM');
       }
     }
 
-    // 2. OpenStreetMap / Nominatim autocomplete fallback
+    // 2. OpenStreetMap Nominatim fallback
     try {
-      const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanQuery)}&format=json&addressdetails=1&countrycodes=in&limit=6`;
+      const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanQuery)}&countrycodes=in&format=json&addressdetails=1&limit=6`;
       const res = await fetch(osmUrl, {
         headers: {
           'User-Agent': 'CartPilot-AgenticCommerce/1.0',
@@ -294,9 +448,9 @@ export class MapsService {
 
       if (res.ok) {
         const list = (await res.json()) as any[];
-        if (Array.isArray(list)) {
+        if (list && list.length > 0) {
           return list.map((item) => {
-            const parts = (item.display_name || '').split(',');
+            const parts = item.display_name.split(',');
             const mainText = parts[0]?.trim() || item.name || cleanQuery;
             const secondaryText = parts.slice(1, 4).join(',').trim();
             return {
@@ -343,7 +497,7 @@ export class MapsService {
   }
 
   /**
-   * Haversine formula to compute great-circle distance between two geographic points in kilometers.
+   * Haversine formula to compute distance between two coordinates in kilometers.
    */
   public static calculateDistanceKm(
     lat1: number,
@@ -365,138 +519,41 @@ export class MapsService {
   }
 
   /**
-   * Calculates realistic quick-commerce delivery time in minutes based on distance.
-   */
-  public static estimateDeliveryMinutes(distanceKm: number): number {
-    // 8 mins store packing + 2.5 mins per km in urban traffic + 2 mins doorstep handoff
-    const estimated = Math.round(8 + distanceKm * 2.5 + 2);
-    return Math.max(12, Math.min(estimated, 45)); // Clamped between 12 and 45 mins
-  }
-
-  /**
-   * Centralized Delivery Radius & Serviceability Engine:
-   * Active delivery hub is centered in Patna, Bihar.
-   * Core delivery model: Order by midnight -> Next-day scheduled delivery (Morning 7-10 AM / Evening 5-9 PM).
+   * Compatibility wrapper for checking serviceability (delegates to dynamic database configuration)
    */
   public static async checkServiceability(
     customerLat?: number,
     customerLng?: number,
     pincode?: string
   ): Promise<ServiceabilityCheckResult> {
+    // Dynamically check against active service areas and stores
     try {
-      const merchants = await MerchantModel.find({
-        isActive: true,
-        status: 'APPROVED',
-      }).lean();
+      const { LocationService } = await import('./location.service.js');
+      const resolved = await LocationService.resolveLocation({
+        lat: customerLat,
+        lng: customerLng,
+        pincode,
+        source: 'manual',
+      });
 
-      // Standard central default hub for Patna, Bihar (Boring Road / Fraser Road Central Hub)
-      const DEFAULT_HUB = {
-        id: 'patna_central_hub_01',
-        businessName: 'CartPilot Central Fulfillment Hub (Patna)',
-        latitude: 25.5941,
-        longitude: 85.1376,
-        deliveryRadiusKm: 30, // 30 km radius covers all of Patna, Danapur, Patliputra, Kankarbagh, Phulwari Sharif, Patna City
-        serviceAreaPincodes: [
-          '800001', '800002', '800003', '800004', '800005', '800006', '800007',
-          '800008', '800009', '800010', '800011', '800012', '800013', '800014',
-          '800015', '800016', '800017', '800018', '800019', '800020', '800023',
-          '800024', '800025', '800026', '800027', '800028', '801503', '801105'
-        ],
-      };
-
-      const hubs =
-        merchants.length > 0
-          ? merchants.map((m) => ({
-              id: m._id.toString(),
-              businessName: m.businessName,
-              latitude: (m.address as any)?.latitude || DEFAULT_HUB.latitude,
-              longitude: (m.address as any)?.longitude || DEFAULT_HUB.longitude,
-              deliveryRadiusKm: m.deliverySettings?.deliveryRadiusKm || 30,
-              serviceAreaPincodes: m.serviceAreaPincodes?.length ? m.serviceAreaPincodes : DEFAULT_HUB.serviceAreaPincodes,
-            }))
-          : [DEFAULT_HUB];
-
-      // 1. Precise Coordinate Validation
-      if (
-        customerLat !== undefined &&
-        customerLng !== undefined &&
-        !isNaN(customerLat) &&
-        !isNaN(customerLng) &&
-        customerLat !== 0 &&
-        customerLng !== 0
-      ) {
-        let nearestHub = hubs[0] || DEFAULT_HUB;
-        let minDistanceKm = Infinity;
-
-        for (const hub of hubs) {
-          const dist = this.calculateDistanceKm(customerLat, customerLng, hub.latitude, hub.longitude);
-          if (dist < minDistanceKm) {
-            minDistanceKm = dist;
-            nearestHub = hub;
-          }
-        }
-
-        const isServiceable = minDistanceKm <= (nearestHub.deliveryRadiusKm || 30);
-        const deliveryFeePaise = minDistanceKm <= 5 ? 0 : 2900;
-
-        return {
-          isServiceable,
-          distanceKm: minDistanceKm,
-          estimatedMinutes: 0, // Quick-commerce time removed; Next-Day slot model active
-          deliveryFeePaise,
-          freeDeliveryThresholdPaise: 39900,
-          pincode,
-          nearestMerchant: {
-            id: nearestHub.id,
-            businessName: nearestHub.businessName,
-            distanceKm: minDistanceKm,
-          },
-          message: isServiceable
-            ? `Serviceable in Patna! Order before midnight for next-day delivery (Morning 7-10 AM / Evening 5-9 PM)`
-            : `Location is ${minDistanceKm} km from our Patna fulfillment hub. Currently serving Patna, Bihar — coming soon to your city! 🚀`,
-        };
-      }
-
-      // 2. PIN code lookup fallback
-      if (pincode) {
-        const cleanPin = pincode.trim();
-        const matched = hubs.some((h) => h.serviceAreaPincodes.includes(cleanPin));
-        const isPatnaPin = cleanPin.startsWith('800') || cleanPin.startsWith('801');
-
-        const isServiceable = Boolean(matched) || isPatnaPin;
-        const distanceKm = isServiceable ? 4.2 : 45.0;
-
-        return {
-          isServiceable,
-          distanceKm,
-          estimatedMinutes: 0,
-          deliveryFeePaise: 0,
-          freeDeliveryThresholdPaise: 39900,
-          pincode: cleanPin,
-          message: isServiceable
-            ? `PIN ${cleanPin} is serviceable in Patna! Next-day morning & evening slots available.`
-            : `PIN ${cleanPin} is outside our Patna delivery region. Expanding to your area soon! 🚀`,
-        };
-      }
-
-      // 3. Initial App Launch Default (Patna Central)
       return {
-        isServiceable: true,
-        distanceKm: 2.5,
+        isServiceable: resolved.serviceability.isServiceable,
+        distanceKm: resolved.serviceability.distanceKm || 0,
         estimatedMinutes: 0,
         deliveryFeePaise: 0,
         freeDeliveryThresholdPaise: 39900,
-        message: 'Active delivery in Patna, Bihar (Next-Day Morning & Evening Slots)',
+        pincode: resolved.location.pincode || pincode,
+        message: resolved.serviceability.message,
       };
-    } catch (err) {
-      logger.error({ err }, 'Error checking serviceability');
+    } catch {
+      // Safe fallback
       return {
         isServiceable: true,
-        distanceKm: 3.0,
+        distanceKm: 0,
         estimatedMinutes: 0,
         deliveryFeePaise: 0,
         freeDeliveryThresholdPaise: 39900,
-        message: 'Active delivery in Patna, Bihar (Next-Day Morning & Evening Slots)',
+        message: 'Delivery service operational',
       };
     }
   }

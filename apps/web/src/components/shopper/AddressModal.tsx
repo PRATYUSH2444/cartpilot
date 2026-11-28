@@ -57,9 +57,9 @@ const INITIAL_FORM: AddressFormData = {
   apartmentStreet: '',
   areaLocality: '',
   landmark: '',
-  city: 'Patna',
-  state: 'Bihar',
-  pincode: '800001',
+  city: '',
+  state: '',
+  pincode: '',
   addressType: 'HOME',
   deliveryInstructions: '',
   isDefault: false,
@@ -195,11 +195,11 @@ export const AddressModal: React.FC<AddressModalProps> = ({
           phone: user?.phone || '',
           houseFlat: detected.houseFlat && !detected.houseFlat.includes('Location') ? detected.houseFlat : '',
           apartmentStreet: detected.apartmentStreet || detected.areaLocality || '',
-          areaLocality: detected.areaLocality || 'Patna',
+          areaLocality: detected.areaLocality || '',
           landmark: detected.landmark || '',
-          city: detected.city || 'Patna',
-          state: detected.state || 'Bihar',
-          pincode: detected.pincode || '800001',
+          city: detected.city || '',
+          state: detected.state || '',
+          pincode: detected.pincode || '',
           latitude: detected.latitude,
           longitude: detected.longitude,
           isDefault: addresses.length === 0,
@@ -274,11 +274,11 @@ export const AddressModal: React.FC<AddressModalProps> = ({
           phone: user?.phone || '',
           houseFlat: '',
           apartmentStreet: item.mainText || geoData.street || geoData.locality || '',
-          areaLocality: geoData.locality || item.mainText || 'Patna',
+          areaLocality: geoData.locality || item.mainText || '',
           landmark: '',
-          city: geoData.city || 'Patna',
-          state: geoData.state || 'Bihar',
-          pincode: geoData.pincode || '800001',
+          city: geoData.city || '',
+          state: geoData.state || '',
+          pincode: geoData.pincode || '',
           latitude: lat,
           longitude: lng,
           isDefault: addresses.length === 0,
@@ -289,9 +289,9 @@ export const AddressModal: React.FC<AddressModalProps> = ({
           lng,
           formattedAddress: item.description || geoData.formattedAddress,
           locality: geoData.locality || item.mainText,
-          city: geoData.city || 'Patna',
-          state: geoData.state || 'Bihar',
-          pincode: geoData.pincode || '800001',
+          city: geoData.city || '',
+          state: geoData.state || '',
+          pincode: geoData.pincode || '',
           serviceability: serv,
         });
 
@@ -317,10 +317,10 @@ export const AddressModal: React.FC<AddressModalProps> = ({
       phone: user?.phone || '',
       houseFlat: '',
       apartmentStreet: pinnedLocation.locality || pinnedLocation.formattedAddress.split(',')[0] || '',
-      areaLocality: pinnedLocation.locality || 'Patna',
-      city: pinnedLocation.city || 'Patna',
-      state: pinnedLocation.state || 'Bihar',
-      pincode: pinnedLocation.pincode || '800001',
+      areaLocality: pinnedLocation.locality || '',
+      city: pinnedLocation.city || '',
+      state: pinnedLocation.state || '',
+      pincode: pinnedLocation.pincode || '',
       latitude: pinnedLocation.lat,
       longitude: pinnedLocation.lng,
       isDefault: addresses.length === 0,
@@ -472,11 +472,11 @@ export const AddressModal: React.FC<AddressModalProps> = ({
       phone: (formData.phone || user?.phone || '9999999999').trim(),
       houseFlat: formData.houseFlat.trim(),
       apartmentStreet: formData.apartmentStreet.trim(),
-      areaLocality: (formData.areaLocality || 'Patna').trim(),
+      areaLocality: (formData.areaLocality || '').trim(),
       landmark: formData.landmark.trim(),
-      city: (formData.city || 'Patna').trim(),
-      state: (formData.state || 'Bihar').trim(),
-      pincode: (formData.pincode || '800001').trim(),
+      city: (formData.city || '').trim(),
+      state: (formData.state || '').trim(),
+      pincode: (formData.pincode || '').trim(),
       addressType: formData.addressType,
       deliveryInstructions: formData.deliveryInstructions.trim(),
       latitude: formData.latitude,
@@ -577,9 +577,9 @@ export const AddressModal: React.FC<AddressModalProps> = ({
               </h2>
               <p className="text-[11px] text-stone-500 font-medium">
                 {viewState === 'LIST'
-                  ? 'Serving Patna, Bihar • Morning & Evening Delivery Slots'
+                  ? 'Scheduled Farm-Fresh Delivery • Morning & Evening Slots'
                   : viewState === 'PIN_PREVIEW'
-                  ? 'Review pin coordinates and Patna serviceability'
+                  ? 'Review pin coordinates and serviceability'
                   : 'Enter complete house & floor details'}
               </p>
             </div>
@@ -682,7 +682,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                       {isDetectingLocation ? 'Detecting Precise GPS Location…' : 'Use Current Location'}
                     </span>
                     <span className="text-[11px] text-emerald-100 font-medium block">
-                      Using device GPS • Accurate pin location in Patna
+                      Using live device GPS • High-accuracy multi-sample triangulation
                     </span>
                   </div>
                 </div>
@@ -716,7 +716,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   <Navigation className="w-10 h-10 mx-auto mb-2 text-emerald-600/40" />
                   <p className="font-bold text-xs text-stone-900 dark:text-white">No saved addresses yet</p>
                   <p className="text-[11px] text-stone-500 mt-1">
-                    Use your current location above or tap Add New to save your home address in Patna.
+                    Use your current location above or tap Add New to save your delivery address.
                   </p>
                 </div>
               ) : (
@@ -763,7 +763,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                             ) : (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-1">
                                 <ShieldAlert className="w-2.5 h-2.5" />
-                                Outside Patna
+                                Outside Area
                               </span>
                             )}
                           </div>
@@ -885,7 +885,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                     <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <span>Serviceable in Patna (Next-Day Slot)</span>
+                        <span>Serviceable (Next-Day Scheduled Delivery)</span>
                       </div>
                       <span className="font-mono text-white">
                         {pinnedLocation.serviceability.distanceKm} km from hub
@@ -895,7 +895,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                     <div className="flex items-center justify-between text-xs font-bold text-amber-400">
                       <div className="flex items-center gap-1.5">
                         <AlertCircle className="w-4 h-4 text-amber-400" />
-                        <span>Outside Patna Delivery Radius</span>
+                        <span>Outside Active Delivery Radius</span>
                       </div>
                       <span className="font-mono text-white">
                         {pinnedLocation.serviceability?.distanceKm} km

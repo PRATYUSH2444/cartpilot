@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { UserAddress, ServiceabilityInfo } from '../types';
+import { UserAddress, ServiceabilityInfo, LocalityLabelInfo } from '../types';
 import { API_BASE } from '../config/api';
 import { useAuth } from './AuthContext';
+import { LocationService } from '../services/LocationService';
 
 interface Coordinates {
   latitude: number;
@@ -10,20 +11,25 @@ interface Coordinates {
 
 export type LocationPermissionState = 'prompt' | 'granted' | 'denied' | 'unavailable';
 
-interface LocationContextType {
+export interface LocationContextType {
+  currentLocation: LocalityLabelInfo | null;
   currentCoordinates: Coordinates | null;
   selectedAddress: UserAddress | null;
   savedAddresses: UserAddress[];
   serviceability: ServiceabilityInfo | null;
   isDetectingLocation: boolean;
+  gpsAccuracyM: number | null;
   locationError: string | null;
   locationPermission: LocationPermissionState;
   isAddressModalOpen: boolean;
+  isCelebrationBannerVisible: boolean;
+  dismissCelebrationBanner: () => void;
   openAddressModal: () => void;
   closeAddressModal: () => void;
   detectCurrentLocation: () => Promise<UserAddress | null>;
   selectAddress: (address: UserAddress) => Promise<void>;
-  setManualLocation: (lat: number, lng: number, addressInfo?: Partial<UserAddress>) => Promise<UserAddress | null>;
+  setManualLocation: (latOrPin: number | string, lng?: number, addressInfo?: Partial<UserAddress>) => Promise<UserAddress | null>;
+  joinWaitlist: (email: string, phone?: string, consent?: boolean) => Promise<{ success: boolean; message: string; waitlistCount: number }>;
   refreshAddresses: () => Promise<void>;
 }
 
@@ -32,25 +38,7 @@ const LocationContext = createContext<LocationContextType | undefined>(undefined
 const STORAGE_KEY = 'cartpilot_selected_address';
 const COORDS_KEY = 'cartpilot_current_coords';
 const SAVED_ADDRS_KEY = 'cartpilot_saved_addresses';
-
-export const DEFAULT_PATNA_ADDRESS: UserAddress = {
-  _id: 'default_patna_address',
-  userId: 'guest',
-  fullName: 'Patna Resident',
-  phone: '',
-  houseFlat: 'Boring Road',
-  apartmentStreet: 'Near Boring Canal Road',
-  areaLocality: 'Boring Road',
-  landmark: 'Boring Road Crossing',
-  city: 'Patna',
-  state: 'Bihar',
-  pincode: '800001',
-  addressType: 'HOME',
-  latitude: 25.5941,
-  longitude: 85.1376,
-  isDefault: true,
-  isServiceable: true,
-};
+const CURRENT_LOC_KEY = 'cartpilot_current_locality';
 
 export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { authFetch, token, user } = useAuth();
@@ -58,91 +46,95 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [currentCoordinates, setCurrentCoordinates] = useState<Coordinates | null>(() => {
     try {
       const stored = localStorage.getItem(COORDS_KEY);
-      return stored ? JSON.parse(stored) : { latitude: 25.5941, longitude: 85.1376 };
+      return stored ? JSON.parse(stored) : null;
     } catch {
-      return { latitude: 25.5941, longitude: 85.1376 };
+      return null;
+    }
+  });
+
+  const [currentLocation, setCurrentLocation] = useState<LocalityLabelInfo | null>(() => {
+    try {
+      const stored = localStorage.getItem(CURRENT_LOC_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
     }
   });
 
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : DEFAULT_PATNA_ADDRESS;
+      return stored ? JSON.parse(stored) : null;
     } catch {
-      return DEFAULT_PATNA_ADDRESS;
+      return null;
     }
   });
 
   const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>(() => {
     try {
       const local = localStorage.getItem(SAVED_ADDRS_KEY);
-      return local ? JSON.parse(local) : [DEFAULT_PATNA_ADDRESS];
+      return local ? JSON.parse(local) : [];
     } catch {
-      return [DEFAULT_PATNA_ADDRESS];
+      return [];
     }
   });
+
   const [serviceability, setServiceability] = useState<ServiceabilityInfo | null>(null);
   const [isDetectingLocation, setIsDetectingLocation] = useState<boolean>(false);
+  const [gpsAccuracyM, setGpsAccuracyM] = useState<number | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationPermission, setLocationPermission] = useState<LocationPermissionState>('prompt');
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
+  const [isCelebrationBannerVisible, setIsCelebrationBannerVisible] = useState<boolean>(false);
 
-  // Check serviceability for coordinates or pincode
+  // Check serviceability directly against backend resolve endpoint
   const checkServiceability = useCallback(async (lat?: number, lng?: number, pincode?: string) => {
     try {
-      const res = await fetch(`${API_BASE}/location/serviceability`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latitude: lat, longitude: lng, pincode }),
+      const resolved = await LocationService.resolveLocation({
+        lat,
+        lng,
+        pincode,
+        source: lat && lng ? 'gps' : 'manual',
       });
-      const data = await res.json();
-      if (res.ok && data.success && data.data) {
-        setServiceability(data.data);
-        return data.data as ServiceabilityInfo;
+
+      setServiceability(resolved.serviceability);
+      if (resolved.location) {
+        setCurrentLocation(resolved.location);
+        localStorage.setItem(CURRENT_LOC_KEY, JSON.stringify(resolved.location));
       }
-    } catch (e) {
-      console.warn('Serviceability check failed:', e);
+      return resolved.serviceability;
+    } catch (e: any) {
+      console.warn('Serviceability resolve failed:', e);
+      return null;
     }
-    return null;
   }, []);
 
   // Fetch saved addresses from server if authenticated
   const refreshAddresses = useCallback(async () => {
     if (!token || !user || !authFetch) {
-      // Unauthenticated / guest session: safely load local cache and avoid 401 Unauthorized spam
       try {
         const local = localStorage.getItem(SAVED_ADDRS_KEY);
-        if (local) {
-          setSavedAddresses(JSON.parse(local));
-        } else {
-          setSavedAddresses([DEFAULT_PATNA_ADDRESS]);
-        }
+        if (local) setSavedAddresses(JSON.parse(local));
       } catch {}
       return;
     }
 
     try {
       const res = await authFetch(`${API_BASE}/addresses`);
-      if (res.status === 401) {
-        return; // Token expired or invalid; handled by AuthContext
-      }
       if (res.ok) {
         const data = await res.json();
         const addrs: UserAddress[] = data.data || [];
-        setSavedAddresses(addrs.length > 0 ? addrs : [DEFAULT_PATNA_ADDRESS]);
+        setSavedAddresses(addrs);
         try {
-          localStorage.setItem(SAVED_ADDRS_KEY, JSON.stringify(addrs.length > 0 ? addrs : [DEFAULT_PATNA_ADDRESS]));
+          localStorage.setItem(SAVED_ADDRS_KEY, JSON.stringify(addrs));
         } catch {}
 
-        // If no selected address yet, pick default or first
         if (!selectedAddress && addrs.length > 0) {
           const def = addrs.find((a) => a.isDefault) || addrs[0];
           if (def) {
             setSelectedAddress(def);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(def));
-            if (def.latitude && def.longitude) {
-              checkServiceability(def.latitude, def.longitude, def.pincode);
-            }
+            checkServiceability(def.latitude, def.longitude, def.pincode);
           }
         }
       }
@@ -151,7 +143,9 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [authFetch, token, user, selectedAddress, checkServiceability]);
 
-  // Automatic browser geolocation detection
+  /**
+   * Refined live browser geolocation using multi-sample watchPosition
+   */
   const detectCurrentLocation = useCallback(async (): Promise<UserAddress | null> => {
     if (typeof window === 'undefined' || !navigator.geolocation) {
       setLocationPermission('unavailable');
@@ -162,120 +156,127 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
     setIsDetectingLocation(true);
     setLocationError(null);
 
-    return new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          const coords = { latitude: lat, longitude: lng };
+    try {
+      // 1. Collect refined multi-sample GPS readings
+      const sample = await LocationService.getRefinedCoordinates((acc) => {
+        setGpsAccuracyM(Math.round(acc));
+      });
 
-          setCurrentCoordinates(coords);
-          setLocationPermission('granted');
-          localStorage.setItem(COORDS_KEY, JSON.stringify(coords));
+      const lat = sample.latitude;
+      const lng = sample.longitude;
+      const coords = { latitude: lat, longitude: lng };
 
-          try {
-            // 1. Reverse-geocode coordinates to readable address
-            const revRes = await fetch(`${API_BASE}/location/reverse-geocode?lat=${lat}&lng=${lng}`);
-            const revData = await revRes.json();
-            const geo = revData.data || {};
+      setCurrentCoordinates(coords);
+      setGpsAccuracyM(Math.round(sample.accuracyM));
+      setLocationPermission('granted');
+      localStorage.setItem(COORDS_KEY, JSON.stringify(coords));
 
-            // 2. Check real-time serviceability
-            const serv = await checkServiceability(lat, lng, geo.pincode);
+      // 2. Resolve via live API with clean locality label builder
+      const resolved = await LocationService.resolveLocation({
+        lat,
+        lng,
+        accuracyM: sample.accuracyM,
+        source: 'gps',
+      });
 
-            // 3. Assemble unified address object
-            const detectedAddress: UserAddress = {
-              _id: `gps_${Date.now()}`,
-              userId: user?.id || 'guest',
-              fullName: user?.name || 'Customer',
-              phone: user?.phone || '',
-              houseFlat: geo.houseFlat || 'Detected Location',
-              apartmentStreet: geo.street || geo.locality || 'Patna Area',
-              areaLocality: geo.locality || geo.city || 'Patna',
-              landmark: '',
-              city: geo.city || 'Patna',
-              state: geo.state || 'Bihar',
-              pincode: geo.pincode || '800001',
-              addressType: 'HOME',
-              latitude: lat,
-              longitude: lng,
-              isDefault: true,
-              isServiceable: serv?.isServiceable ?? true,
-            };
+      const loc = resolved.location;
+      const serv = resolved.serviceability;
 
-            setSelectedAddress(detectedAddress);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(detectedAddress));
-            setIsDetectingLocation(false);
-            resolve(detectedAddress);
-          } catch (err: any) {
-            console.error('Reverse geocode failed:', err);
-            setIsDetectingLocation(false);
-            resolve(null);
-          }
-        },
-        (error) => {
-          setIsDetectingLocation(false);
-          if (error.code === error.PERMISSION_DENIED) {
-            setLocationPermission('denied');
-            setLocationError('Location permission denied. Please search or pick your address manually.');
-          } else if (error.code === error.POSITION_UNAVAILABLE) {
-            setLocationPermission('unavailable');
-            setLocationError('GPS signal unavailable. Please select your address manually.');
-          } else if (error.code === error.TIMEOUT) {
-            setLocationPermission('unavailable');
-            setLocationError('Location request timed out. Please try again.');
-          } else {
-            setLocationError(error.message || 'Unable to retrieve location');
-          }
-          resolve(null);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 60000,
-        }
-      );
-    });
-  }, [checkServiceability, user]);
+      setCurrentLocation(loc);
+      setServiceability(serv);
+      localStorage.setItem(CURRENT_LOC_KEY, JSON.stringify(loc));
 
-  // Set manual location from map or search autocomplete
+      // 3. Assemble unified user address object
+      const detectedAddress: UserAddress = {
+        _id: `gps_${Date.now()}`,
+        userId: user?.id || 'guest',
+        fullName: user?.name || 'Customer',
+        phone: user?.phone || '',
+        houseFlat: loc.locality || 'Detected Location',
+        apartmentStreet: loc.label,
+        areaLocality: loc.locality,
+        landmark: '',
+        city: loc.city,
+        state: loc.state,
+        pincode: loc.pincode,
+        addressType: 'HOME',
+        latitude: lat,
+        longitude: lng,
+        isDefault: true,
+        isServiceable: serv.isServiceable,
+      };
+
+      setSelectedAddress(detectedAddress);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(detectedAddress));
+      setIsDetectingLocation(false);
+      return detectedAddress;
+    } catch (err: any) {
+      setIsDetectingLocation(false);
+      if (err.code === 1) {
+        setLocationPermission('denied');
+        setLocationError('Location permission denied. Please enter your PIN or locality manually.');
+      } else {
+        setLocationError(err.message || 'Unable to retrieve precise GPS signal');
+      }
+      return null;
+    }
+  }, [user]);
+
+  /**
+   * Set manual location from search autocomplete or PIN code
+   */
   const setManualLocation = useCallback(
-    async (lat: number, lng: number, addressInfo?: Partial<UserAddress>): Promise<UserAddress | null> => {
+    async (
+      latOrPin: number | string,
+      lng?: number,
+      addressInfo?: Partial<UserAddress>
+    ): Promise<UserAddress | null> => {
       setIsDetectingLocation(true);
       setLocationError(null);
 
       try {
-        const revRes = await fetch(`${API_BASE}/location/reverse-geocode?lat=${lat}&lng=${lng}`);
-        const revData = await revRes.json();
-        const geo = revData.data || {};
+        const isCoords = typeof latOrPin === 'number' && typeof lng === 'number';
+        const resolved = await LocationService.resolveLocation({
+          lat: isCoords ? (latOrPin as number) : undefined,
+          lng: isCoords ? lng : undefined,
+          pincode: !isCoords ? String(latOrPin).trim() : addressInfo?.pincode,
+          source: 'manual',
+        });
 
-        const serv = await checkServiceability(lat, lng, addressInfo?.pincode || geo.pincode);
+        const loc = resolved.location;
+        const serv = resolved.serviceability;
+
+        setCurrentLocation(loc);
+        setServiceability(serv);
+        localStorage.setItem(CURRENT_LOC_KEY, JSON.stringify(loc));
+
+        if (loc.lat && loc.lng) {
+          const coords = { latitude: loc.lat, longitude: loc.lng };
+          setCurrentCoordinates(coords);
+          localStorage.setItem(COORDS_KEY, JSON.stringify(coords));
+        }
 
         const newAddr: UserAddress = {
           _id: addressInfo?._id || `manual_${Date.now()}`,
           userId: user?.id || 'guest',
           fullName: addressInfo?.fullName || user?.name || 'Customer',
           phone: addressInfo?.phone || user?.phone || '',
-          houseFlat: addressInfo?.houseFlat || geo.houseFlat || 'Selected Location',
-          apartmentStreet: addressInfo?.apartmentStreet || geo.street || geo.locality || 'Road',
-          areaLocality: addressInfo?.areaLocality || geo.locality || geo.city || 'Locality',
+          houseFlat: addressInfo?.houseFlat || loc.locality,
+          apartmentStreet: addressInfo?.apartmentStreet || loc.label,
+          areaLocality: loc.locality,
           landmark: addressInfo?.landmark || '',
-          city: addressInfo?.city || geo.city || 'Patna',
-          state: addressInfo?.state || geo.state || 'Bihar',
-          pincode: addressInfo?.pincode || geo.pincode || '800001',
+          city: loc.city,
+          state: loc.state,
+          pincode: loc.pincode,
           addressType: addressInfo?.addressType || 'HOME',
-          latitude: lat,
-          longitude: lng,
+          latitude: loc.lat,
+          longitude: loc.lng,
           isDefault: true,
-          isServiceable: serv?.isServiceable ?? true,
+          isServiceable: serv.isServiceable,
         };
-
-        const coords = { latitude: lat, longitude: lng };
-        setCurrentCoordinates(coords);
-        localStorage.setItem(COORDS_KEY, JSON.stringify(coords));
 
         setSelectedAddress(newAddr);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newAddr));
-
         setIsDetectingLocation(false);
         return newAddr;
       } catch (err: any) {
@@ -284,10 +285,12 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
         return null;
       }
     },
-    [checkServiceability, user]
+    [user]
   );
 
-  // Select a saved address
+  /**
+   * Select a saved address
+   */
   const selectAddress = useCallback(
     async (addr: UserAddress) => {
       setSelectedAddress(addr);
@@ -305,12 +308,78 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
     [checkServiceability]
   );
 
-  // Initial load effect: load saved addresses or detect location
+  /**
+   * Join waitlist for unserviceable area
+   */
+  const joinWaitlist = useCallback(
+    async (email: string, phone?: string, consent = true) => {
+      if (!currentLocation && !selectedAddress) {
+        throw new Error('Please select or detect your location first');
+      }
+
+      const pincode = currentLocation?.pincode || selectedAddress?.pincode || '';
+      const locality = currentLocation?.locality || selectedAddress?.areaLocality || 'My Area';
+      const city = currentLocation?.city || selectedAddress?.city || 'My City';
+      const state = currentLocation?.state || selectedAddress?.state || 'My State';
+
+      const res = await LocationService.joinWaitlist({
+        email,
+        phone,
+        pincode,
+        locality,
+        city,
+        state,
+        consentTextVersion: consent ? 'v1.0' : undefined,
+      });
+
+      // Update waitlist count in state
+      setServiceability((prev) =>
+        prev ? { ...prev, waitlistCount: res.waitlistCount } : null
+      );
+
+      return res;
+    },
+    [currentLocation, selectedAddress]
+  );
+
+  // Real-time Serviceability updates via WebSocket
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    try {
+      const wsUrl = API_BASE.replace(/^http/, 'ws') + '/ws';
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (
+            payload.event === 'location.serviceability.changed' ||
+            payload.type === 'location.serviceability.changed'
+          ) {
+            const changedArea = payload.data?.area;
+            const currentPin = currentLocation?.pincode || selectedAddress?.pincode;
+
+            if (changedArea && changedArea.pincode === currentPin && changedArea.status === 'active') {
+              setServiceability((prev) =>
+                prev ? { ...prev, status: 'serviceable', isServiceable: true } : null
+              );
+              setIsCelebrationBannerVisible(true);
+            }
+          }
+        } catch {}
+      };
+    } catch {}
+
+    return () => {
+      if (ws) ws.close();
+    };
+  }, [currentLocation, selectedAddress]);
+
+  // Initial load
   useEffect(() => {
     refreshAddresses();
 
-    // If no address selected at all, attempt graceful initial location detection
-    if (!selectedAddress && !currentCoordinates) {
+    if (!currentLocation && !selectedAddress) {
       if (typeof navigator !== 'undefined' && navigator.permissions) {
         navigator.permissions
           .query({ name: 'geolocation' as PermissionName })
@@ -325,27 +394,33 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
     } else if (selectedAddress?.latitude && selectedAddress?.longitude && !serviceability) {
       checkServiceability(selectedAddress.latitude, selectedAddress.longitude, selectedAddress.pincode);
     }
-  }, []); // Run once on app mount
+  }, []);
 
   const openAddressModal = useCallback(() => setIsAddressModalOpen(true), []);
   const closeAddressModal = useCallback(() => setIsAddressModalOpen(false), []);
+  const dismissCelebrationBanner = useCallback(() => setIsCelebrationBannerVisible(false), []);
 
   return (
     <LocationContext.Provider
       value={{
+        currentLocation,
         currentCoordinates,
         selectedAddress,
         savedAddresses,
         serviceability,
         isDetectingLocation,
+        gpsAccuracyM,
         locationError,
         locationPermission,
         isAddressModalOpen,
+        isCelebrationBannerVisible,
+        dismissCelebrationBanner,
         openAddressModal,
         closeAddressModal,
         detectCurrentLocation,
         selectAddress,
         setManualLocation,
+        joinWaitlist,
         refreshAddresses,
       }}
     >

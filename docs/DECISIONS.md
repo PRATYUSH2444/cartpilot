@@ -51,3 +51,43 @@
 - **Decision**:
   - Server-side role enforcement on every API route via `requireRole('ADMIN')` and `requireRole('MERCHANT')`.
   - Client-side navigation guards with clear 1-click role switcher in development/demo mode to allow frictionless evaluation of all 3 portals without session locking.
+
+---
+
+## ADR 6: Live Geolocation Engine, Multi-Sample Refinement & Locality-Level Label Architecture (Module 11)
+
+- **Status**: Approved & Enforced
+- **Context**: Shoppers expect automatic location detection similar to Blinkit/Zepto/Swiggy without displaying private unit, tower, or flat numbers. In mobile and desktop browsers, a single GPS reading often has coarse accuracy.
+- **Decision**:
+  - Implement a dedicated `LocationService` with multi-sample `watchPosition` refinement (sampling up to 8s or until accuracy <= 50m, selecting the lowest accuracy reading).
+  - Reverse geocode addresses using a pluggable server-side geocoder adapter (Google Geocoding / OpenStreetMap Nominatim fallback / TTL-indexed MongoDB cache).
+  - Enforce pure **Locality Label Stripping**:
+    - Strip all apartment/tower/flat/unit/plot/floor identifiers (`Tower 5, Flat 1203, La Residencia` -> `La Residencia, Greater Noida`).
+    - Construct `label` as Society/Locality + City, and `subLabel` as District, State, PIN.
+    - Keep labels clean, human-readable, and under 40 characters.
+
+---
+
+## ADR 7: Service Areas Data Model, Fallback Chain, & Admin Enforcement Modes
+
+- **Status**: Approved & Enforced
+- **Context**: Hardcoding delivery cities (like Patna or Bengaluru) in codebase strings creates brittle deployments and prevents multi-city expansion.
+- **Decision**:
+  - Store delivery zones dynamically in `service_areas` collection (indexed by pincode, city, and status).
+  - Support three enforcement levels: `off` (allow all), `report_only` (allow all while logging demand events), and `on` (strict serviceability gating).
+  - Fail-safe guard: If zero active service areas exist at runtime, automatically run in `report_only` mode with admin warning banner so shoppers are never locked out accidentally.
+  - Server-authoritative checkout verification: Validate serviceability against the shipping address snapshot on order placement.
+
+---
+
+## ADR 8: "Coming Soon" Full Page Experience & Real-Time Waitlist Demand Tracking
+
+- **Status**: Approved & Enforced
+- **Context**: When a user is in an unserviceable locality (e.g. Greater Noida while dark store is elsewhere), displaying a raw error or generic modal causes user drop-off.
+- **Decision**:
+  - Render a warm, interactive, responsive **"Coming Soon"** page when unserviceable and enforcement is `on`.
+  - Provide 1-tap "Notify me when we arrive" waitlist subscription with explicit DPDP consent timestamping.
+  - Allow seamless switching to other addresses/pincodes or browsing nearby served regions.
+  - Log pseudonymized demand metrics (`location_events` with 180-day TTL) aggregated into `location_demand_daily` for the Admin Demand Dashboard.
+  - Listen for real-time `location.serviceability.changed` events so that activating an area in the Admin console immediately flips the user's active Coming Soon page into the shopping experience live!
+

@@ -295,7 +295,7 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
   const displayPhone = user?.phone || '';
   const displayLocality = selectedAddress
     ? selectedAddress.areaLocality || selectedAddress.apartmentStreet || selectedAddress.city
-    : 'Patna, Bihar';
+    : 'Select Delivery Location';
 
   const userInitial = displayName ? displayName.charAt(0).toUpperCase() : 'P';
 

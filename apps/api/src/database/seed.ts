@@ -7,6 +7,7 @@ import { MerchantUserModel } from '../modules/merchants/merchant-user.model.js';
 import { ProductModel } from '../modules/catalog/product.model.js';
 import { OrderModel } from '../modules/orders/order.model.js';
 import { RecipePlanModel } from '../modules/recipe/recipe-plan.model.js';
+import { ServiceAreaModel, StoreModel, ServiceabilitySettingsModel } from '../modules/location/models.js';
 import { SEED_RECIPES } from '../modules/recipe/recipe-seed.data.js';
 import {
   SEED_MERCHANTS,
@@ -489,6 +490,88 @@ export async function runSeed(dropExisting = false): Promise<void> {
       logger.info({ count: initialOrders.length }, '✅ Seeded Operational Orders for Fresh Greens Organics');
     }
   }
+
+  // 7. Seed Production Service Areas, Dark Stores & Serviceability Settings
+  await ServiceabilitySettingsModel.findOneAndUpdate(
+    { key: 'GLOBAL' },
+    {
+      key: 'GLOBAL',
+      enforcement: 'on',
+      allowBrowseWhenUnserviceable: false,
+      minDemandDisplayThreshold: 3,
+      deliverySlots: [
+        { id: 'morning', label: 'Morning Slot (6:00 AM – 10:00 AM)', cutoffTime: '00:00', startHour: 6, endHour: 10 },
+        { id: 'evening', label: 'Evening Slot (5:00 PM – 9:00 PM)', cutoffTime: '15:00', startHour: 17, endHour: 21 },
+      ],
+    },
+    { upsert: true, new: true }
+  );
+
+  const SEED_SERVICE_AREAS = [
+    // NCR / Greater Noida & Noida
+    { pincode: '201308', city: 'Greater Noida', locality: 'La Residencia & Greater Noida West', state: 'Uttar Pradesh', status: 'active', type: 'pincode' },
+    { pincode: '201301', city: 'Noida', locality: 'Sector 62 / Sector 1', state: 'Uttar Pradesh', status: 'active', type: 'pincode' },
+    { pincode: '201305', city: 'Noida', locality: 'Sector 137 / Express View', state: 'Uttar Pradesh', status: 'active', type: 'pincode' },
+    { pincode: '201310', city: 'Greater Noida', locality: 'Knowledge Park / Pari Chowk', state: 'Uttar Pradesh', status: 'active', type: 'pincode' },
+    { pincode: '201009', city: 'Greater Noida', locality: 'Gaur City 2', state: 'Uttar Pradesh', status: 'active', type: 'pincode' },
+    // Bengaluru
+    { pincode: '560038', city: 'Bengaluru', locality: 'Indiranagar', state: 'Karnataka', status: 'active', type: 'pincode' },
+    { pincode: '560103', city: 'Bengaluru', locality: 'Bellandur & Outer Ring Road', state: 'Karnataka', status: 'active', type: 'pincode' },
+    { pincode: '560066', city: 'Bengaluru', locality: 'Whitefield', state: 'Karnataka', status: 'active', type: 'pincode' },
+    { pincode: '560034', city: 'Bengaluru', locality: 'Koramangala', state: 'Karnataka', status: 'active', type: 'pincode' },
+    // Bihar
+    { pincode: '800001', city: 'Patna', locality: 'Boring Road & Fraser Road', state: 'Bihar', status: 'active', type: 'pincode' },
+    { pincode: '800020', city: 'Patna', locality: 'Kankarbagh', state: 'Bihar', status: 'active', type: 'pincode' },
+    { pincode: '801503', city: 'Patna', locality: 'Danapur Cantt', state: 'Bihar', status: 'active', type: 'pincode' },
+  ];
+
+  for (const area of SEED_SERVICE_AREAS) {
+    await ServiceAreaModel.findOneAndUpdate(
+      { pincode: area.pincode },
+      { ...area },
+      { upsert: true, new: true }
+    );
+  }
+
+  const SEED_STORES = [
+    {
+      storeId: 'store_ncr_01',
+      name: 'CartPilot NCR Dark-Store Hub',
+      address: 'Knowledge Park III, Greater Noida, Uttar Pradesh 201310',
+      lat: 28.4744,
+      lng: 77.504,
+      serviceRadiusKm: 25,
+      status: 'active' as const,
+    },
+    {
+      storeId: 'store_blr_01',
+      name: 'CartPilot Bengaluru Tech-Corridor Hub',
+      address: 'Outer Ring Road, Bellandur, Bengaluru, Karnataka 560103',
+      lat: 12.926,
+      lng: 77.6762,
+      serviceRadiusKm: 25,
+      status: 'active' as const,
+    },
+    {
+      storeId: 'store_patna_01',
+      name: 'CartPilot Central Facility Hub',
+      address: 'Boring Road Crossing, Patna, Bihar 800001',
+      lat: 25.5941,
+      lng: 85.1376,
+      serviceRadiusKm: 30,
+      status: 'active' as const,
+    },
+  ];
+
+  for (const store of SEED_STORES) {
+    await StoreModel.findOneAndUpdate(
+      { storeId: store.storeId },
+      { ...store },
+      { upsert: true, new: true }
+    );
+  }
+
+  logger.info({ areaCount: SEED_SERVICE_AREAS.length, storeCount: SEED_STORES.length }, '✅ Seeded Active Service Areas and Dark Stores');
 
   logger.info('🎉 Database seeding completed cleanly!');
 }

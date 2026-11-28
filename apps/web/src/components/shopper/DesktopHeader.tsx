@@ -71,8 +71,8 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   const cartCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) ?? (cart?.itemCount || 0);
   const addressTypeLabel = selectedAddress?.addressType || 'Delivery to';
   const addressLocalityLabel = selectedAddress
-    ? `${selectedAddress.areaLocality || selectedAddress.apartmentStreet || 'Boring Road'}, ${selectedAddress.city || 'Patna'}`
-    : 'Boring Road, Patna';
+    ? `${selectedAddress.areaLocality || selectedAddress.apartmentStreet || selectedAddress.city || 'Delivery Point'}${selectedAddress.city ? ', ' + selectedAddress.city : ''}`
+    : 'Select Delivery Location';
 
   // Format currency with standard INR formatting without stray decimals
   const formattedWallet = new Intl.NumberFormat('en-IN', {

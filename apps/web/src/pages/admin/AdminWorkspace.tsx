@@ -44,6 +44,7 @@ import {
   AdminOrdersView,
   AdminFulfilmentHubView,
 } from '../../components/admin/AdminFulfilmentViews';
+import { AdminServiceAreasView } from '../../components/admin/AdminServiceAreasView';
 
 interface PendingApprovalData {
   _id: string;
@@ -118,7 +119,7 @@ export const AdminWorkspace: React.FC = () => {
   const [systemHealth, setSystemHealth] = useState<{ status: string; uptime: number } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<
-    'today' | 'orders' | 'fulfilment' | 'merchants' | 'policy' | 'approvals' | 'audit' | 'integrations'
+    'today' | 'orders' | 'fulfilment' | 'merchants' | 'policy' | 'approvals' | 'audit' | 'integrations' | 'locations'
   >('today');
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -735,6 +736,18 @@ export const AdminWorkspace: React.FC = () => {
           >
             <Cpu className="w-4 h-4" />
             <span>Cloud AI</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('locations')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'locations'
+                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-card/60'
+            }`}
+          >
+            <MapPin className="w-4 h-4 text-emerald-500" />
+            <span>Service Areas & Demand</span>
           </button>
         </div>
 
@@ -1462,6 +1475,11 @@ export const AdminWorkspace: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Tab 6: Service Areas & Demand Analytics Hub */}
+        {activeTab === 'locations' && (
+          <AdminServiceAreasView token={token} />
         )}
       </main>
     </div>
