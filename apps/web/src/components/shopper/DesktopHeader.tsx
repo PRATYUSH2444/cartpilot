@@ -76,7 +76,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   }).format(Math.round(walletBalance));
 
   return (
-    <header className="hidden lg:block sticky top-0 z-40 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-b border-stone-200/80 dark:border-stone-800 shadow-2xs">
+    <header className="hidden lg:block shrink-0 sticky top-0 z-40 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-b border-stone-200/80 dark:border-stone-800 shadow-2xs">
       <div className="page-container h-16 lg:h-18 flex items-center justify-between gap-3 lg:gap-4 xl:gap-6">
         {/* ── Left: Brand Identity & Location Chip ── */}
         <div className="flex items-center gap-3 xl:gap-5 flex-shrink-0">

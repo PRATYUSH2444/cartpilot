@@ -789,7 +789,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-stone-50 dark:bg-[#0E0F10] text-stone-900 dark:text-[#F2F3F4] select-none">
+    <div className="flex-1 min-h-0 h-full flex flex-col overflow-hidden bg-stone-50 dark:bg-[#0E0F10] text-stone-900 dark:text-[#F2F3F4] select-none">
       {/* ── 1. Top Sticky Bar (Scoped Category, Search & Icons) ── */}
       <header className="shrink-0 bg-white/95 dark:bg-[#0E0F10]/95 backdrop-blur-md border-b border-stone-200 dark:border-[#2A2D31] z-20">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 space-y-2">
@@ -1105,7 +1105,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
       {/* ── 3. Main Two-Pane Body (Left Category Rail + Independent Product Pane) ── */}
       <div className="flex-1 min-h-0 flex w-full max-w-7xl mx-auto overflow-hidden">
         {/* ── Left Category Vertical Rail ── */}
-        <aside className="w-[76px] sm:w-[88px] lg:w-[110px] shrink-0 h-full overflow-y-auto no-scrollbar overscroll-contain bg-white dark:bg-[#16181A] border-r border-stone-200 dark:border-[#2A2D31] py-2">
+        <aside className="w-[76px] sm:w-[88px] lg:w-[110px] shrink-0 h-full overflow-y-auto thin-scrollbar overscroll-contain bg-white dark:bg-[#16181A] border-r border-stone-200 dark:border-[#2A2D31] py-2">
           <div className="space-y-1 px-1 sm:px-1.5">
             {BROWSE_CATEGORIES.map((cat) => {
               const isActive = isSingleCategoryMode
@@ -1155,9 +1155,11 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
         </aside>
 
         {/* ── Right Product Pane ── */}
-        <main
+        <div
           ref={productPaneRef}
-          className="flex-1 min-w-0 h-full overflow-y-auto overscroll-contain p-3 sm:p-4 lg:p-5"
+          role="region"
+          aria-label="Products"
+          className="flex-1 min-w-0 h-full overflow-y-auto thin-scrollbar overscroll-contain p-3 sm:p-4 lg:p-5"
         >
           {/* Case A: Single Category Dedicated View */}
           {isSingleCategoryMode ? (
@@ -1287,7 +1289,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
               )}
             </div>
           )}
-        </main>
+        </div>
       </div>
 
       {/* ── 4. Floating "View Cart" Bottom Pill ── */}

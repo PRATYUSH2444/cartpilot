@@ -1532,9 +1532,9 @@ export const ShopperWorkspace: React.FC = () => {
     };
   }, [token, authFetch]);
 
-  // ── Mobile Viewport Lock on Chat (Strictly locks window scrolling and elastic bouncing) ──
+  // ── Mobile & Desktop Viewport Lock on Chat and Browse (Strictly locks window scrolling and elastic bouncing) ──
   useEffect(() => {
-    if (activeMobileTab === 'chat') {
+    if (activeMobileTab === 'chat' || activeMobileTab === 'browse') {
       const origHtmlOverflow = document.documentElement.style.overflow;
       const origHtmlHeight = document.documentElement.style.height;
       const origBodyOverflow = document.body.style.overflow;
@@ -1576,8 +1576,8 @@ export const ShopperWorkspace: React.FC = () => {
   return (
     <div
       className={`w-full flex flex-col bg-[--bg] text-[--ink] selection:bg-brand selection:text-white ${
-        activeMobileTab === 'chat'
-          ? 'fixed inset-0 h-[100dvh] max-h-[100dvh] overflow-hidden lg:relative lg:inset-auto'
+        activeMobileTab === 'chat' || activeMobileTab === 'browse'
+          ? 'fixed inset-0 h-[100dvh] max-h-[100dvh] overflow-hidden'
           : activeMobileTab === 'cart'
             ? 'min-h-screen lg:h-[100dvh] lg:max-h-[100dvh] lg:overflow-hidden'
             : 'min-h-screen'

@@ -55,6 +55,7 @@
 /* ── Document Scroller Architecture (Enables native browser pull-to-refresh on mobile) ── */
 html,
 body {
+  height: 100%;
   min-height: 100%;
   margin: 0;
   padding: 0;
@@ -69,6 +70,7 @@ body {
 }
 
 #root {
+  height: 100%;
   min-height: 100%;
   width: 100%;
   margin: 0;
@@ -287,5 +289,26 @@ h1, h2, h3, h4, .font-heading {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ── Sleek Thin Scrollbar ────────────────────────────────────────────── */
+.thin-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.3);
+  border-radius: 9999px;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 150, 150, 0.5);
+}
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(150, 150, 150, 0.3) transparent;
+}
+
 
 
