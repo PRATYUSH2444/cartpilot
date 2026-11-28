@@ -11,6 +11,8 @@ import {
   ChevronRight,
   ShoppingCart,
   Layers,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { MerchantTab, MerchantStoreData } from './types';
 
@@ -22,6 +24,8 @@ interface MerchantSidebarProps {
   store: MerchantStoreData | null;
   pendingOrdersCount: number;
   lowStockCount: number;
+  user?: any;
+  onLogout?: () => void;
 }
 
 export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
@@ -32,6 +36,8 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
   store,
   pendingOrdersCount,
   lowStockCount,
+  user,
+  onLogout,
 }) => {
   // Map secondary tabs to the 5 primary tabs for highlighting
   const getActivePrimaryTab = (): 'home' | 'orders' | 'fulfilment' | 'products' | 'delivery' | 'shop' => {
@@ -218,6 +224,48 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
             >
               <Headphones className="w-5 h-5" />
             </button>
+          </div>
+        )}
+
+        {/* User Account & Logout in Sidebar (Desktop & Mobile) */}
+        {user && onLogout && (
+          <div className="p-3 border-t border-slate-200 dark:border-slate-800/80">
+            {!isCollapsed ? (
+              <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center shrink-0">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      {user.name || 'Merchant'}
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                      {user.email}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  title="Sign Out"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer shrink-0"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  title={`Sign Out (${user.email})`}
+                  className="w-10 h-10 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

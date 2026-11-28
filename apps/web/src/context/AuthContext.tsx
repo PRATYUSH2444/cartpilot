@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth as useClerkAuth, useUser as useClerkUser, useClerk } from '@clerk/clerk-react';
-import { DEMO_CREDENTIALS } from '../config/demo-credentials';
 import { API_BASE } from '../config/api';
 
 const hasClerk = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
@@ -107,7 +106,6 @@ export interface AuthContextType {
   logoutAll: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
   authFetch: (url: string, options?: RequestInit) => Promise<Response>;
-  switchRoleQuick: (role: UserRole) => Promise<boolean>;
   setUserProfile: (user: UserProfile) => void;
   setSession: (token: string, user: UserProfile) => void;
 }
@@ -873,15 +871,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const switchRoleQuick = async (role: UserRole): Promise<boolean> => {
-    const creds = DEMO_CREDENTIALS[role];
-    if (creds) {
-      const result = await login(creds.email, creds.password);
-      return result.success;
-    }
-    return false;
-  };
-
   const dismissSessionExpired = () => {
     setIsSessionExpired(false);
   };
@@ -924,7 +913,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           logoutAll,
           refreshSession,
           authFetch,
-          switchRoleQuick,
           setUserProfile: setUser,
           setSession,
         }}

@@ -653,6 +653,8 @@ export const MerchantWorkspace: React.FC = () => {
           store={store}
           pendingOrdersCount={pendingOrdersCount}
           lowStockCount={lowStockCount}
+          user={user}
+          onLogout={logout}
         />
       </div>
 
@@ -676,6 +678,8 @@ export const MerchantWorkspace: React.FC = () => {
                 store={store}
                 pendingOrdersCount={pendingOrdersCount}
                 lowStockCount={lowStockCount}
+                user={user}
+                onLogout={logout}
               />
             </div>
           </div>

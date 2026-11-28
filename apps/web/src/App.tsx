@@ -6,7 +6,6 @@ import { LocationProvider } from './context/LocationContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicRoute } from './components/PublicRoute';
 import { SessionEndedModal } from './components/SessionEndedModal';
-import { DemoRoleSwitcher } from './components/common/DemoRoleSwitcher';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/auth/LoginPage';
 import { AdminLoginPage } from './pages/auth/AdminLoginPage';
@@ -54,8 +53,6 @@ export function App() {
           <BrowserRouter>
             {/* Session expiry re-auth dialog */}
             <SessionEndedModal />
-            {/* 1-Tap Demo Role Switcher (Shopper / Merchant / Admin) */}
-            <DemoRoleSwitcher />
 
             <Routes>
             {/* Public Authentication Routes (Guarded: authenticated users cannot navigate back into them) */}

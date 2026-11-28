@@ -321,22 +321,6 @@ export const AdminLoginPage: React.FC = () => {
                 </>
               )}
             </button>
-
-            {/* 1-Tap Quick Fill Demo Credentials */}
-            <div className="pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('admin@cartpilot.com');
-                  setPassword('Admin1234!');
-                  setErrorMessage(null);
-                }}
-                className="w-full py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 text-emerald-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <KeyRound className="w-3.5 h-3.5" />
-                <span>1-Tap Fill: admin@cartpilot.com / Admin1234!</span>
-              </button>
-            </div>
           </form>
         ) : (
           /* -------------------- STEP 2: MFA CHALLENGE -------------------- */
