@@ -181,7 +181,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.round(amount));
 
   return (
-    <div className="flex-1 w-full pb-16 bg-[var(--bg)] text-[var(--ink)] font-body selection:bg-brand selection:text-white">
+    <div className="flex-1 w-full pb-28 sm:pb-32 lg:pb-12 bg-[var(--bg)] text-[var(--ink)] font-body selection:bg-brand selection:text-white">
       {/* ── Mobile Top App Bar (< 1024px) ── */}
       <div className="block lg:hidden sticky top-0 z-30 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-b border-stone-200/60 dark:border-stone-800/60 shadow-2xs">
         <div className="max-w-xl mx-auto px-4 pt-3 pb-2.5 space-y-2">
