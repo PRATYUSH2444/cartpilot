@@ -197,4 +197,167 @@ export class OrderController {
       next(err);
     }
   }
+
+  public static async getTodayBoard(
+    _req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const board = await OrderService.getAdminTodayBoard();
+      res.status(200).json({ success: true, data: board });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async getProcurement(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const targetDate = req.query.targetDate as string | undefined;
+      const slot = req.query.slot as string | undefined;
+      const list = await OrderService.getProcurementList(targetDate, slot);
+      res.status(200).json({ success: true, data: list });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async getPackingChecklist(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const targetDate = req.query.targetDate as string | undefined;
+      const slot = req.query.slot as string | undefined;
+      const list = await OrderService.getPackingChecklist(targetDate, slot);
+      res.status(200).json({ success: true, data: list });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async getDeliveryManifest(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const targetDate = req.query.targetDate as string | undefined;
+      const slot = req.query.slot as string | undefined;
+      const manifest = await OrderService.getDeliveryManifest(targetDate, slot);
+      res.status(200).json({ success: true, data: manifest });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async advanceFulfilmentStage(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const id = req.params.id as string;
+      const stage = req.body.stage as 'PROCURED' | 'PACKED' | 'OUT_FOR_DELIVERY' | 'DELIVERED';
+      const actorId = req.user!.userId;
+      const actorRole = req.user!.role;
+
+      const order = await OrderService.advanceFulfilmentStage(id, stage, actorId, actorRole);
+      res.status(200).json({
+        success: true,
+        message: `Order advanced to stage ${stage}`,
+        data: order,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async generateLots(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { targetDate, slot } = req.body || {};
+      const lots = await OrderService.generateMerchantLots(targetDate, slot);
+      res.status(200).json({
+        success: true,
+        message: `Generated ${lots.length} merchant pickup lots`,
+        data: lots,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async getMerchantLots(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const merchantId = req.user!.merchantId;
+      if (!merchantId) {
+        res.status(200).json({ success: true, data: [] });
+        return;
+      }
+      const lots = await OrderService.getMerchantLots(merchantId);
+      res.status(200).json({ success: true, data: lots });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async updateLotStatus(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const lotId = req.params.lotId as string;
+      const { status, notes } = req.body || {};
+      const lot = await OrderService.updateLotStatus(lotId, status, notes);
+      res.status(200).json({ success: true, data: lot });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async getFieldRun(
+    req: any,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const token = req.params.token as string;
+      const lot = await OrderService.getFieldRunByToken(token);
+      res.status(200).json({ success: true, data: lot });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async collectFieldRun(
+    req: any,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const token = req.params.token as string;
+      const lot = await OrderService.markLotCollectedByRunner(token);
+      res.status(200).json({
+        success: true,
+        message: 'Merchant lot marked as collected by runner',
+        data: lot,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }

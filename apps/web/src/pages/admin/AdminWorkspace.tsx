@@ -34,8 +34,16 @@ import {
   Zap,
   AlertTriangle,
   Download,
+  ShoppingBag,
+  Truck,
+  LayoutDashboard,
 } from 'lucide-react';
 import { API_BASE } from '../../config/api';
+import {
+  AdminTodayBoardView,
+  AdminOrdersView,
+  AdminFulfilmentHubView,
+} from '../../components/admin/AdminFulfilmentViews';
 
 interface PendingApprovalData {
   _id: string;
@@ -87,7 +95,9 @@ export const AdminWorkspace: React.FC = () => {
   const [merchantsList, setMerchantsList] = useState<AdminMerchantData[]>([]);
   const [systemHealth, setSystemHealth] = useState<{ status: string; uptime: number } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'audit' | 'policy' | 'approvals' | 'merchants' | 'integrations'>('audit');
+  const [activeTab, setActiveTab] = useState<
+    'today' | 'orders' | 'fulfilment' | 'merchants' | 'policy' | 'approvals' | 'audit' | 'integrations'
+  >('today');
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Integrations & Cloud Infrastructure State (Super Admin Only)
@@ -578,66 +588,134 @@ export const AdminWorkspace: React.FC = () => {
         </div>
 
         {/* Tab Selector */}
-        <div className="flex items-center gap-2 border-b border-brd pb-2">
+        <div className="flex items-center gap-2 border-b border-brd pb-2 overflow-x-auto">
           <button
-            onClick={() => setActiveTab('audit')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'audit'
-                ? 'bg-acc text-white shadow-sm'
+            onClick={() => setActiveTab('today')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'today'
+                ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-mut hover:text-ink hover:bg-paper'
             }`}
           >
-            <Layers className="w-4 h-4" />
-            <span>Cryptographic Audit Ledger ({auditEvents.length})</span>
+            <LayoutDashboard className="w-4 h-4" />
+            <span>Today Board</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'orders'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-paper'
+            }`}
+          >
+            <ShoppingBag className="w-4 h-4" />
+            <span>Consolidated Orders</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('fulfilment')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'fulfilment'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-paper'
+            }`}
+          >
+            <Truck className="w-4 h-4" />
+            <span>Fulfilment Hub</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('merchants')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'merchants'
                 ? 'bg-acc text-white shadow-sm'
                 : 'text-mut hover:text-ink hover:bg-paper'
             }`}
           >
             <Store className="w-4 h-4" />
-            <span>Merchants & Stores ({merchantsList.length})</span>
+            <span>Merchants ({merchantsList.length})</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('audit')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'audit'
+                ? 'bg-acc text-white shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-paper'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Audit Ledger ({auditEvents.length})</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('policy')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'policy'
                 ? 'bg-acc text-white shadow-sm'
                 : 'text-mut hover:text-ink hover:bg-paper'
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>Active Policy Engine</span>
+            <span>Policy Engine</span>
           </button>
+
           <button
             onClick={() => setActiveTab('approvals')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'approvals'
                 ? 'bg-acc text-white shadow-sm'
                 : 'text-mut hover:text-ink hover:bg-paper'
             }`}
           >
             <Lock className="w-4 h-4" />
-            <span>Approvals Queue ({pendingApprovals.length})</span>
+            <span>Approvals ({pendingApprovals.length})</span>
           </button>
+
           <button
             onClick={() => {
               setActiveTab('integrations');
               fetchIntegrations();
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'integrations'
                 ? 'bg-acc text-white shadow-sm'
                 : 'text-mut hover:text-ink hover:bg-paper'
             }`}
           >
             <Cpu className="w-4 h-4" />
-            <span>Integrations & Cloud AI</span>
+            <span>Cloud AI</span>
           </button>
         </div>
+
+        {/* Tab: Today Board */}
+        {activeTab === 'today' && (
+          <AdminTodayBoardView
+            token={token}
+            authFetch={authFetch}
+            showBanner={showBanner}
+            onNavigateTab={setActiveTab}
+          />
+        )}
+
+        {/* Tab: Consolidated Orders */}
+        {activeTab === 'orders' && (
+          <AdminOrdersView
+            token={token}
+            authFetch={authFetch}
+            showBanner={showBanner}
+          />
+        )}
+
+        {/* Tab: Dark-Store Fulfilment Hub */}
+        {activeTab === 'fulfilment' && (
+          <AdminFulfilmentHubView
+            token={token}
+            authFetch={authFetch}
+            showBanner={showBanner}
+          />
+        )}
 
         {/* Tab 1: Audit Ledger */}
         {activeTab === 'audit' && (

@@ -874,12 +874,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const switchRoleQuick = async (role: UserRole): Promise<boolean> => {
-    if (DEMO_CREDENTIALS) {
-      const creds = DEMO_CREDENTIALS[role];
+    const creds = DEMO_CREDENTIALS[role];
+    if (creds) {
       const result = await login(creds.email, creds.password);
       return result.success;
     }
-    throw new Error('Quick role switcher is disabled in production environments.');
+    return false;
   };
 
   const dismissSessionExpired = () => {

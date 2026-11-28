@@ -105,10 +105,12 @@ export class CheckoutService {
       }
 
       const itemTotalPaise = prod.pricePaise * item.quantity;
+      const commissionPaise = Math.round(prod.pricePaise * 0.10); // Standard 10% platform take rate
 
       itemSnapshots.push({
         variantId: undefined,
         productId: prod._id,
+        merchantId: prod.merchantId,
         name: prod.name,
         category: prod.category,
         unitPricePaise: prod.pricePaise,
@@ -116,6 +118,8 @@ export class CheckoutService {
         subtotalPaise: itemTotalPaise,
         packageSize: prod.packageSize,
         packageUnit: prod.packageUnit,
+        commissionPaise,
+        itemStatus: 'PENDING_PROCUREMENT',
       });
 
       pricingItems.push({
@@ -214,6 +218,23 @@ export class CheckoutService {
       throw new BadRequestError('A valid delivery address is required to place your order', 'ADDRESS_REQUIRED');
     }
 
+    // 5.5 Determine Delivery Window and Cutoff Logic
+    const now = new Date();
+    const currentHour = now.getHours();
+    const isSameDayEligible = currentHour < 14; // Orders before 2:00 PM are same-day evening
+
+    const targetDeliveryDate = new Date(now);
+    let deliverySlot: 'MORNING' | 'EVENING' = 'MORNING';
+
+    if (isSameDayEligible) {
+      deliverySlot = 'EVENING';
+    } else {
+      // Next-day morning slot (orders after 2 PM or night orders)
+      targetDeliveryDate.setDate(targetDeliveryDate.getDate() + 1);
+      deliverySlot = 'MORNING';
+    }
+    targetDeliveryDate.setHours(0, 0, 0, 0);
+
     // 6. Create Order with immutable snapshots and PENDING_PAYMENT status
     const order = new OrderModel({
       orderNumber,
@@ -233,6 +254,9 @@ export class CheckoutService {
       deliveryNote: input?.deliveryNote || input?.notes || cart.deliveryNote,
       approvalSnapshot,
       reservationId: reservation._id,
+      targetDeliveryDate,
+      deliverySlot,
+      fulfilmentStatus: 'ROUTED',
       placedAt: new Date(),
     });
 

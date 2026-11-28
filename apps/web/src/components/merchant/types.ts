@@ -1,6 +1,6 @@
 import { Product, OrderData } from '../../types';
 
-export type MerchantPrimaryTab = 'home' | 'orders' | 'products' | 'delivery' | 'shop';
+export type MerchantPrimaryTab = 'home' | 'orders' | 'fulfilment' | 'products' | 'delivery' | 'shop';
 
 export type MerchantTab =
   | 'home'

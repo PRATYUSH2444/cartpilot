@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ShoppingCart,
+  Layers,
 } from 'lucide-react';
 import { MerchantTab, MerchantStoreData } from './types';
 
@@ -33,9 +34,10 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
   lowStockCount,
 }) => {
   // Map secondary tabs to the 5 primary tabs for highlighting
-  const getActivePrimaryTab = (): 'home' | 'orders' | 'products' | 'delivery' | 'shop' => {
+  const getActivePrimaryTab = (): 'home' | 'orders' | 'fulfilment' | 'products' | 'delivery' | 'shop' => {
     if (activeTab === 'home' || activeTab === 'overview') return 'home';
-    if (activeTab === 'orders' || activeTab === 'fulfilment') return 'orders';
+    if (activeTab === 'orders') return 'orders';
+    if (activeTab === 'fulfilment') return 'fulfilment';
     if (activeTab === 'products' || activeTab === 'inventory' || activeTab === 'categories') return 'products';
     if (activeTab === 'delivery' || activeTab === 'delivery-settings') return 'delivery';
     return 'shop';
@@ -57,6 +59,12 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
       badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
       badgeColor: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
       isActive: primaryActive === 'orders',
+    },
+    {
+      id: 'fulfilment' as MerchantTab,
+      label: 'Pickup Crates',
+      icon: Layers,
+      isActive: primaryActive === 'fulfilment',
     },
     {
       id: 'products' as MerchantTab,

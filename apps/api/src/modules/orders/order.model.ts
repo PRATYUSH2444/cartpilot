@@ -20,6 +20,7 @@ export type OrderStatus =
 export interface IOrderItemSnapshot {
   variantId?: string;
   productId: mongoose.Types.ObjectId;
+  merchantId?: mongoose.Types.ObjectId;
   name: string;
   category: string;
   unitPricePaise: number;
@@ -27,6 +28,9 @@ export interface IOrderItemSnapshot {
   subtotalPaise: number;
   packageSize: number;
   packageUnit: string;
+  commissionPaise?: number;
+  itemStatus?: 'PENDING_PROCUREMENT' | 'PROCURED' | 'PACKED' | 'SHORTAGE' | 'SUBSTITUTED';
+  lotId?: mongoose.Types.ObjectId;
 }
 
 export interface IPricingSnapshot {
@@ -66,6 +70,11 @@ export interface IOrder extends Document {
   reservationId?: mongoose.Types.ObjectId;
   paymentId?: mongoose.Types.ObjectId;
   walletAmountPaidPaise?: number;
+  targetDeliveryDate?: Date;
+  deliverySlot?: 'MORNING' | 'EVENING';
+  fulfilmentStatus?: 'ROUTED' | 'PROCURED' | 'PACKED' | 'OUT_FOR_DELIVERY' | 'DELIVERED';
+  packedAt?: Date;
+  dispatchedAt?: Date;
   placedAt: Date;
   deliveredAt?: Date;
   createdAt: Date;
@@ -125,6 +134,27 @@ const OrderItemSnapshotSchema = new Schema<IOrderItemSnapshot>(
     packageUnit: {
       type: String,
       required: true,
+    },
+    merchantId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Merchant',
+      required: false,
+      index: true,
+    },
+    commissionPaise: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    itemStatus: {
+      type: String,
+      enum: ['PENDING_PROCUREMENT', 'PROCURED', 'PACKED', 'SHORTAGE', 'SUBSTITUTED'],
+      default: 'PENDING_PROCUREMENT',
+    },
+    lotId: {
+      type: Schema.Types.ObjectId,
+      ref: 'MerchantLot',
+      required: false,
     },
   },
   { _id: false }
@@ -273,6 +303,27 @@ const OrderSchema = new Schema<IOrder>(
       min: 0,
       default: 0,
     },
+    targetDeliveryDate: {
+      type: Date,
+      index: true,
+    },
+    deliverySlot: {
+      type: String,
+      enum: ['MORNING', 'EVENING'],
+      default: 'MORNING',
+    },
+    fulfilmentStatus: {
+      type: String,
+      enum: ['ROUTED', 'PROCURED', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED'],
+      default: 'ROUTED',
+      index: true,
+    },
+    packedAt: {
+      type: Date,
+    },
+    dispatchedAt: {
+      type: Date,
+    },
     placedAt: {
       type: Date,
       default: Date.now,
@@ -292,6 +343,8 @@ OrderSchema.index({ userId: 1, createdAt: -1 });
 OrderSchema.index({ merchantId: 1, createdAt: -1 });
 OrderSchema.index({ merchantId: 1, status: 1 });
 OrderSchema.index({ status: 1, createdAt: -1 });
+OrderSchema.index({ 'items.merchantId': 1, createdAt: -1 });
+OrderSchema.index({ targetDeliveryDate: 1, deliverySlot: 1 });
 
 export const OrderModel: Model<IOrder> =
   mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);

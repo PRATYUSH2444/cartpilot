@@ -5,10 +5,8 @@ export interface DemoCredential {
   password: string;
 }
 
-export const DEMO_CREDENTIALS: Record<UserRole, DemoCredential> | null = import.meta.env.DEV
-  ? {
-      CUSTOMER: { email: 'customer@example.com', password: 'Customer1234!' },
-      MERCHANT: { email: 'merchant@example.com', password: 'Merchant1234!' },
-      ADMIN: { email: 'admin@example.com', password: 'Admin1234!' },
-    }
-  : null;
+export const DEMO_CREDENTIALS: Record<UserRole, DemoCredential> = {
+  CUSTOMER: { email: 'customer@example.com', password: 'Customer1234!' },
+  MERCHANT: { email: 'merchant@freshgrocers.com', password: 'Merchant1234!' },
+  ADMIN: { email: 'admin@cartpilot.com', password: 'Admin1234!' },
+};

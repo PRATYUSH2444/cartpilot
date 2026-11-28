@@ -20,6 +20,7 @@ import { MerchantHomeView } from '../../components/merchant/MerchantHomeView';
 import { MerchantDeliveryView } from '../../components/merchant/MerchantDeliveryView';
 import { MerchantShopView } from '../../components/merchant/MerchantShopView';
 import { MerchantOrdersView } from '../../components/merchant/MerchantOrdersView';
+import { MerchantFulfilmentView } from '../../components/merchant/MerchantFulfilmentView';
 import { MerchantOrderDetailDrawer } from '../../components/merchant/MerchantOrderDetailDrawer';
 import { MerchantProductsView } from '../../components/merchant/MerchantProductsView';
 import { MerchantProductFormModal } from '../../components/merchant/MerchantProductFormModal';
@@ -713,13 +714,22 @@ export const MerchantWorkspace: React.FC = () => {
             />
           )}
 
-          {(activeTab === 'orders' || activeTab === 'fulfilment') && (
+          {activeTab === 'orders' && (
             <MerchantOrdersView
               orders={orders}
               onSelectOrder={(id) => setSelectedOrderId(id)}
               onOpenCreateOrder={() => setIsCreateOrderOpen(true)}
               onAdvanceStatus={handleAdvanceStatus}
               onAcceptOrder={handleAcceptOrder}
+            />
+          )}
+
+          {activeTab === 'fulfilment' && (
+            <MerchantFulfilmentView
+              orders={orders}
+              onSelectOrder={(id: string) => setSelectedOrderId(id)}
+              onAdvanceStatus={handleAdvanceStatus}
+              isAdvancing={isAdvancingOrder}
             />
           )}
 

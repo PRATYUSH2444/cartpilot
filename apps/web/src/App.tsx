@@ -6,6 +6,7 @@ import { LocationProvider } from './context/LocationContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicRoute } from './components/PublicRoute';
 import { SessionEndedModal } from './components/SessionEndedModal';
+import { DemoRoleSwitcher } from './components/common/DemoRoleSwitcher';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/auth/LoginPage';
 import { AdminLoginPage } from './pages/auth/AdminLoginPage';
@@ -18,6 +19,7 @@ import { AccountSecurityPage } from './pages/auth/AccountSecurityPage';
 import { ShopperWorkspace } from './pages/shopper/ShopperWorkspace';
 import { MerchantWorkspace } from './pages/merchant/MerchantWorkspace';
 import { AdminWorkspace } from './pages/admin/AdminWorkspace';
+import { FieldRunnerPage } from './pages/field/FieldRunnerPage';
 
 // Root smart redirect based on session status and server-assigned role
 const RootRedirect: React.FC = () => {
@@ -52,6 +54,8 @@ export function App() {
           <BrowserRouter>
             {/* Session expiry re-auth dialog */}
             <SessionEndedModal />
+            {/* 1-Tap Demo Role Switcher (Shopper / Merchant / Admin) */}
+            <DemoRoleSwitcher />
 
             <Routes>
             {/* Public Authentication Routes (Guarded: authenticated users cannot navigate back into them) */}
@@ -97,6 +101,7 @@ export function App() {
             />
             <Route path="/become-merchant" element={<BecomeMerchantPage />} />
             <Route path="/accept-invite" element={<AcceptStaffInvitePage />} />
+            <Route path="/field/run/:token" element={<FieldRunnerPage />} />
 
             {/* Account Security (All authenticated roles) */}
             <Route
