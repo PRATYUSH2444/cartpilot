@@ -27,6 +27,8 @@ export interface IEmailAdapter {
   ): Promise<boolean>;
   sendEmailVerification(email: string, token: string): Promise<boolean>;
   sendOrderConfirmationEmail(email: string, details: OrderEmailDetails): Promise<boolean>;
+  sendLowBalanceAlertEmail(email: string, balanceRupees: number): Promise<boolean>;
+  sendRefundConfirmationEmail(email: string, orderNumber: string, refundRupees: number): Promise<boolean>;
 }
 
 export class ResendEmailAdapter implements IEmailAdapter {
@@ -170,6 +172,51 @@ export class ResendEmailAdapter implements IEmailAdapter {
     `;
     return this.dispatchEmail(email, `Order Confirmed: #${details.orderNumber}`, html);
   }
+
+  async sendLowBalanceAlertEmail(email: string, balanceRupees: number): Promise<boolean> {
+    const topUpUrl = `${env.isProduction ? 'https://cartpilot.app' : 'http://localhost:5173'}/shopper`;
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <h2 style="color: #059669; margin: 0; font-size: 20px;">CartPilot Wallet Notice</h2>
+          <span style="font-family: monospace; font-size: 13px; background: #f0fdf4; color: #166534; padding: 4px 8px; border-radius: 6px; font-weight: 700;">₹${balanceRupees.toFixed(2)} Balance</span>
+        </div>
+        <p style="font-size: 15px; color: #374151; line-height: 1.5;">Your CartPilot grocery wallet balance is currently running low.</p>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px; color: #475569; line-height: 1.5;">
+            To ensure your upcoming morning grocery baskets and daily milk provisions execute seamlessly without manual intervention, please top up your balance when convenient.
+          </p>
+        </div>
+        <p style="margin: 24px 0;">
+          <a href="${topUpUrl}" style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Top Up Wallet</a>
+        </p>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">Zero transaction fees on all CartPilot 1-tap wallet top-ups.</p>
+      </div>
+    `;
+    return this.dispatchEmail(email, `CartPilot Balance Notice: ₹${balanceRupees.toFixed(0)} Remaining`, html);
+  }
+
+  async sendRefundConfirmationEmail(email: string, orderNumber: string, refundRupees: number): Promise<boolean> {
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <h2 style="color: #059669; margin: 0; font-size: 20px;">Refund Processed</h2>
+          <span style="font-family: monospace; font-size: 13px; background: #ecfdf5; color: #059669; padding: 4px 8px; border-radius: 6px; font-weight: 700;">#${orderNumber}</span>
+        </div>
+        <p style="font-size: 15px; color: #374151; line-height: 1.5;">We have processed a refund of <strong>₹${refundRupees.toFixed(2)}</strong> for Order #${orderNumber}.</p>
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px; color: #166534; font-weight: 600;">
+            ✓ Credited to your CartPilot Wallet with 0 delay.
+          </p>
+          <p style="margin: 6px 0 0 0; font-size: 13px; color: #15803d;">
+            The funds are immediately available for your next harvest order or scheduled morning essentials.
+          </p>
+        </div>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">CartPilot Agentic Commerce — Pure Vegetarian Quick Delivery</p>
+      </div>
+    `;
+    return this.dispatchEmail(email, `Refund Credited: ₹${refundRupees.toFixed(2)} for #${orderNumber}`, html);
+  }
 }
 
 export class ConsoleEmailAdapter implements IEmailAdapter {
@@ -210,6 +257,16 @@ export class ConsoleEmailAdapter implements IEmailAdapter {
     logger.info({ to: email, details }, '📧 [Console Email] Order confirmation dispatch');
     return true;
   }
+
+  async sendLowBalanceAlertEmail(email: string, balanceRupees: number): Promise<boolean> {
+    logger.info({ to: email, balanceRupees }, '📧 [Console Email] Low balance alert dispatch');
+    return true;
+  }
+
+  async sendRefundConfirmationEmail(email: string, orderNumber: string, refundRupees: number): Promise<boolean> {
+    logger.info({ to: email, orderNumber, refundRupees }, '📧 [Console Email] Refund confirmation dispatch');
+    return true;
+  }
 }
 
 export class EmailService {
@@ -241,4 +298,6 @@ export const emailAdapter: IEmailAdapter = {
     EmailService.getAdapter().sendMerchantStatusEmail(email, storeName, status, reason),
   sendEmailVerification: (email, token) => EmailService.getAdapter().sendEmailVerification(email, token),
   sendOrderConfirmationEmail: (email, details) => EmailService.getAdapter().sendOrderConfirmationEmail(email, details),
+  sendLowBalanceAlertEmail: (email, balanceRupees) => EmailService.getAdapter().sendLowBalanceAlertEmail(email, balanceRupees),
+  sendRefundConfirmationEmail: (email, orderNumber, refundRupees) => EmailService.getAdapter().sendRefundConfirmationEmail(email, orderNumber, refundRupees),
 };

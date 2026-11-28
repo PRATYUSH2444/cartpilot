@@ -9,7 +9,6 @@ import {
   Truck,
   Leaf,
   Sparkles,
-  Bell,
   Heart,
   ShieldCheck,
   Wallet,
@@ -137,7 +136,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   walletBalance = 0,
   onOpenWallet,
   onOpenWishlist,
-  onOpenNotifications,
+  onOpenNotifications: _onOpenNotifications,
   unreadNotificationsCount = 0,
   primaryNotificationType = 'general',
   onOpenRules,
@@ -236,31 +235,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </button>
               )}
 
-              {/* Notifications */}
-              <button
-                type="button"
-                onClick={onOpenNotifications || (() => onSelectTab('account'))}
-                className="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 flex items-center justify-center transition-colors relative cursor-pointer overflow-visible"
-                title="Notifications"
-                aria-label="Notifications"
-              >
-                <Bell className="w-4 h-4" />
-                {unreadNotificationsCount > 0 && (
-                  <span
-                    className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white dark:border-stone-900 shadow-2xs ${
-                      primaryNotificationType === 'order'
-                        ? 'bg-emerald-500'
-                        : primaryNotificationType === 'wallet'
-                        ? 'bg-sky-500'
-                        : primaryNotificationType === 'mandate'
-                        ? 'bg-rose-500'
-                        : 'bg-purple-500'
-                    } animate-pulse`}
-                  />
-                )}
-              </button>
-
-              {/* Profile Avatar */}
+              {/* Profile Avatar with Floating Category-Aware Notification Tag */}
               <button
                 type="button"
                 data-tour="account"
@@ -276,6 +251,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     userInitial
                   )}
                 </div>
+
+                {/* Floating Status Notification Tag (Category-Aware) */}
+                {unreadNotificationsCount > 0 && (
+                  <span
+                    className={`absolute -top-1 -right-1 translate-x-1/4 -translate-y-1/4 z-30 flex items-center justify-center rounded-full ring-2 ring-white dark:ring-stone-900 transition-transform pointer-events-none ${
+                      primaryNotificationType === 'order'
+                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                        : primaryNotificationType === 'wallet'
+                        ? 'bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.5)]'
+                        : primaryNotificationType === 'mandate'
+                        ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'
+                        : 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]'
+                    } ${
+                      unreadNotificationsCount > 1
+                        ? 'min-w-[16px] h-[16px] px-1 text-[9px] font-mono font-black text-white'
+                        : 'w-3 h-3'
+                    }`}
+                  >
+                    {unreadNotificationsCount > 1 ? (
+                      unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount
+                    ) : (
+                      <span className="w-1 h-1 rounded-full bg-white animate-ping opacity-75" />
+                    )}
+                  </span>
+                )}
               </button>
             </div>
           </div>

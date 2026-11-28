@@ -391,8 +391,17 @@ export const ShopperWorkspace: React.FC = () => {
       });
     }
 
-    // Real wallet notification
-    if (walletBalance > 0) {
+    // Real wallet notifications (contextual low-balance vs active balance)
+    if (walletBalance < 100) {
+      list.unshift({
+        id: `wallet_low_${Math.round(walletBalance)}`,
+        title: walletBalance === 0 ? 'Wallet Empty — Add Balance' : `Low Balance: ₹${Math.round(walletBalance)} Remaining`,
+        message: 'Your wallet balance is low. Upcoming scheduled or daily grocery baskets may be delayed. Top up when convenient.',
+        time: 'Balance Reminder',
+        type: 'wallet',
+        read: readNotificationIds.includes(`wallet_low_${Math.round(walletBalance)}`),
+      });
+    } else {
       list.push({
         id: `wallet_${Math.round(walletBalance)}`,
         title: `₹${walletBalance.toLocaleString('en-IN')} in CartPilot Wallet`,

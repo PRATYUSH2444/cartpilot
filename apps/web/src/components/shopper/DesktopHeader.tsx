@@ -112,30 +112,35 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
     order: {
       bg: 'bg-emerald-500',
       ping: 'bg-emerald-400',
+      glow: 'shadow-[0_0_8px_rgba(16,185,129,0.5)]',
       tagBg: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
       label: 'Order',
     },
     mandate: {
       bg: 'bg-rose-500',
       ping: 'bg-rose-400',
+      glow: 'shadow-[0_0_8px_rgba(244,63,94,0.5)]',
       tagBg: 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-800',
       label: 'Security',
     },
     wallet: {
       bg: 'bg-sky-500',
       ping: 'bg-sky-400',
+      glow: 'shadow-[0_0_8px_rgba(14,165,233,0.5)]',
       tagBg: 'bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300 border-sky-200 dark:border-sky-800',
       label: 'Wallet',
     },
     catalog: {
       bg: 'bg-purple-500',
       ping: 'bg-purple-400',
+      glow: 'shadow-[0_0_8px_rgba(168,85,247,0.5)]',
       tagBg: 'bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-800',
       label: 'Store',
     },
     general: {
       bg: 'bg-rose-500',
       ping: 'bg-rose-400',
+      glow: 'shadow-[0_0_8px_rgba(244,63,94,0.5)]',
       tagBg: 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-800',
       label: 'Alert',
     },
@@ -352,7 +357,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
               {/* Floating Status Notification Tag (Positioned outside the avatar circle, never clipped) */}
               {unreadNotificationsCount > 0 && (
                 <span
-                  className={`absolute -top-1 -right-1 z-30 flex items-center justify-center rounded-full border-2 border-white dark:border-stone-900 shadow-md transition-transform pointer-events-none ${
+                  className={`absolute -top-1 -right-1 translate-x-1/4 -translate-y-1/4 z-30 flex items-center justify-center rounded-full ring-2 ring-white dark:ring-stone-900 shadow-md transition-transform pointer-events-none ${badgeConfig.glow} ${
                     unreadNotificationsCount > 1
                       ? 'min-w-[18px] h-[18px] px-1 text-[10px] font-mono font-black text-white'
                       : 'w-3.5 h-3.5'

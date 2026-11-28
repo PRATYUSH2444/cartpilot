@@ -488,6 +488,31 @@ export class WalletService {
     });
 
     realtimeService.emitWalletUpdated(userId, newBalance, txn);
+
+    // Asynchronously dispatch refund confirmation email
+    void (async () => {
+      try {
+        const { UserModel } = await import('../users/user.model.js');
+        const { EmailService } = await import('../../integrations/email/email-adapter.js');
+        const user = await UserModel.findById(userId);
+        if (
+          user?.email &&
+          !user.email.endsWith('@cartpilot.local') &&
+          !user.email.endsWith('@phone.cartpilot.com') &&
+          !user.email.endsWith('.local')
+        ) {
+          const shortOrderNumber = orderId.slice(-6).toUpperCase();
+          await EmailService.getAdapter().sendRefundConfirmationEmail(
+            user.email,
+            shortOrderNumber,
+            amountPaise / 100
+          );
+        }
+      } catch (err) {
+        logger.warn({ err, userId, orderId }, 'Refund notification email dispatch skipped');
+      }
+    })();
+
     return txn;
   }
 

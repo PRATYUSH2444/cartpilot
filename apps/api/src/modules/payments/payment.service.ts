@@ -211,13 +211,35 @@ export class PaymentService {
     if (razorpayPaymentId.startsWith('wallet_')) {
       const { WalletService } = await import('../wallet/wallet.service.js');
       const debitIdempotencyKey = `wallet_debit_${order._id}_${order.pricingSnapshot.totalPaise}`;
-      await WalletService.debitForOrder(
+      const walletTxn = await WalletService.debitForOrder(
         order.userId.toString(),
         order.pricingSnapshot.totalPaise,
         order._id.toString(),
         debitIdempotencyKey
       );
       order.walletAmountPaidPaise = order.pricingSnapshot.totalPaise;
+
+      // Discretionary low-balance check (< ₹100) after order debit
+      if (walletTxn && typeof walletTxn.balanceAfterPaise === 'number' && walletTxn.balanceAfterPaise < 10000) {
+        void (async () => {
+          try {
+            const user = await UserModel.findById(order.userId);
+            if (
+              user?.email &&
+              !user.email.endsWith('@cartpilot.local') &&
+              !user.email.endsWith('@phone.cartpilot.com') &&
+              !user.email.endsWith('.local')
+            ) {
+              await EmailService.getAdapter().sendLowBalanceAlertEmail(
+                user.email,
+                walletTxn.balanceAfterPaise / 100
+              );
+            }
+          } catch (err) {
+            logger.warn({ err, userId: order.userId }, 'Discretionary low-balance email notice skipped');
+          }
+        })();
+      }
     }
 
     // 3. Mark Order as PAID & auto-confirm to CONFIRMED
