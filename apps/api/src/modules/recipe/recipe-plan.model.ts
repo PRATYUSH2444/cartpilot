@@ -60,7 +60,6 @@ const RecipePlanSchema = new Schema<IRecipePlan>(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
     },
     dishName: { type: String, required: true, trim: true },
     cuisine: { type: String, default: 'Indian', trim: true },
@@ -75,7 +74,6 @@ const RecipePlanSchema = new Schema<IRecipePlan>(
   }
 );
 
-RecipePlanSchema.index({ dishKey: 1 });
 RecipePlanSchema.index({ hits: -1 });
 
 export const RecipePlanModel: Model<IRecipePlan> =
