@@ -103,18 +103,35 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   return (
     <div className="flex-1 w-full h-full lg:h-[calc(100dvh-72px)] overflow-y-auto lg:overflow-hidden bg-stone-50/70 dark:bg-stone-950 text-stone-900 dark:text-stone-100 font-sans">
       <style>{`
+        .cart-items-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: #10b981 transparent;
+        }
         .cart-items-scroll::-webkit-scrollbar {
-          width: 5px;
+          width: 4px;
         }
         .cart-items-scroll::-webkit-scrollbar-track {
-          background: transparent;
+          background: rgba(0, 0, 0, 0.04);
+          border-radius: 9999px;
         }
         .cart-items-scroll::-webkit-scrollbar-thumb {
           background: #10b981;
           border-radius: 9999px;
         }
+        .cart-items-scroll::-webkit-scrollbar-thumb:hover {
+          background: #059669;
+        }
+        .dark .cart-items-scroll {
+          scrollbar-color: #059669 transparent;
+        }
+        .dark .cart-items-scroll::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+        }
         .dark .cart-items-scroll::-webkit-scrollbar-thumb {
-          background: #047857;
+          background: #059669;
+        }
+        .dark .cart-items-scroll::-webkit-scrollbar-thumb:hover {
+          background: #10b981;
         }
       `}</style>
 
@@ -253,7 +270,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               </div>
 
               {/* ── Internal Product Scroller (Prevents infinite page stretch, scrolls inside card) ── */}
-              <div className="divide-y divide-stone-100 dark:divide-stone-800/80 pr-1.5 my-1.5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto cart-items-scroll">
+              <div className="overflow-y-auto cart-items-scroll overscroll-contain max-h-[270px] sm:max-h-[330px] lg:max-h-none lg:flex-1 lg:min-h-0 divide-y divide-stone-100 dark:divide-stone-800/80 pr-1.5 my-1.5">
                 {items.map((item) => {
                   const linePriceRupees = Math.round((item.pricePaise || 0) / 100);
                   const lineTotalRupees = Math.round(
