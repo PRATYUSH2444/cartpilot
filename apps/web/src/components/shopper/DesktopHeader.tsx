@@ -36,6 +36,7 @@ interface DesktopHeaderProps {
   onLogout: () => void;
   userInitial?: string;
   userName?: string;
+  avatarUrl?: string;
   walletBalance?: number;
   favoritesCount?: number;
   isDark: boolean;
@@ -59,6 +60,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   onLogout,
   userInitial = 'U',
   userName = 'Customer',
+  avatarUrl = '',
   walletBalance = 0,
   favoritesCount = 0,
   isDark,
@@ -295,11 +297,15 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
               type="button"
               data-tour="account"
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-              className="w-9 h-9 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shadow-2xs cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition-all"
+              className="w-9 h-9 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shadow-2xs cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition-all overflow-hidden border border-emerald-600/40"
               title={userName}
               aria-label="Open profile menu"
             >
-              {userInitial}
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
+              ) : (
+                userInitial
+              )}
             </button>
 
             {isProfileMenuOpen && (
@@ -307,11 +313,20 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                 onMouseLeave={() => setIsProfileMenuOpen(false)}
                 className="absolute right-0 top-12 w-64 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xl py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-150"
               >
-                <div className="px-4 py-2.5 border-b border-stone-100 dark:border-stone-800">
-                  <p className="font-extrabold text-stone-900 dark:text-white truncate text-sm">
-                    {userName}
-                  </p>
-                  <p className="text-[11px] text-stone-400">Customer Account</p>
+                <div className="px-4 py-2.5 border-b border-stone-100 dark:border-stone-800 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-700 text-white font-extrabold text-sm flex items-center justify-center overflow-hidden shrink-0 border border-stone-200 dark:border-stone-700">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
+                    ) : (
+                      userInitial
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-extrabold text-stone-900 dark:text-white truncate text-sm">
+                      {userName}
+                    </p>
+                    <p className="text-[11px] text-stone-400">Customer Account</p>
+                  </div>
                 </div>
 
                 <div className="py-1">

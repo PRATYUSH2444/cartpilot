@@ -41,6 +41,7 @@ interface HomeScreenProps {
   favorites?: string[];
   onToggleFavorite?: (productId: string) => void;
   userInitial?: string;
+  avatarUrl?: string;
   walletBalance?: number;
   onOpenWallet?: () => void;
   onOpenCoupons?: () => void;
@@ -131,6 +132,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   favorites = [],
   onToggleFavorite,
   userInitial = 'U',
+  avatarUrl = '',
   walletBalance = 0,
   onOpenWallet,
   onOpenWishlist,
@@ -251,11 +253,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 type="button"
                 data-tour="account"
                 onClick={onOpenProfile}
-                className="w-8 h-8 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shadow-xs cursor-pointer"
+                className="w-8 h-8 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shadow-xs cursor-pointer overflow-hidden border border-emerald-600/40"
                 title="Profile & Settings"
                 aria-label="Account"
               >
-                {userInitial}
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Account" className="w-full h-full object-cover" />
+                ) : (
+                  userInitial
+                )}
               </button>
             </div>
           </div>

@@ -242,6 +242,7 @@ export class OtpService {
         role: user.role,
         phone: user.phone,
         hasPhone: Boolean(user.phone && user.phone.trim()),
+        avatarUrl: user.avatarUrl || '',
         mustChangePassword: false,
         isEmailVerified: user.isEmailVerified && !isSyntheticEmail,
         isPhoneVerified: Boolean(user.isPhoneVerified && user.phone),

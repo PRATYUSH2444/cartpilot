@@ -154,7 +154,13 @@ export const Header: React.FC<HeaderProps> = ({
               className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg border border-brd bg-paper/40 hover:bg-paper text-xs transition-colors group"
               title="Manage Account Security & Active Sessions"
             >
-              {currentMeta.icon}
+              {user.avatarUrl ? (
+                <div className="w-6 h-6 rounded-full overflow-hidden border border-brd shrink-0">
+                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                currentMeta.icon
+              )}
               <div className="text-left">
                 <span className="font-semibold text-ink block text-[11px] truncate max-w-[120px] group-hover:text-acc transition-colors">
                   {user.name}

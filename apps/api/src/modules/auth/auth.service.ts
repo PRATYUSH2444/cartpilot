@@ -54,6 +54,7 @@ export interface AuthUserDTO {
   role: UserRole;
   phone?: string;
   hasPhone?: boolean;
+  avatarUrl?: string;
   merchantId?: string;
   isStaff?: boolean;
   staffPermissions?: MerchantPermission[];
@@ -256,6 +257,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        avatarUrl: user.avatarUrl || '',
         isEmailVerified: user.isEmailVerified,
       },
       accessToken,
@@ -382,6 +384,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        avatarUrl: user.avatarUrl || '',
         merchantId,
         isStaff,
         staffPermissions,
@@ -574,6 +577,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        avatarUrl: user.avatarUrl || '',
         merchantId,
         isStaff,
         staffPermissions,
@@ -1222,6 +1226,7 @@ export class AuthService {
       name: user.name,
       role: user.role,
       phone: user.phone,
+      avatarUrl: user.avatarUrl || '',
       merchantId,
       isStaff,
       staffPermissions,
@@ -1241,6 +1246,7 @@ export class AuthService {
     email: string;
     name?: string;
     phone?: string;
+    avatarUrl?: string;
     role?: UserRole;
     isEmailVerified?: boolean;
     isPhoneVerified?: boolean;
@@ -1262,15 +1268,19 @@ export class AuthService {
         email: normalizedEmail,
         name: input.name || 'Shopper',
         phone: input.phone,
+        avatarUrl: input.avatarUrl || '',
         role: input.role || 'CUSTOMER',
         isActive: true,
         isEmailVerified: input.isEmailVerified ?? true,
         isPhoneVerified: input.isPhoneVerified ?? false,
       });
     } else {
-      // Update name/phone/verification if provided, but NEVER override role from client
+      // Update name/phone/avatar/verification if provided, but NEVER override role from client
       if (input.name) user.name = input.name;
       if (input.phone) user.phone = input.phone;
+      if (input.avatarUrl && (!user.avatarUrl || user.avatarUrl.trim() === '')) {
+        user.avatarUrl = input.avatarUrl;
+      }
       if (input.isEmailVerified !== undefined) user.isEmailVerified = input.isEmailVerified;
       if (input.isPhoneVerified !== undefined) user.isPhoneVerified = input.isPhoneVerified;
     }
@@ -1296,6 +1306,7 @@ export class AuthService {
       name: user.name,
       role: user.role,
       phone: user.phone,
+      avatarUrl: user.avatarUrl || '',
       merchantId,
       isStaff,
       staffPermissions,
@@ -1346,6 +1357,7 @@ export class AuthService {
       const isEmailVerified = emailObj?.verification?.status === 'verified';
       const isPhoneVerified = phoneObj?.verification?.status === 'verified';
       const email = emailObj?.email_address || (phone ? `${phone.replace(/\D/g, '')}@phone.cartpilot.com` : undefined);
+      const avatarUrl = data.image_url || data.profile_image_url || data.avatar_url;
 
       if (email && clerkUserId) {
         await this.syncClerkUser({
@@ -1353,6 +1365,7 @@ export class AuthService {
           email,
           name,
           phone,
+          avatarUrl,
           isEmailVerified,
           isPhoneVerified,
         });

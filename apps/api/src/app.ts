@@ -72,13 +72,13 @@ export function createApp(): Express {
   // Standard JSON Body Parser with rawBody capture for Svix signature verification
   app.use(
     express.json({
-      limit: '1mb',
+      limit: '10mb',
       verify: (req: Request & { rawBody?: string }, _res: Response, buf: Buffer) => {
         req.rawBody = buf.toString('utf8');
       },
     })
   );
-  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Root Diagnostic Aliases
   app.use(healthRouter);

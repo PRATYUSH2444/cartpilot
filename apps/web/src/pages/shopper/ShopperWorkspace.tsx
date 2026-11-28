@@ -1742,6 +1742,7 @@ export const ShopperWorkspace: React.FC = () => {
         onLogout={() => logout()}
         userInitial={userInitial}
         userName={user?.name || 'Customer'}
+        avatarUrl={user?.avatarUrl}
         walletBalance={walletBalance}
         favoritesCount={favorites.length}
         unreadNotificationsCount={unreadNotificationsCount}
@@ -1800,6 +1801,7 @@ export const ShopperWorkspace: React.FC = () => {
                 setIsLiveTrackingOpen(true);
               }}
               userInitial={userInitial}
+              avatarUrl={user?.avatarUrl}
               walletBalance={walletBalance}
               favorites={favorites}
               onToggleFavorite={handleToggleFavorite}

@@ -35,6 +35,7 @@ import {
 import { OrderData, UserAddress } from '../../types';
 import { API_BASE } from '../../config/api';
 import { useScrollLock } from '../../hooks/useScrollLock';
+import { AvatarModal } from './AvatarModal';
 
 interface AccountScreenProps {
   user: {
@@ -43,6 +44,7 @@ interface AccountScreenProps {
     email?: string;
     phone?: string;
     role?: string;
+    avatarUrl?: string;
     isEmailVerified?: boolean;
     isPhoneVerified?: boolean;
     hasRealEmail?: boolean;
@@ -250,6 +252,40 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
     }
   };
 
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+
+  const handleSaveAvatar = async (newAvatarUrl: string): Promise<boolean> => {
+    try {
+      if (user && setUserProfile) {
+        (setUserProfile as any)({
+          ...user,
+          avatarUrl: newAvatarUrl,
+        });
+      }
+
+      const res = await authFetch(`${API_BASE}/users/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarUrl: newAvatarUrl }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (setUserProfile && data.data) {
+          (setUserProfile as any)({
+            ...user,
+            ...data.data,
+            avatarUrl: data.data.avatarUrl || newAvatarUrl,
+          });
+        }
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   const activeOrdersCount = orders.filter(
     (o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED' && o.status !== 'FAILED'
   ).length;
@@ -331,19 +367,36 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
             <div className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 p-4 sm:p-5 shadow-xs">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative flex-shrink-0">
-                    <div className="w-14 h-14 rounded-full border-2 border-stone-200 dark:border-stone-700 p-0.5 flex items-center justify-center">
-                      <div className="w-full h-full rounded-full bg-stone-900 text-white font-extrabold text-2xl flex items-center justify-center shadow-inner">
-                        {userInitial}
-                      </div>
-                    </div>
+                  <div className="relative flex-shrink-0 group">
                     <button
                       type="button"
-                      onClick={onOpenProfileModal}
-                      className="absolute -bottom-0.5 -right-0.5 w-5.5 h-5.5 rounded-full bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 border border-white dark:border-stone-800 flex items-center justify-center shadow-xs cursor-pointer hover:scale-110 transition-transform"
-                      title="Update Avatar"
+                      onClick={() => setIsAvatarModalOpen(true)}
+                      className="w-16 h-16 sm:w-18 sm:h-18 rounded-full border-2 border-stone-200 dark:border-stone-700 p-0.5 flex items-center justify-center cursor-pointer transition-all hover:scale-102 hover:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 overflow-hidden shadow-xs"
+                      title="Click to view or change profile photo"
                     >
-                      <Camera className="w-3 h-3" />
+                      {user?.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={displayName}
+                          className="w-full h-full rounded-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                      {!user?.avatarUrl && (
+                        <div className="w-full h-full rounded-full bg-stone-900 dark:bg-stone-800 text-white font-extrabold text-2xl sm:text-3xl flex items-center justify-center shadow-inner">
+                          {userInitial}
+                        </div>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsAvatarModalOpen(true)}
+                      className="absolute -bottom-1 -right-1 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-700 hover:bg-emerald-600 text-white border-2 border-white dark:border-stone-900 flex items-center justify-center shadow-md cursor-pointer hover:scale-110 active:scale-95 transition-all"
+                      title="Upload or Take Photo"
+                    >
+                      <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                   </div>
 
@@ -1223,6 +1276,15 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
           </div>
         </div>
       )}
+      {/* ── Avatar Upload & Photo Capture Modal ────────────────────────────── */}
+      <AvatarModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+        currentAvatarUrl={user?.avatarUrl || ''}
+        userName={displayName}
+        userInitial={userInitial}
+        onSaveAvatar={handleSaveAvatar}
+      />
     </div>
   );
 };

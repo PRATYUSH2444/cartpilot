@@ -16,10 +16,12 @@ import {
   Leaf,
   Bell,
   Lock,
+  Camera,
 } from 'lucide-react';
 import { UserProfile, UserGender, INotificationPreferences } from '../../types';
 import { API_BASE } from '../../config/api';
 import { useAuth, isPlaceholderEmail } from '../../context/AuthContext';
+import { AvatarModal } from './AvatarModal';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -74,6 +76,42 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Avatar Modal state
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+
+  const handleSaveAvatarFromModal = async (newAvatarUrl: string): Promise<boolean> => {
+    try {
+      if (setUserProfile) {
+        (setUserProfile as any)({
+          ...(profile || {}),
+          avatarUrl: newAvatarUrl,
+        });
+      }
+
+      const res = await authFetch(`${API_BASE}/users/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarUrl: newAvatarUrl }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setProfile((prev) => (prev ? { ...prev, avatarUrl: newAvatarUrl } : null));
+        if (setUserProfile && data.data) {
+          (setUserProfile as any)({
+            ...(profile || {}),
+            ...data.data,
+            avatarUrl: data.data.avatarUrl || newAvatarUrl,
+          });
+        }
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !token) return;
@@ -374,6 +412,42 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </div>
           ) : activeTab === 'PROFILE' ? (
             <form onSubmit={handleSaveProfile} className="space-y-4">
+              {/* Profile Avatar Card */}
+              <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-stone-50 dark:bg-zinc-900 border border-stone-200/80 dark:border-zinc-800">
+                <div className="relative w-14 h-14 rounded-full border-2 border-stone-200 dark:border-zinc-700 p-0.5 shrink-0 overflow-hidden">
+                  {profile?.avatarUrl ? (
+                    <img
+                      src={profile.avatarUrl}
+                      alt={name}
+                      className="w-full h-full rounded-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  ) : null}
+                  {!profile?.avatarUrl && (
+                    <div className="w-full h-full rounded-full bg-stone-900 dark:bg-zinc-800 text-white font-bold text-lg flex items-center justify-center">
+                      {name ? name.charAt(0).toUpperCase() : 'P'}
+                    </div>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-stone-900 dark:text-white">Profile Photo</div>
+                  <div className="text-[11px] text-stone-500 dark:text-zinc-400">
+                    Visible across your orders and account
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAvatarModalOpen(true)}
+                    className="mt-1 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>{profile?.avatarUrl ? 'Change Photo' : 'Upload or Take Photo'}</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Full Name */}
               <div>
                 <label className="block text-xs font-semibold text-stone-900 dark:text-white mb-1">Full Name</label>
@@ -768,6 +842,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
         </div>
       </div>
+      {/* ── Avatar Modal ── */}
+      <AvatarModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+        currentAvatarUrl={profile?.avatarUrl || ''}
+        userName={name || 'Shopper'}
+        userInitial={name ? name.charAt(0).toUpperCase() : 'P'}
+        onSaveAvatar={handleSaveAvatarFromModal}
+      />
     </div>
   );
 };

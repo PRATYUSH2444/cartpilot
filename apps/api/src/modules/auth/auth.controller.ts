@@ -424,7 +424,7 @@ export async function syncClerkUser(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { clerkUserId, email, name, phone, role, isEmailVerified, isPhoneVerified } = req.body;
+    const { clerkUserId, email, name, phone, avatarUrl, role, isEmailVerified, isPhoneVerified } = req.body;
     if (!clerkUserId || !email) {
       res.status(400).json({
         success: false,
@@ -438,6 +438,7 @@ export async function syncClerkUser(
       email,
       name,
       phone,
+      avatarUrl,
       role,
       isEmailVerified,
       isPhoneVerified,

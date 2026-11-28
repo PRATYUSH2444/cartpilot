@@ -48,6 +48,7 @@ export interface UserProfile {
   role: UserRole;
   phone?: string;
   hasPhone?: boolean;
+  avatarUrl?: string;
   clerkUserId?: string;
   merchantId?: string;
   isStaff?: boolean;
@@ -162,6 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const email = clerkUser.primaryEmailAddress?.emailAddress;
         const phone = clerkUser.primaryPhoneNumber?.phoneNumber;
         const name = clerkUser.fullName || clerkUser.firstName || 'Shopper';
+        const avatarUrl = clerkUser.imageUrl || (clerkUser.hasImage ? clerkUser.imageUrl : undefined);
 
         clerkUserIdRef.current = clerkUser.id;
         try {
@@ -181,6 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email,
             name,
             phone,
+            avatarUrl,
             isEmailVerified: clerkUser.primaryEmailAddress?.verification?.status === 'verified',
             isPhoneVerified: clerkUser.primaryPhoneNumber?.verification?.status === 'verified',
           }),
@@ -195,6 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: d.data.user.name,
             role: d.data.user.role,
             phone: d.data.user.phone,
+            avatarUrl: d.data.user.avatarUrl || avatarUrl || '',
             merchantId: d.data.user.merchantId,
             isStaff: d.data.user.isStaff,
             staffPermissions: d.data.user.staffPermissions,
@@ -326,6 +330,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: data.data.user.name,
             role: data.data.user.role,
             phone: data.data.user.phone,
+            avatarUrl: data.data.user.avatarUrl || '',
             merchantId: data.data.user.merchantId,
             isStaff: data.data.user.isStaff,
             staffPermissions: data.data.user.staffPermissions,
@@ -589,6 +594,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: data.data.user.role,
           phone: data.data.user.phone,
           hasPhone: Boolean(data.data.user.phone && data.data.user.phone.trim()),
+          avatarUrl: data.data.user.avatarUrl || '',
           isPhoneVerified: Boolean(data.data.user.isPhoneVerified ?? true),
           merchantId: data.data.user.merchantId,
           isStaff: data.data.user.isStaff,
@@ -684,6 +690,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: data.data.user.role,
           phone: data.data.user.phone,
           hasPhone: Boolean(data.data.user.phone && data.data.user.phone.trim()),
+          avatarUrl: data.data.user.avatarUrl || '',
           isPhoneVerified: Boolean(data.data.user.isPhoneVerified ?? true),
           merchantId: data.data.user.merchantId,
           isStaff: data.data.user.isStaff,
