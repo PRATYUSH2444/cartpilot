@@ -89,59 +89,30 @@ export const WalletModal: React.FC<WalletModalProps> = ({
     });
   };
 
-  // Fetch live wallet balance, limits, and real ledger transactions
   const fetchWalletData = useCallback(async () => {
     if (!token && !authFetch) return;
     try {
       setRefreshing(true);
-      const [walletRes, txRes] = await Promise.all([
-        authFetch(`${API_BASE}/wallet`),
-        authFetch(`${API_BASE}/wallet/transactions?page=1&limit=20`),
-      ]);
-
-      if (walletRes.ok) {
-        const walletData = await walletRes.json();
-        if (walletData.data) {
-          const w = walletData.data.wallet || walletData.data;
-          const lim = walletData.data.limits;
-          if (w && typeof w.balancePaise === 'number') {
+      const res = await authFetch(`${API_BASE}/wallet`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          const w = json.data.wallet || json.data;
+          if (w.balancePaise !== undefined) {
             setLiveBalancePaise(w.balancePaise);
-          } else if (typeof walletData.data.balancePaise === 'number') {
-            setLiveBalancePaise(walletData.data.balancePaise);
+          } else if (w.balanceRupees !== undefined) {
+            setLiveBalancePaise(Math.round(w.balanceRupees * 100));
           }
-          if (lim) {
-            const minPaise =
-              lim.minTopupPaise ??
-              (typeof lim.minTopupRupees === 'number' ? Math.round(lim.minTopupRupees * 100) : 100);
-            const maxPaise =
-              lim.maxTopupPaise ??
-              (typeof lim.maxTopupRupees === 'number' ? Math.round(lim.maxTopupRupees * 100) : 1000000);
-            const maxBal =
-              lim.maxBalancePaise ??
-              (typeof lim.maxBalanceRupees === 'number' ? Math.round(lim.maxBalanceRupees * 100) : 5000000);
-            const chips =
-              (lim.quickAddChipsRupees?.length && lim.quickAddChipsRupees) ||
-              (lim.quickAddChips?.length && lim.quickAddChips) ||
-              [50, 100, 200, 500];
-
-            setLimits({
-              minTopupPaise: minPaise,
-              maxTopupPaise: maxPaise,
-              maxBalancePaise: maxBal,
-              quickAddChipsRupees: chips,
-            });
+          if (json.data.limits) {
+            setLimits(json.data.limits);
+          }
+          if (Array.isArray(json.data.recentTransactions)) {
+            setTransactions(json.data.recentTransactions);
           }
         }
       }
-
-      if (txRes.ok) {
-        const txData = await txRes.json();
-        if (txData.data && Array.isArray(txData.data.items)) {
-          setTransactions(txData.data.items);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch wallet info:', err);
+    } catch {
+      // Graceful fallback to initial prop balance
     } finally {
       setRefreshing(false);
     }
@@ -149,44 +120,35 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      setLiveBalancePaise(Math.round(balance * 100));
       fetchWalletData();
     }
-  }, [isOpen, fetchWalletData]);
-
-  // Keep liveBalance in sync with balance prop if updated externally
-  useEffect(() => {
-    if (balance > 0 && liveBalancePaise === 0) {
-      setLiveBalancePaise(Math.round(balance * 100));
-    }
-  }, [balance, liveBalancePaise]);
-
-  if (!isOpen) return null;
+  }, [isOpen, balance, fetchWalletData]);
 
   const currentRupees = liveBalancePaise / 100;
-  const targetRupees = customAmount ? parseFloat(customAmount) : selectedTopup;
+  const targetRupees = customAmount ? parseFloat(customAmount) || 0 : selectedTopup;
 
   const handleTopupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    const amountToAdd = customAmount ? parseFloat(customAmount) : selectedTopup;
-    if (isNaN(amountToAdd) || amountToAdd <= 0) {
-      setErrorMessage('Please enter a valid top-up amount');
-      return;
-    }
+    const amountToAdd = targetRupees;
+    const minRupees = limits.minTopupPaise / 100;
+    const maxRupees = limits.maxTopupPaise / 100;
 
-    const amountPaise = Math.round(amountToAdd * 100);
-    if (amountPaise < limits.minTopupPaise) {
-      setErrorMessage(`Minimum top-up is ₹${limits.minTopupPaise / 100}`);
+    if (!amountToAdd || isNaN(amountToAdd) || amountToAdd < minRupees) {
+      setErrorMessage(`Please enter a valid top-up amount of at least ₹${minRupees}`);
       return;
     }
-    if (amountPaise > limits.maxTopupPaise) {
-      setErrorMessage(`Maximum top-up per transaction is ₹${limits.maxTopupPaise / 100}`);
+    if (amountToAdd > maxRupees) {
+      setErrorMessage(`Maximum top-up per transaction is ₹${maxRupees.toLocaleString('en-IN')}`);
       return;
     }
-    if (liveBalancePaise + amountPaise > limits.maxBalancePaise) {
+    if (liveBalancePaise + amountToAdd * 100 > limits.maxBalancePaise) {
       setErrorMessage(
-        `Wallet balance limit exceeded. Maximum wallet capacity is ₹${limits.maxBalancePaise / 100}`
+        `Adding ₹${amountToAdd} would exceed the wallet limit of ₹${(
+          limits.maxBalancePaise / 100
+        ).toLocaleString('en-IN')}`
       );
       return;
     }
@@ -194,47 +156,38 @@ export const WalletModal: React.FC<WalletModalProps> = ({
     setIsProcessing(true);
 
     try {
-      const idempotencyKey = `topup_${user?.id || 'guest'}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
-      // 1. Create Top-up Intent on backend
-      const intentRes = await authFetch(`${API_BASE}/wallet/topup/intent`, {
+      // 1. Create top-up intent on backend
+      const res = await authFetch(`${API_BASE}/wallet/topup-intent`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'idempotency-key': idempotencyKey,
-        },
-        body: JSON.stringify({
-          amountRupees: amountToAdd,
-          amountPaise,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amountRupees: amountToAdd }),
       });
 
-      const intentJson = await intentRes.json();
-      if (!intentRes.ok) {
-        throw new Error(intentJson.error?.message || intentJson.message || 'Failed to initiate top-up');
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error?.message || data.message || 'Could not initiate wallet top-up');
       }
 
-      const intentPayload = intentJson.data?.razorpay || intentJson.data?.intent || intentJson.data;
-      const orderId = intentPayload?.orderId || intentPayload?.id || intentJson.data?.orderId;
-      const keyId = intentPayload?.keyId || intentJson.data?.keyId;
-      const amountPaiseFinal = intentPayload?.amountPaise || intentJson.data?.amountPaise || amountPaise;
-      const currency = intentPayload?.currency || intentJson.data?.currency || 'INR';
-      const isSimulated = intentJson.data?.isSimulated ?? (!keyId || keyId === 'rzp_test_placeholder');
+      const intent = data.data;
+      const { razorpayOrderId, amountPaise: serverPaise, keyId } = intent;
 
-      // 2. Open Razorpay Checkout or verify simulation
+      // 2. Initialize Razorpay Checkout
       const sdkReady = await loadRazorpaySdk();
 
-      const completeVerification = async (paymentId: string, signature: string) => {
-        const verifyRes = await authFetch(`${API_BASE}/wallet/topup/verify`, {
+      const proceedVerification = async (paymentResponse: {
+        razorpay_order_id: string;
+        razorpay_payment_id: string;
+        razorpay_signature: string;
+      }) => {
+        const amountPaiseFinal = serverPaise || Math.round(amountToAdd * 100);
+        const verifyRes = await authFetch(`${API_BASE}/wallet/topup-verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            razorpay_order_id: orderId,
-            razorpay_payment_id: paymentId,
-            razorpay_signature: signature,
-            orderId,
-            paymentId,
-            signature,
+            orderId: paymentResponse.razorpay_order_id,
+            paymentId: paymentResponse.razorpay_payment_id,
+            signature: paymentResponse.razorpay_signature,
+            amountPaise: amountPaiseFinal,
           }),
         });
 
@@ -268,32 +221,29 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       if (
         sdkReady &&
         keyId &&
-        keyId.startsWith('rzp_') &&
-        keyId !== 'rzp_test_placeholder' &&
-        !isSimulated
+        razorpayOrderId &&
+        !razorpayOrderId.startsWith('wallet_topup_sim_')
       ) {
         const options = {
           key: keyId,
-          amount: amountPaiseFinal,
-          currency,
+          amount: serverPaise || Math.round(amountToAdd * 100),
+          currency: 'INR',
           name: 'CartPilot Wallet',
-          description: `Top-up ₹${amountToAdd}`,
-          order_id: orderId,
+          description: `Add ₹${amountToAdd} to Wallet Balance`,
+          order_id: razorpayOrderId,
           prefill: {
-            name: user?.name || '',
+            name: user?.name || 'Shopper',
             email: user?.email || '',
+            contact: user?.phone || '',
           },
           theme: {
-            color: '#10B981',
+            color: '#08643D',
           },
           handler: async (response: any) => {
             try {
-              await completeVerification(
-                response.razorpay_payment_id,
-                response.razorpay_signature
-              );
+              await proceedVerification(response);
             } catch (vErr: any) {
-              setErrorMessage(vErr.message || 'Verification failed');
+              setErrorMessage(vErr.message || 'Payment verification failed');
             } finally {
               setIsProcessing(false);
             }
@@ -304,14 +254,22 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             },
           },
         };
+
         const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', (resp: any) => {
+          setErrorMessage(resp.error?.description || 'Payment failed');
+          setIsProcessing(false);
+        });
         rzp.open();
       } else {
-        // Safe sandbox simulator for local testing or placeholder keys
-        await completeVerification(
-          `pay_sim_${Date.now()}`,
-          'sig_sim_test'
-        );
+        // High-fidelity sandbox / simulated fallback for development & immediate top-ups
+        const mockResponse = {
+          razorpay_order_id: razorpayOrderId || `wallet_topup_${Date.now()}`,
+          razorpay_payment_id: `pay_sim_${Date.now()}`,
+          razorpay_signature: `sig_sim_${Date.now()}`,
+        };
+
+        await proceedVerification(mockResponse);
         setIsProcessing(false);
       }
     } catch (err: any) {
@@ -338,32 +296,32 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="wallet-modal-title"
     >
       <div
-        className="relative w-full max-w-md bg-stone-950 text-stone-100 rounded-3xl shadow-2xl border border-stone-800/80 overflow-hidden flex flex-col max-h-[88dvh] animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-md bg-white dark:bg-stone-950 text-stone-900 dark:text-stone-100 rounded-3xl shadow-2xl border border-stone-200/90 dark:border-stone-800/80 overflow-hidden flex flex-col max-h-[88dvh] animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Top Header ────────────────────────────────────────────────────── */}
-        <div className="px-5 py-4 border-b border-stone-800/80 flex items-center justify-between bg-stone-900/60 backdrop-blur-sm flex-shrink-0">
+        <div className="px-5 py-4 border-b border-stone-200/80 dark:border-stone-800/80 flex items-center justify-between bg-stone-50/90 dark:bg-stone-900/60 backdrop-blur-sm flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-inner">
+            <div className="w-9 h-9 rounded-2xl bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shadow-inner">
               <Wallet className="w-4.5 h-4.5" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 id="wallet-modal-title" className="font-extrabold text-base text-white tracking-tight leading-none">
+                <h3 id="wallet-modal-title" className="font-extrabold text-base text-stone-900 dark:text-white tracking-tight leading-none">
                   CartPilot Wallet
                 </h3>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800/60">
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
                   LEDGER
                 </span>
               </div>
-              <p className="text-[11px] text-stone-400 mt-0.5">
+              <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
                 Instant 1-tap checkout • Zero gateway fees
               </p>
             </div>
@@ -374,16 +332,16 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               type="button"
               onClick={fetchWalletData}
               disabled={refreshing}
-              className="p-2 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800/80 transition-colors cursor-pointer"
+              className="p-2 rounded-xl text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800/80 transition-colors cursor-pointer"
               title="Refresh ledger"
               aria-label="Refresh wallet"
             >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-emerald-400' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-emerald-600 dark:text-emerald-400' : ''}`} />
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800/80 transition-colors cursor-pointer"
+              className="p-2 rounded-xl text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800/80 transition-colors cursor-pointer"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -394,7 +352,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         {/* ── Scrollable Body ────────────────────────────────────────────────── */}
         <div className="p-5 overflow-y-auto space-y-4 flex-1 min-h-0 overscroll-contain">
           {/* Obsidian Black Balance Card (Premium Fintech Aesthetic) */}
-          <div className="relative rounded-3xl bg-gradient-to-br from-stone-900 via-stone-900 to-stone-950 border border-stone-800/90 p-5 shadow-xl overflow-hidden">
+          <div className="relative rounded-3xl bg-gradient-to-br from-stone-900 via-stone-900 to-stone-950 border border-stone-800/90 p-5 shadow-xl overflow-hidden text-white">
             {/* Subtle glow accent */}
             <div className="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
 
@@ -425,14 +383,14 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           </div>
 
           {/* Tab Selector: Add Money vs Ledger Activity */}
-          <div className="flex p-1 bg-stone-900 rounded-2xl border border-stone-800/90 text-xs font-bold">
+          <div className="flex p-1 bg-stone-100 dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800/90 text-xs font-bold">
             <button
               type="button"
               onClick={() => setActiveTab('topup')}
               className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
                 activeTab === 'topup'
-                  ? 'bg-stone-800 text-white shadow-sm'
-                  : 'text-stone-400 hover:text-stone-200'
+                  ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-xs'
+                  : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
               }`}
             >
               Add Money
@@ -442,8 +400,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               onClick={() => setActiveTab('history')}
               className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
                 activeTab === 'history'
-                  ? 'bg-stone-800 text-white shadow-sm'
-                  : 'text-stone-400 hover:text-stone-200'
+                  ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-xs'
+                  : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
               }`}
             >
               Ledger Activity ({transactions.length})
@@ -452,18 +410,18 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
           {/* Error Banner */}
           {errorMessage && (
-            <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs flex items-start gap-2.5 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800/60 dark:text-rose-300 text-xs flex items-start gap-2.5 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-500 dark:text-rose-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1 font-medium">{errorMessage}</div>
             </div>
           )}
 
           {/* Success Banner */}
           {isSuccess && (
-            <div className="p-4 rounded-2xl bg-emerald-950/50 border border-emerald-800/60 text-center space-y-1.5 animate-in zoom-in-95">
-              <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-              <h4 className="font-bold text-sm text-white">Funds Added!</h4>
-              <p className="text-xs text-emerald-300/80">{successMessage}</p>
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-emerald-950/50 dark:border-emerald-800/60 text-center space-y-1.5 animate-in zoom-in-95">
+              <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mx-auto" />
+              <h4 className="font-bold text-sm text-stone-900 dark:text-white">Funds Added!</h4>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300/80">{successMessage}</p>
             </div>
           )}
 
@@ -471,10 +429,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             <form onSubmit={handleTopupSubmit} className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-stone-300">
+                  <label className="text-xs font-bold text-stone-700 dark:text-stone-300">
                     Select Quick Top-Up Amount
                   </label>
-                  <span className="text-[11px] text-stone-500 font-mono">
+                  <span className="text-[11px] text-stone-400 dark:text-stone-500 font-mono">
                     Min ₹{limits.minTopupPaise / 100}
                   </span>
                 </div>
@@ -494,8 +452,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                         }}
                         className={`py-2.5 px-2 rounded-2xl font-black text-xs font-mono border transition-all cursor-pointer ${
                           isSelected
-                            ? 'border-emerald-500 bg-emerald-950/60 text-emerald-300 ring-2 ring-emerald-500/30'
-                            : 'border-stone-800 bg-stone-900 text-stone-300 hover:bg-stone-850 hover:border-stone-700'
+                            ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/30 dark:border-emerald-500 dark:bg-emerald-950/60 dark:text-emerald-300'
+                            : 'border-stone-200 dark:border-stone-800 bg-stone-50 hover:bg-stone-100 dark:bg-stone-900 text-stone-700 dark:text-stone-300 dark:hover:bg-stone-850 hover:border-stone-300 dark:hover:border-stone-700'
                         }`}
                       >
                         +₹{amt}
@@ -521,7 +479,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                       setErrorMessage(null);
                     }}
                     placeholder={`Enter custom amount (e.g. 10, 50, 750)`}
-                    className="w-full pl-8 pr-4 py-3 rounded-2xl border border-stone-800 bg-stone-900 text-sm font-bold text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-mono"
+                    className="w-full pl-8 pr-4 py-3 rounded-2xl border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900 text-sm font-bold text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-mono"
                   />
                 </div>
               </div>
@@ -530,7 +488,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               <button
                 type="submit"
                 disabled={isProcessing || targetRupees <= 0}
-                className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-extrabold text-sm shadow-lg shadow-emerald-900/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-extrabold text-sm shadow-lg shadow-emerald-700/20 dark:shadow-emerald-900/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isProcessing ? (
                   <>
@@ -547,7 +505,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 )}
               </button>
 
-              <p className="text-center text-[11px] text-stone-500">
+              <p className="text-center text-[11px] text-stone-400 dark:text-stone-500">
                 Supports UPI, Credit/Debit Cards, NetBanking via Razorpay
               </p>
             </form>
@@ -555,10 +513,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             /* Real Ledger Activity */
             <div className="space-y-2">
               {transactions.length === 0 ? (
-                <div className="py-8 text-center space-y-2 rounded-2xl bg-stone-900/40 border border-stone-850">
-                  <Clock className="w-8 h-8 text-stone-600 mx-auto" />
-                  <p className="text-xs font-semibold text-stone-400">No transactions recorded yet</p>
-                  <p className="text-[11px] text-stone-500 max-w-xs mx-auto">
+                <div className="py-8 text-center space-y-2 rounded-2xl bg-stone-50 dark:bg-stone-900/40 border border-stone-200 dark:border-stone-850">
+                  <Clock className="w-8 h-8 text-stone-400 dark:text-stone-600 mx-auto" />
+                  <p className="text-xs font-semibold text-stone-600 dark:text-stone-400">No transactions recorded yet</p>
+                  <p className="text-[11px] text-stone-400 dark:text-stone-500 max-w-xs mx-auto">
                     Top up your wallet or place an order to see your double-entry ledger history here.
                   </p>
                 </div>
@@ -572,14 +530,14 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                     return (
                       <div
                         key={tx.id}
-                        className="p-3 rounded-2xl bg-stone-900 border border-stone-800/80 flex items-center justify-between gap-3 text-xs"
+                        className="p-3 rounded-2xl bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800/80 flex items-center justify-between gap-3 text-xs"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div
                             className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
                               isCredit
-                                ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50'
-                                : 'bg-rose-950/80 text-rose-400 border border-rose-800/50'
+                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-400 dark:border-emerald-800/50'
+                                : 'bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/80 dark:text-rose-400 dark:border-rose-800/50'
                             }`}
                           >
                             {isCredit ? (
@@ -589,10 +547,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-bold text-stone-200 truncate leading-tight">
+                            <p className="font-bold text-stone-800 dark:text-stone-200 truncate leading-tight">
                               {tx.description || tx.type}
                             </p>
-                            <p className="text-[10px] text-stone-500 font-mono mt-0.5">
+                            <p className="text-[10px] text-stone-400 dark:text-stone-500 font-mono mt-0.5">
                               {formatTxDate(tx.createdAt)}
                             </p>
                           </div>
@@ -601,12 +559,12 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                         <div className="text-right flex-shrink-0 font-mono">
                           <span
                             className={`font-black text-xs block ${
-                              isCredit ? 'text-emerald-400' : 'text-stone-300'
+                              isCredit ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-700 dark:text-stone-300'
                             }`}
                           >
                             {isCredit ? '+' : '-'}₹{amountRupees.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </span>
-                          <span className="text-[10px] text-stone-500 block">
+                          <span className="text-[10px] text-stone-400 dark:text-stone-500 block">
                             Bal: ₹{balanceAfterRupees.toLocaleString('en-IN')}
                           </span>
                         </div>

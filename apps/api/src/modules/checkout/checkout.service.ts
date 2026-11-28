@@ -65,9 +65,9 @@ export class CheckoutService {
   ): Promise<CheckoutResult> {
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
-    // 0. Enforce mandatory email verification before checkout (bypassed in test environment)
+    // 0. Enforce mandatory email verification before checkout
     const user = await UserModel.findById(userObjectId);
-    if ((!user || !user.isEmailVerified) && env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'test') {
+    if (!user || !user.isEmailVerified) {
       throw new ForbiddenError(
         'Email verification is required before checkout. Please verify your email to proceed.',
         'EMAIL_VERIFICATION_REQUIRED'
