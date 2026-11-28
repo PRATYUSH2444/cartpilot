@@ -132,6 +132,43 @@ export const AdminWorkspace: React.FC = () => {
   const [isTestingKey, setIsTestingKey] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; latencyMs?: number } | null>(null);
 
+  // Twilio SMS Carrier Live Testing State
+  const [testSmsPhone, setTestSmsPhone] = useState<string>('');
+  const [isTestingSms, setIsTestingSms] = useState<boolean>(false);
+  const [smsTestResult, setSmsTestResult] = useState<{ success: boolean; message: string; sid?: string } | null>(null);
+
+  const handleTestSms = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !testSmsPhone.trim()) return;
+    setIsTestingSms(true);
+    setSmsTestResult(null);
+    try {
+      const res = await authFetch(`${API_BASE}/system/integrations/test-sms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: testSmsPhone.trim() }),
+      });
+      const data = await res.json();
+      setSmsTestResult({
+        success: data.success,
+        message: data.data?.message || data.error || 'Failed to dispatch test SMS',
+        sid: data.data?.sid,
+      });
+      if (data.success) {
+        showBanner('success', 'Real test SMS dispatched via Twilio to carrier!');
+      } else {
+        showBanner('error', data.data?.message || data.error || 'SMS dispatch failed');
+      }
+    } catch {
+      setSmsTestResult({
+        success: false,
+        message: 'Network error connecting to SMS test endpoint',
+      });
+    } finally {
+      setIsTestingSms(false);
+    }
+  };
+
   // Admin Provisioning state
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
@@ -1345,6 +1382,71 @@ export const AdminWorkspace: React.FC = () => {
                       )}
                     </button>
                   </div>
+                </form>
+              </div>
+
+              {/* Twilio SMS Carrier Live Testing Station */}
+              <div className="pt-6 border-t border-brd space-y-4">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-teal-500" />
+                  <div>
+                    <h4 className="font-bold text-sm text-ink">Twilio SMS & OTP Carrier Live Station</h4>
+                    <p className="text-xs text-mut">
+                      Dispatch an authentic live SMS to verify your Twilio credentials (Account SID, Auth Token & Sender Number)
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleTestSms} className="space-y-3 max-w-xl">
+                  <div className="flex gap-2.5">
+                    <input
+                      type="tel"
+                      value={testSmsPhone}
+                      onChange={(e) => setTestSmsPhone(e.target.value)}
+                      placeholder="Enter mobile with country code (e.g. +919876543210)"
+                      className="flex-1 px-3.5 py-2.5 text-xs bg-paper border border-brd rounded-xl font-mono text-ink placeholder:text-mut focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isTestingSms || !testSmsPhone.trim()}
+                      className="px-4 py-2.5 text-xs font-bold rounded-xl bg-zinc-950 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-950 disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      {isTestingSms ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" /> Dispatching...
+                        </>
+                      ) : (
+                        <>
+                          <MessageSquare className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" /> Send Live Test SMS
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {smsTestResult && (
+                    <div
+                      className={`p-3.5 rounded-2xl border text-xs flex items-start gap-2.5 ${
+                        smsTestResult.success
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-300'
+                      }`}
+                    >
+                      {smsTestResult.success ? (
+                        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-500" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-500" />
+                      )}
+                      <div>
+                        <div className="font-bold">
+                          {smsTestResult.success ? 'Twilio Carrier SMS Dispatched Successfully' : 'Twilio SMS Dispatch Failed'}
+                        </div>
+                        <div className="mt-0.5 opacity-90">{smsTestResult.message}</div>
+                        {smsTestResult.sid && (
+                          <div className="mt-1 font-mono text-[10px] text-mut">Message SID: {smsTestResult.sid}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </form>
               </div>
 

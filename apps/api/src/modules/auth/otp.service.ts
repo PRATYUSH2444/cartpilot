@@ -65,29 +65,38 @@ export class OtpService {
       expiresAt,
     });
 
-    // Attempt real SMS carrier delivery via Twilio Programmable Messaging
+    // Attempt real SMS carrier delivery via Twilio Programmable Messaging / Twilio Verify
     let dispatchedViaCarrier = false;
     const { TwilioSmsService } = await import('../sms/twilio-sms.service.js');
-    const smsResult = await TwilioSmsService.sendSms({
-      to: cleanPhone,
-      body: `Your CartPilot verification code is: ${rawOtp}. Valid for 5 minutes.`,
-    });
-    if (smsResult.success && smsResult.carrier === 'TWILIO') {
-      dispatchedViaCarrier = true;
-    }
+    const isTwilioActive = TwilioSmsService.isTwilioConfigured();
 
-    if (!dispatchedViaCarrier) {
+    if (isTwilioActive) {
+      const smsResult = await TwilioSmsService.sendSms({
+        to: cleanPhone,
+        body: `Your CartPilot verification code is: ${rawOtp}. Valid for 5 minutes.`,
+      });
+
+      if (smsResult.success) {
+        dispatchedViaCarrier = true;
+      } else {
+        // Real carrier was configured but failed (e.g. unverified trial number or credential issue)
+        // Throw real carrier error directly so user/developer gets true feedback instead of fake fallback
+        throw new BadRequestError(
+          smsResult.error || 'Twilio carrier rejected SMS dispatch. Please verify your phone number or Twilio settings.'
+        );
+      }
+    } else {
       logger.info(
         { phone: cleanPhone, rawOtp, purpose },
-        '📱 [SMS Service Notice] SMS carrier unconfigured. Development OTP generated securely.'
+        '📱 [SMS Service Notice] Twilio credentials not configured in environment. Development OTP fallback active.'
       );
     }
 
     return {
       success: true,
       message: dispatchedViaCarrier
-        ? `Verification code dispatched via SMS to ${cleanPhone}`
-        : `OTP dispatched to ${cleanPhone}. (Code: ${rawOtp})`,
+        ? `Real verification code dispatched via Twilio SMS to ${cleanPhone}`
+        : `OTP dispatched to ${cleanPhone}. (Dev fallback: ${rawOtp})`,
       simulated: !dispatchedViaCarrier,
       simulatedCode: !dispatchedViaCarrier ? rawOtp : undefined,
       expiresAt,

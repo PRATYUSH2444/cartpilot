@@ -42,6 +42,7 @@ const envSchema = z
     TWILIO_AUTH_TOKEN: z.string().optional(),
     TWILIO_PHONE_NUMBER: z.string().optional(),
     TWILIO_MESSAGING_SERVICE_SID: z.string().optional(),
+    TWILIO_VERIFY_SERVICE_SID: z.string().optional(),
 
     GOOGLE_MAPS_API_KEY: z.string().optional(),
 

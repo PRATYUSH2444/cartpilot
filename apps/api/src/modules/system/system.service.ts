@@ -105,7 +105,11 @@ export class SystemService {
     };
 
     // 5. SMS / OTP
-    const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_PHONE_NUMBER);
+    const hasTwilio = Boolean(
+      env.TWILIO_ACCOUNT_SID &&
+        env.TWILIO_AUTH_TOKEN &&
+        (env.TWILIO_PHONE_NUMBER || env.TWILIO_MESSAGING_SERVICE_SID || env.TWILIO_VERIFY_SERVICE_SID)
+    );
     const smsStatus: IntegrationStatus = {
       service: 'SMS / OTP Carrier',
       category: 'SMS',

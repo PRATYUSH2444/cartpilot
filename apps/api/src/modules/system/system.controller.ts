@@ -45,6 +45,21 @@ export async function testIntegration(req: Request, res: Response, next: NextFun
   }
 }
 
+export async function testSmsIntegration(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { phone } = req.body;
+    const { TwilioSmsService } = await import('../sms/twilio-sms.service.js');
+    const result = await TwilioSmsService.testConnection(phone || '+919999999999');
+
+    res.status(result.success ? 200 : 400).json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function updateConfig(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { provider, apiKey } = req.body;

@@ -80,7 +80,48 @@ export class TwilioSmsService {
   }
 
   /**
-   * Delivers an SMS message to the carrier via Twilio Programmable Messaging.
+   * Helper to parse Twilio error responses into clear, actionable human explanations.
+   */
+  public static parseTwilioError(responseText: string, phone: string): string {
+    try {
+      const parsed = JSON.parse(responseText);
+      const code = parsed.code;
+      const msg = parsed.message || '';
+
+      if (code === 21608) {
+        return `Twilio Trial Account: ${phone} is unverified. Trial accounts can only send SMS to numbers registered under 'Verified Caller IDs' in Twilio Console (twilio.com/console/phone-numbers/verified). Add your phone number there or upgrade your Twilio account.`;
+      }
+      if (code === 20003) {
+        return 'Twilio Authentication Failed: Invalid Account SID or Auth Token. Please check TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN on Render.';
+      }
+      if (code === 21408) {
+        return 'Twilio Geo-Permission Disabled: SMS dispatch to India (+91) is disabled in your Twilio account. Enable it in Twilio Console -> Messaging -> Settings -> Geo Permissions -> Check "India".';
+      }
+      if (code === 21211) {
+        return `Invalid Phone Number format: Twilio rejected ${phone}. Ensure it is an active mobile number.`;
+      }
+      if (code === 21606) {
+        return 'The "From" number configured in TWILIO_PHONE_NUMBER is not a valid SMS-capable number in your Twilio account.';
+      }
+      return msg || responseText;
+    } catch {
+      return responseText;
+    }
+  }
+
+  /**
+   * Checks whether real Twilio credentials have been provided in the environment.
+   */
+  public static isTwilioConfigured(): boolean {
+    return Boolean(
+      env.TWILIO_ACCOUNT_SID &&
+        env.TWILIO_AUTH_TOKEN &&
+        (env.TWILIO_PHONE_NUMBER || env.TWILIO_MESSAGING_SERVICE_SID || env.TWILIO_VERIFY_SERVICE_SID)
+    );
+  }
+
+  /**
+   * Delivers an SMS message to the carrier via Twilio Programmable Messaging or Twilio Verify.
    */
   public static async sendSms(params: SendSmsParams): Promise<SendSmsResult> {
     const normalizedPhone = this.normalizeE164(params.to);
@@ -88,9 +129,7 @@ export class TwilioSmsService {
 
     this.checkRateLimit(normalizedPhone);
 
-    const hasTwilioCredentials = Boolean(
-      env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && (env.TWILIO_PHONE_NUMBER || env.TWILIO_MESSAGING_SERVICE_SID)
-    );
+    const hasTwilioCredentials = this.isTwilioConfigured();
 
     if (!hasTwilioCredentials) {
       logger.info(
@@ -106,8 +145,37 @@ export class TwilioSmsService {
 
     try {
       const auth = Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString('base64');
-      const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`;
 
+      // Mode A: Twilio Verify Service API (if TWILIO_VERIFY_SERVICE_SID is set)
+      if (env.TWILIO_VERIFY_SERVICE_SID) {
+        const verifyUrl = `https://verify.twilio.com/v2/Services/${env.TWILIO_VERIFY_SERVICE_SID}/Verifications`;
+        const bodyParams = new URLSearchParams();
+        bodyParams.append('To', normalizedPhone);
+        bodyParams.append('Channel', 'sms');
+
+        const res = await fetch(verifyUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: bodyParams.toString(),
+        });
+
+        const responseText = await res.text();
+        if (res.ok) {
+          const json = JSON.parse(responseText);
+          logger.info({ phone: masked, sid: json.sid }, '✅ Real OTP dispatched via Twilio Verify API');
+          return { success: true, sid: json.sid, carrier: 'TWILIO_VERIFY' };
+        } else {
+          const friendly = this.parseTwilioError(responseText, normalizedPhone);
+          logger.error({ phone: masked, error: friendly }, '❌ Twilio Verify rejected dispatch request');
+          return { success: false, error: friendly };
+        }
+      }
+
+      // Mode B: Twilio Programmable Messaging API
+      const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`;
       const bodyParams = new URLSearchParams();
       bodyParams.append('To', normalizedPhone);
       bodyParams.append('Body', params.body);
@@ -156,8 +224,9 @@ export class TwilioSmsService {
 
         return { success: true, sid, carrier: 'TWILIO' };
       } else {
+        const friendly = this.parseTwilioError(responseText, normalizedPhone);
         logger.error(
-          { phone: masked, error: responseText },
+          { phone: masked, error: friendly },
           '❌ Twilio carrier rejected SMS dispatch request'
         );
 
@@ -169,11 +238,11 @@ export class TwilioSmsService {
           resourceType: 'USER',
           payload: {
             maskedPhone: masked,
-            error: responseText,
+            error: friendly,
           },
         });
 
-        return { success: false, error: responseText };
+        return { success: false, error: friendly };
       }
     } catch (err: any) {
       logger.error(
@@ -182,6 +251,40 @@ export class TwilioSmsService {
       );
       return { success: false, error: err?.message || 'Network error communicating with Twilio' };
     }
+  }
+
+  /**
+   * Diagnostic test tool to verify Twilio connectivity live.
+   */
+  public static async testConnection(targetPhone = '+919999999999'): Promise<{
+    configured: boolean;
+    success: boolean;
+    message: string;
+    sid?: string;
+    details?: any;
+  }> {
+    if (!this.isTwilioConfigured()) {
+      return {
+        configured: false,
+        success: false,
+        message:
+          'Twilio credentials not found in environment. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER.',
+      };
+    }
+
+    const testResult = await this.sendSms({
+      to: targetPhone,
+      body: 'CartPilot Diagnostic: Your Twilio SMS integration is working live and active!',
+    });
+
+    return {
+      configured: true,
+      success: testResult.success,
+      message: testResult.success
+        ? `Test SMS dispatched successfully to ${this.maskPhone(targetPhone)}`
+        : testResult.error || 'Failed to dispatch test SMS',
+      sid: testResult.sid,
+    };
   }
 
   /**
