@@ -289,6 +289,11 @@ export const ShopperWorkspace: React.FC = () => {
             try {
               localStorage.setItem('cartpilot_wallet_balance', updatedRupees.toString());
             } catch {}
+          } else if (msg.event === 'cart:updated' && msg.data?.cart && isMounted) {
+            if (pendingQuantitiesRef.current.size === 0) {
+              lastConfirmedCartRef.current = msg.data.cart;
+              setCart(msg.data.cart);
+            }
           }
         } catch {}
       };
@@ -1379,6 +1384,19 @@ export const ShopperWorkspace: React.FC = () => {
     if (categoryId) {
       setSelectedBrowseCategory(categoryId);
     }
+    if (tab === 'cart') {
+      authFetch(`${API_BASE}/cart`)
+        .then(async (res) => {
+          if (res.ok) {
+            const d = await res.json();
+            if (pendingQuantitiesRef.current.size === 0) {
+              lastConfirmedCartRef.current = d.data;
+              setCart(d.data);
+            }
+          }
+        })
+        .catch(() => {});
+    }
     try {
       const url = new URL(window.location.href);
       if (tab === 'chat') {
@@ -1614,7 +1632,7 @@ export const ShopperWorkspace: React.FC = () => {
           activeMobileTab === 'chat' || activeMobileTab === 'browse'
             ? 'min-h-0 overflow-hidden'
             : activeMobileTab === 'cart'
-              ? 'min-h-0 lg:overflow-hidden'
+              ? 'min-h-0 overflow-y-auto lg:overflow-hidden'
               : ''
         }`}
       >
@@ -1626,7 +1644,7 @@ export const ShopperWorkspace: React.FC = () => {
               : activeMobileTab === 'browse'
                 ? 'min-h-0 overflow-hidden pb-16 lg:pb-0'
                 : activeMobileTab === 'cart'
-                  ? 'min-h-0 lg:overflow-hidden pb-16 lg:pb-0'
+                  ? 'min-h-0 overflow-y-auto lg:overflow-hidden pb-24 lg:pb-0'
                   : activeMobileTab === 'account'
                     ? 'pb-[72px] lg:pb-6'
                     : 'pb-20 lg:pb-0'

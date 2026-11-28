@@ -154,6 +154,13 @@ export class RealtimeService {
       transaction,
     });
   }
+
+  public emitCartUpdated(userId: string, cart: any): void {
+    this.emitToUser(userId, 'cart:updated', {
+      type: 'CART_UPDATED',
+      cart,
+    });
+  }
 }
 
 export const realtimeService = RealtimeService.getInstance();

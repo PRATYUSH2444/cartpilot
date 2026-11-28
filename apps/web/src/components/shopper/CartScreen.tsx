@@ -118,8 +118,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         }
       `}</style>
 
-      {/* ── Main Container: Locked to viewport height on desktop, zero outer scrolling ── */}
-      <div className="max-w-6xl w-full h-full mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex flex-col min-h-0">
+      {/* ── Main Container: Responsive scrolling on mobile, zero outer scrolling on desktop ── */}
+      <div className="max-w-6xl w-full lg:h-full mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex flex-col min-h-0">
         {/* ── 1. Static Title Bar + 3-Step Stepper (Interactive & Prominent) ── */}
         <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5">
           {/* Left: Back Button + Title + Clear */}
@@ -232,11 +232,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           </div>
         ) : (
           /* ── 2-Column Grid Layout: Clean, Spacious & Responsive ─────────── */
-          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3.5 lg:gap-4 items-stretch pb-2">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 lg:gap-4 items-stretch lg:flex-1 lg:min-h-0 pb-16 lg:pb-2">
             {/* ══════════════════════════════════════════════════════════════════
                 LEFT COLUMN (7 cols): Items Card with Dedicated Internal Scroller
                ══════════════════════════════════════════════════════════════════ */}
-            <div className="lg:col-span-7 h-full flex flex-col min-h-0 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 p-3.5 sm:p-4 shadow-2xs">
+            <div className="lg:col-span-7 flex flex-col rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 p-3.5 sm:p-4 shadow-2xs lg:h-full lg:min-h-0">
               {/* Items Card Header */}
               <div className="flex-shrink-0 flex items-center justify-between pb-3 border-b border-stone-150 dark:border-stone-800">
                 <div className="flex items-center gap-2.5">
@@ -253,7 +253,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               </div>
 
               {/* ── Internal Product Scroller (Prevents infinite page stretch, scrolls inside card) ── */}
-              <div className="flex-1 min-h-0 overflow-y-auto cart-items-scroll divide-y divide-stone-100 dark:divide-stone-800/80 pr-1.5 my-1.5 max-h-[380px] sm:max-h-[440px] lg:max-h-none">
+              <div className="divide-y divide-stone-100 dark:divide-stone-800/80 pr-1.5 my-1.5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto cart-items-scroll">
                 {items.map((item) => {
                   const linePriceRupees = Math.round((item.pricePaise || 0) / 100);
                   const lineTotalRupees = Math.round(
