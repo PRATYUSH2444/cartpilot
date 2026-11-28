@@ -1100,7 +1100,7 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
       <div className="flex-1 min-h-0 flex w-full max-w-7xl mx-auto overflow-hidden">
         {/* ── Left Category Vertical Rail ── */}
         <aside className="w-[76px] sm:w-[88px] lg:w-[110px] shrink-0 h-full overflow-y-auto thin-scrollbar overscroll-contain bg-white dark:bg-[#16181A] border-r border-stone-200 dark:border-[#2A2D31] py-2">
-          <div className="space-y-1 px-1 sm:px-1.5 pb-32 sm:pb-36 lg:pb-12">
+          <div className="space-y-1 px-1 sm:px-1.5 pb-40 sm:pb-44 lg:pb-16">
             {BROWSE_CATEGORIES.map((cat) => {
               const isActive = isSingleCategoryMode
                 ? activeCategoryId === cat.id
@@ -1202,14 +1202,14 @@ export const BrowseScreen: React.FC<BrowseScreenProps> = ({
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3.5 pb-32 sm:pb-36 lg:pb-12">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3.5 pb-40 sm:pb-44 lg:pb-16">
                   {singleCategoryProducts.map(renderProductCard)}
                 </div>
               )}
             </div>
           ) : (
             /* Case B: Continuous Sequential Sections ("All" View) */
-            <div className="space-y-8 pb-32 sm:pb-36 lg:pb-12">
+            <div className="space-y-8 pb-40 sm:pb-44 lg:pb-16">
               {continuousCategorySections.map(({ category, totalCount, previewProducts }) => (
                 <section
                   key={category.id}

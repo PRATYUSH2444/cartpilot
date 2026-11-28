@@ -245,11 +245,11 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
     (o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED' && o.status !== 'FAILED'
   ).length;
 
-  const displayName = user?.name || 'Pratyush Prakash';
-  const displayPhone = user?.phone || '+91 8409826244';
+  const displayName = user?.name || (user?.email ? user.email.split('@')[0] : 'Shopper');
+  const displayPhone = user?.phone || '';
   const displayLocality = selectedAddress
     ? selectedAddress.areaLocality || selectedAddress.apartmentStreet || selectedAddress.city
-    : 'La residentia, Greater Noida West';
+    : 'Patna, Bihar';
 
   const userInitial = displayName ? displayName.charAt(0).toUpperCase() : 'P';
 
@@ -341,10 +341,24 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({
                     <h2 className="font-extrabold text-base sm:text-lg text-stone-900 dark:text-white truncate">
                       {displayName}
                     </h2>
-                    <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 font-medium truncate">
-                      <Smartphone className="w-3.5 h-3.5 flex-shrink-0 text-stone-400" />
-                      <span className="truncate">{displayPhone}</span>
-                    </div>
+                    {displayPhone ? (
+                      <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 font-medium truncate">
+                        <Smartphone className="w-3.5 h-3.5 flex-shrink-0 text-stone-400" />
+                        <span className="truncate">{displayPhone}</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={onOpenProfileModal}
+                        className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer font-semibold"
+                      >
+                        <Smartphone className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>No phone linked</span>
+                        <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                          + Add
+                        </span>
+                      </button>
+                    )}
                     <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 font-medium truncate">
                       <Mail className="w-3.5 h-3.5 flex-shrink-0 text-stone-400" />
                       <span className="truncate">{user?.email || 'shopper@cartpilot.local'}</span>

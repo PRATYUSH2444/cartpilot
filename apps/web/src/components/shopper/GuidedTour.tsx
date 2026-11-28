@@ -43,6 +43,7 @@ const TOUR_STEPS: TourStep[] = [
 interface GuidedTourProps {
   isOpen: boolean;
   onComplete: () => void;
+  userId?: string;
 }
 
 interface TargetRect {
@@ -52,7 +53,7 @@ interface TargetRect {
   height: number;
 }
 
-export const GuidedTour: React.FC<GuidedTourProps> = ({ isOpen, onComplete }) => {
+export const GuidedTour: React.FC<GuidedTourProps> = ({ isOpen, onComplete, userId }) => {
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
 
@@ -64,12 +65,13 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ isOpen, onComplete }) =>
 
   const finishTour = useCallback(() => {
     try {
-      localStorage.setItem('cartpilot_tour_completed', 'true');
+      const key = userId ? `cartpilot_tour_${userId}` : 'cartpilot_tour_guest';
+      localStorage.setItem(key, 'true');
     } catch {
       // Ignore
     }
     onComplete();
-  }, [onComplete]);
+  }, [onComplete, userId]);
 
   // Position recalculation for active target
   const updateTargetPosition = useCallback((stepIdx: number) => {

@@ -29,6 +29,7 @@ interface DesktopHeaderProps {
   onOpenWishlist: () => void;
   onOpenWallet: () => void;
   onOpenNotifications: () => void;
+  unreadNotificationsCount?: number;
   onOpenRules: () => void;
   onOpenOrders: () => void;
   onOpenProfile: () => void;
@@ -51,6 +52,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   onOpenWishlist,
   onOpenWallet,
   onOpenNotifications,
+  unreadNotificationsCount = 0,
   onOpenRules,
   onOpenOrders,
   onOpenProfile,
@@ -271,7 +273,9 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             aria-label="Notifications"
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-stone-800" />
+            {unreadNotificationsCount > 0 && (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-stone-800 animate-pulse" />
+            )}
           </button>
 
           {/* Theme Toggle (Visible on 2xl: 1440px+) */}

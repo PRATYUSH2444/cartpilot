@@ -46,6 +46,7 @@ interface HomeScreenProps {
   onOpenCoupons?: () => void;
   onOpenWishlist?: () => void;
   onOpenNotifications?: () => void;
+  unreadNotificationsCount?: number;
   onOpenRules?: () => void;
 }
 
@@ -134,6 +135,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenWallet,
   onOpenWishlist,
   onOpenNotifications,
+  unreadNotificationsCount = 0,
   onOpenRules,
 }) => {
   const deliveryWindow = getDeliveryWindowInfo();
@@ -239,7 +241,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 aria-label="Notifications"
               >
                 <Bell className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-500" />
+                {unreadNotificationsCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                )}
               </button>
 
               {/* Profile Avatar */}

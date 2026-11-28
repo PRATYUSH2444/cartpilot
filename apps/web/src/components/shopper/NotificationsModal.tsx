@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
 import { X, Bell, Truck, Sparkles, Wallet, ShieldCheck, CheckCheck } from 'lucide-react';
 
-interface NotificationsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-interface NotificationItem {
+export interface NotificationItem {
   id: string;
   title: string;
   message: string;
@@ -15,51 +10,32 @@ interface NotificationItem {
   read: boolean;
 }
 
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'n1',
-    title: 'Morning Delivery Window Scheduled',
-    message: 'Order till midnight to receive guaranteed fresh delivery tomorrow between 6:00 AM and 9:00 AM.',
-    time: '10 mins ago',
-    type: 'order',
-    read: false,
-  },
-  {
-    id: 'n2',
-    title: 'Fresh Organic Harvest Restocked',
-    message: 'Farm-fresh spinach, broccoli, red apples, and farm milk are now back in stock.',
-    time: '1 hour ago',
-    type: 'catalog',
-    read: false,
-  },
-  {
-    id: 'n3',
-    title: '₹100 Cashback Added to Wallet',
-    message: 'Your bonus credit has been added to CartPilot wallet for 1-tap checkout.',
-    time: 'Today, 2:30 PM',
-    type: 'wallet',
-    read: true,
-  },
-  {
-    id: 'n4',
-    title: 'Autonomous Spending Mandate Active',
-    message: 'Your daily budget ceiling is set to ₹1,500.00 with policy auto-approval.',
-    time: 'Yesterday',
-    type: 'mandate',
-    read: true,
-  },
-];
+export interface NotificationsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  notifications?: NotificationItem[];
+  onMarkAllRead?: () => void;
+}
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   isOpen,
   onClose,
+  notifications = [],
+  onMarkAllRead,
 }) => {
-  const [items, setItems] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [localItems, setLocalItems] = useState<NotificationItem[]>(notifications);
+
+  React.useEffect(() => {
+    setLocalItems(notifications);
+  }, [notifications]);
 
   if (!isOpen) return null;
 
   const handleMarkAllRead = () => {
-    setItems((prev) => prev.map((item) => ({ ...item, read: true })));
+    setLocalItems((prev) => prev.map((item) => ({ ...item, read: true })));
+    if (onMarkAllRead) {
+      onMarkAllRead();
+    }
   };
 
   const getIcon = (type: NotificationItem['type']) => {
@@ -118,34 +94,48 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-2.5 overflow-y-auto">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className={`rounded-2xl border p-3.5 transition-all flex items-start gap-3 ${
-                item.read
-                  ? 'border-stone-100 dark:border-stone-800/60 bg-stone-50/50 dark:bg-stone-850 opacity-80'
-                  : 'border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/30 dark:bg-emerald-950/20'
-              }`}
-            >
-              <div className="w-8 h-8 rounded-xl bg-white dark:bg-stone-800 flex items-center justify-center shadow-2xs flex-shrink-0 mt-0.5 border border-stone-200/60 dark:border-stone-700">
-                {getIcon(item.type)}
+          {localItems.length === 0 ? (
+            <div className="py-12 text-center space-y-2">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 flex items-center justify-center">
+                <Bell className="w-6 h-6 stroke-[1.8]" />
               </div>
-
-              <div className="flex-1 min-w-0 space-y-0.5">
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="font-extrabold text-xs text-stone-900 dark:text-white truncate">
-                    {item.title}
-                  </h4>
-                  <span className="text-[10px] text-stone-400 font-medium whitespace-nowrap">
-                    {item.time}
-                  </span>
-                </div>
-                <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
-                  {item.message}
-                </p>
-              </div>
+              <h4 className="font-heading font-extrabold text-sm text-stone-900 dark:text-white">
+                All caught up!
+              </h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400 max-w-xs mx-auto leading-relaxed">
+                No new notifications. Real-time updates about your orders and wallet balance will appear here.
+              </p>
             </div>
-          ))}
+          ) : (
+            localItems.map((item) => (
+              <div
+                key={item.id}
+                className={`rounded-2xl border p-3.5 transition-all flex items-start gap-3 ${
+                  item.read
+                    ? 'border-stone-100 dark:border-stone-800/60 bg-stone-50/50 dark:bg-stone-850 opacity-80'
+                    : 'border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/30 dark:bg-emerald-950/20'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-xl bg-white dark:bg-stone-800 flex items-center justify-center shadow-2xs flex-shrink-0 mt-0.5 border border-stone-200/60 dark:border-stone-700">
+                  {getIcon(item.type)}
+                </div>
+
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-extrabold text-xs text-stone-900 dark:text-white truncate">
+                      {item.title}
+                    </h4>
+                    <span className="text-[10px] text-stone-400 font-medium whitespace-nowrap">
+                      {item.time}
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                    {item.message}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

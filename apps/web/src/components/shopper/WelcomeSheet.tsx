@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, ShoppingBag, Truck, ArrowRight, ArrowLeft, X } from 'lucide-react';
+import { Sparkles, Truck, ArrowRight, ArrowLeft, X, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 interface WelcomeSheetProps {
   isOpen: boolean;
   onComplete: () => void;
+  userId?: string;
 }
 
 interface SlideItem {
@@ -17,32 +18,40 @@ interface SlideItem {
 
 const SLIDES: SlideItem[] = [
   {
-    tag: 'AI Cooking Assistant',
+    tag: 'Zero Contamination Guarantee',
+    title: '100% Certified Pure Vegetarian',
+    subtitle: 'Farm-fresh harvest from dedicated dark stores with zero meat or egg cross-contamination.',
+    icon: CheckCircle2,
+    iconBg: 'bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800',
+    iconColor: 'text-emerald-700 dark:text-emerald-300',
+  },
+  {
+    tag: 'AI Kitchen Intelligence',
     title: "Ask AI what you're cooking",
-    subtitle: 'Dish → full shopping list in one tap.',
+    subtitle: 'Turn any recipe or craving into exact ingredients in 1 tap, fitted to your servings.',
     icon: Sparkles,
     iconBg: 'bg-purple-100 dark:bg-purple-950/70 border border-purple-200 dark:border-purple-800',
     iconColor: 'text-purple-700 dark:text-purple-300',
   },
   {
-    tag: 'Budget Intelligence',
-    title: 'One tap to cart',
-    subtitle: 'Fresh ingredients that fit your budget.',
-    icon: ShoppingBag,
-    iconBg: 'bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800',
-    iconColor: 'text-emerald-700 dark:text-emerald-300',
+    tag: 'Autonomous Spending Guard',
+    title: 'Smart Daily Grocery Budget Guard',
+    subtitle: 'Set daily grocery budget caps with deterministic policy checks to prevent overspending.',
+    icon: ShieldCheck,
+    iconBg: 'bg-amber-100 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800',
+    iconColor: 'text-amber-700 dark:text-amber-300',
   },
   {
-    tag: 'Daily Harvest Schedule',
-    title: 'Fresh, on your schedule',
-    subtitle: '6–10 AM delivery, spend guard.',
+    tag: 'Morning Delivery Guarantee',
+    title: 'Fresh at your door: 6 AM – 10 AM',
+    subtitle: 'Orders placed till midnight are picked, packed, and delivered fresh tomorrow morning.',
     icon: Truck,
     iconBg: 'bg-sky-100 dark:bg-sky-950/70 border border-sky-200 dark:border-sky-800',
     iconColor: 'text-sky-700 dark:text-sky-300',
   },
 ];
 
-export const WelcomeSheet: React.FC<WelcomeSheetProps> = ({ isOpen, onComplete }) => {
+export const WelcomeSheet: React.FC<WelcomeSheetProps> = ({ isOpen, onComplete, userId }) => {
   const [activeSlide, setActiveSlide] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
 
@@ -66,7 +75,8 @@ export const WelcomeSheet: React.FC<WelcomeSheetProps> = ({ isOpen, onComplete }
 
   const handleDismiss = () => {
     try {
-      localStorage.setItem('cartpilot_welcome_sheet_seen', 'true');
+      const key = userId ? `cartpilot_welcome_${userId}` : 'cartpilot_welcome_guest';
+      localStorage.setItem(key, 'true');
     } catch {
       // Ignore
     }
@@ -196,7 +206,7 @@ export const WelcomeSheet: React.FC<WelcomeSheetProps> = ({ isOpen, onComplete }
                 : 'bg-stone-900 hover:bg-stone-800 dark:bg-white dark:hover:bg-stone-100 text-white dark:text-stone-900'
             }`}
           >
-            <span>{isLast ? 'Start shopping' : 'Next'}</span>
+            <span>{isLast ? 'Start Website Tour' : 'Next'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

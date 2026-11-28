@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation } from '../../context/LocationContext';
 import {
@@ -40,7 +40,7 @@ import { WishlistModal } from '../../components/shopper/WishlistModal';
 import { WalletModal } from '../../components/shopper/WalletModal';
 import { CouponsModal } from '../../components/shopper/CouponsModal';
 import { validateAndComputeCoupon } from '../../config/couponConfig';
-import { NotificationsModal } from '../../components/shopper/NotificationsModal';
+import { NotificationsModal, NotificationItem } from '../../components/shopper/NotificationsModal';
 import { DynamicIsland } from '../../components/shopper/DynamicIsland';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { updateCartOptimistically, calculateOptimisticPricing } from '../../utils/optimisticCart';
@@ -132,6 +132,12 @@ export const ShopperWorkspace: React.FC = () => {
   const [isLiveTrackingOpen, setIsLiveTrackingOpen] = useState(false);
   const [trackedOrder, setTrackedOrder] = useState<OrderData | null>(null);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+  // User-scoped persistent storage keys to guarantee isolation across accounts
+  const userWelcomeKey = user?.id ? `cartpilot_welcome_${user.id}` : 'cartpilot_welcome_guest';
+  const userTourKey = user?.id ? `cartpilot_tour_${user.id}` : 'cartpilot_tour_guest';
+  const userFavoritesKey = user?.id ? `cartpilot_favorites_${user.id}` : 'cartpilot_favorites_guest';
+  const userReadNotificationsKey = user?.id ? `cartpilot_read_notifications_${user.id}` : 'cartpilot_read_notifications_guest';
+
   // Premium First-Run Flow State (Splash -> Welcome Sheet -> Guided Tour)
   const [isSplashActive, setIsSplashActive] = useState<boolean>(() => {
     try {
@@ -145,7 +151,7 @@ export const ShopperWorkspace: React.FC = () => {
 
   const checkAndTriggerTour = useCallback(() => {
     try {
-      const localTourDone = localStorage.getItem('cartpilot_tour_completed') === 'true';
+      const localTourDone = localStorage.getItem(userTourKey) === 'true';
       const serverTourDone = Boolean(user?.hasSeenTour);
       if (!localTourDone && !serverTourDone) {
         setTimeout(() => {
@@ -155,12 +161,12 @@ export const ShopperWorkspace: React.FC = () => {
     } catch {
       // Ignore
     }
-  }, [user]);
+  }, [userTourKey, user?.hasSeenTour]);
 
   const handleSplashComplete = useCallback(() => {
     setIsSplashActive(false);
     try {
-      const welcomeSeen = localStorage.getItem('cartpilot_welcome_sheet_seen') === 'true';
+      const welcomeSeen = localStorage.getItem(userWelcomeKey) === 'true';
       if (!welcomeSeen) {
         setIsWelcomeSheetOpen(true);
         return;
@@ -168,17 +174,22 @@ export const ShopperWorkspace: React.FC = () => {
     } catch {}
 
     checkAndTriggerTour();
-  }, [checkAndTriggerTour]);
+  }, [userWelcomeKey, checkAndTriggerTour]);
 
   const handleWelcomeComplete = useCallback(() => {
     setIsWelcomeSheetOpen(false);
-    checkAndTriggerTour();
-  }, [checkAndTriggerTour]);
+    try {
+      localStorage.setItem(userWelcomeKey, 'true');
+    } catch {}
+    setTimeout(() => {
+      setIsTourOpen(true);
+    }, 200);
+  }, [userWelcomeKey]);
 
   const handleTourComplete = useCallback(async () => {
     setIsTourOpen(false);
     try {
-      localStorage.setItem('cartpilot_tour_completed', 'true');
+      localStorage.setItem(userTourKey, 'true');
       if (token && user) {
         await authFetch(`${API_BASE}/users/profile`, {
           method: 'PUT',
@@ -190,25 +201,25 @@ export const ShopperWorkspace: React.FC = () => {
     } catch (err) {
       console.warn('Could not persist tour completion to server:', err);
     }
-  }, [token, user, authFetch, setUserProfile]);
+  }, [userTourKey, token, user, authFetch, setUserProfile]);
 
   const handleReplayTour = useCallback(() => {
     setActiveMobileTab('home');
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     try {
-      localStorage.removeItem('cartpilot_tour_completed');
+      localStorage.removeItem(userTourKey);
     } catch {}
     setIsTourOpen(false);
     setTimeout(() => {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       setIsTourOpen(true);
     }, 150);
-  }, []);
+  }, [userTourKey]);
 
   useEffect(() => {
     if (!isSplashActive) {
       try {
-        const welcomeSeen = localStorage.getItem('cartpilot_welcome_sheet_seen') === 'true';
+        const welcomeSeen = localStorage.getItem(userWelcomeKey) === 'true';
         if (!welcomeSeen) {
           setIsWelcomeSheetOpen(true);
         } else {
@@ -216,7 +227,7 @@ export const ShopperWorkspace: React.FC = () => {
         }
       } catch {}
     }
-  }, [isSplashActive, checkAndTriggerTour]);
+  }, [isSplashActive, userWelcomeKey, checkAndTriggerTour]);
 
   const [isPhoneLoginOpen, setIsPhoneLoginOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -321,12 +332,106 @@ export const ShopperWorkspace: React.FC = () => {
   }, [token, authFetch]);
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem('cartpilot_favorites');
+      const saved = localStorage.getItem(userFavoritesKey);
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
   });
+
+  // Re-sync favorites whenever user identity changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(userFavoritesKey);
+      setFavorites(saved ? JSON.parse(saved) : []);
+    } catch {
+      setFavorites([]);
+    }
+  }, [userFavoritesKey]);
+
+  // Dynamic user-scoped notifications
+  const [readNotificationIds, setReadNotificationIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(userReadNotificationsKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(userReadNotificationsKey);
+      setReadNotificationIds(saved ? JSON.parse(saved) : []);
+    } catch {
+      setReadNotificationIds([]);
+    }
+  }, [userReadNotificationsKey]);
+
+  const dynamicNotifications = useMemo<NotificationItem[]>(() => {
+    const list: NotificationItem[] = [];
+
+    // Real order notification
+    if (orders && orders.length > 0) {
+      const latest = orders[0];
+      list.push({
+        id: `order_${latest._id || latest.orderNumber}`,
+        title: `Order #${latest.orderNumber} Confirmed`,
+        message: `Status: ${latest.status}. Guaranteed morning delivery tomorrow between 6:00 AM and 10:00 AM.`,
+        time: 'Active Order',
+        type: 'order',
+        read: readNotificationIds.includes(`order_${latest._id || latest.orderNumber}`),
+      });
+    }
+
+    // Real wallet notification
+    if (walletBalance > 0) {
+      list.push({
+        id: `wallet_${Math.round(walletBalance)}`,
+        title: `₹${walletBalance.toLocaleString('en-IN')} in CartPilot Wallet`,
+        message: 'Your wallet balance is active for instant 1-tap checkout with 0 transaction fees.',
+        time: 'Live Balance',
+        type: 'wallet',
+        read: readNotificationIds.includes(`wallet_${Math.round(walletBalance)}`),
+      });
+    }
+
+    // Real spending guard mandate
+    if (mandate && mandate.dailyBudgetPaise > 0) {
+      list.push({
+        id: `mandate_${mandate.dailyBudgetPaise}`,
+        title: 'Autonomous Spending Guard Active',
+        message: `Daily grocery ceiling: ₹${Math.round(mandate.dailyBudgetPaise / 100)}. Zero unauthorized budget spikes.`,
+        time: 'Policy Active',
+        type: 'mandate',
+        read: readNotificationIds.includes(`mandate_${mandate.dailyBudgetPaise}`),
+      });
+    }
+
+    // Pure Veg Dark Store Guarantee
+    list.push({
+      id: 'pure_veg_dark_store_guarantee',
+      title: '100% Certified Pure Vegetarian',
+      message: 'Farm-fresh harvest stored in dedicated dark stores with zero meat or egg cross-contamination.',
+      time: 'Dark Store Verified',
+      type: 'catalog',
+      read: readNotificationIds.includes('pure_veg_dark_store_guarantee'),
+    });
+
+    return list;
+  }, [orders, walletBalance, mandate, readNotificationIds]);
+
+  const unreadNotificationsCount = useMemo(() => {
+    return dynamicNotifications.filter((n: NotificationItem) => !n.read).length;
+  }, [dynamicNotifications]);
+
+  const handleMarkAllNotificationsRead = useCallback(() => {
+    const allIds = dynamicNotifications.map((n: NotificationItem) => n.id);
+    setReadNotificationIds(allIds);
+    try {
+      localStorage.setItem(userReadNotificationsKey, JSON.stringify(allIds));
+    } catch {}
+  }, [dynamicNotifications, userReadNotificationsKey]);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isCouponsOpen, setIsCouponsOpen] = useState(false);
@@ -447,7 +552,7 @@ export const ShopperWorkspace: React.FC = () => {
     setFeedbackBanner({ type, message, action });
     setTimeout(() => {
       setFeedbackBanner((curr) => (curr?.message === message ? null : curr));
-    }, 4500);
+    }, 2200);
   };
 
   // Policy derivation
@@ -1268,7 +1373,9 @@ export const ShopperWorkspace: React.FC = () => {
       const next = prev.includes(productId)
         ? prev.filter((id) => id !== productId)
         : [...prev, productId];
-      localStorage.setItem('cartpilot_favorites', JSON.stringify(next));
+      try {
+        localStorage.setItem(userFavoritesKey, JSON.stringify(next));
+      } catch {}
       showBanner('success', next.includes(productId) ? 'Saved to Wishlist' : 'Removed from Wishlist');
       return next;
     });
@@ -1622,6 +1729,7 @@ export const ShopperWorkspace: React.FC = () => {
         userName={user?.name || 'Customer'}
         walletBalance={walletBalance}
         favoritesCount={favorites.length}
+        unreadNotificationsCount={unreadNotificationsCount}
         isDark={isDark}
         onToggleTheme={toggleTheme}
       />
@@ -1664,6 +1772,7 @@ export const ShopperWorkspace: React.FC = () => {
               onOpenCoupons={() => handleOpenCoupons('view')}
               onOpenWishlist={() => setIsWishlistOpen(true)}
               onOpenNotifications={() => setIsNotificationsOpen(true)}
+              unreadNotificationsCount={unreadNotificationsCount}
               onOpenRules={() => setIsRulesSheetOpen(true)}
               onSelectProduct={(p) => {
                 setSelectedProduct(p);
@@ -1898,6 +2007,8 @@ export const ShopperWorkspace: React.FC = () => {
       <NotificationsModal
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
+        notifications={dynamicNotifications}
+        onMarkAllRead={handleMarkAllNotificationsRead}
       />
 
       {/* ── Live Tracking Modal (Screen 13) ─────────────────────────────────── */}
@@ -2017,11 +2128,13 @@ export const ShopperWorkspace: React.FC = () => {
       <WelcomeSheet
         isOpen={isWelcomeSheetOpen}
         onComplete={handleWelcomeComplete}
+        userId={user?.id}
       />
 
       <GuidedTour
         isOpen={isTourOpen}
         onComplete={handleTourComplete}
+        userId={user?.id}
       />
 
       {/* ── Phone Login Modal ──────────────────────────────────────────────── */}
@@ -2045,6 +2158,7 @@ export const ShopperWorkspace: React.FC = () => {
         activeTab={activeMobileTab}
         isAnyModalOpen={isAnyModalOpen}
         onOpenCart={() => handleSelectTab('cart')}
+        isDark={isDark}
       />
     </div>
   );
