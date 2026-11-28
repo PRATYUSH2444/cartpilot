@@ -8,7 +8,6 @@ import {
   User,
   LogOut,
   Store,
-  ShieldAlert,
 } from 'lucide-react';
 import { DecisionLamp } from './DecisionLamp';
 import { LampStatus, CartData } from '../types';
@@ -62,48 +61,48 @@ export const Header: React.FC<HeaderProps> = ({
     },
     MERCHANT: {
       label: 'Merchant Portal',
-      badgeClass: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-      icon: <Store className="w-3.5 h-3.5 text-blue-500" />,
+      badgeClass: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700',
+      icon: <Store className="w-3.5 h-3.5 text-emerald-500" />,
     },
     ADMIN: {
-      label: 'Governance & Security',
-      badgeClass: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
-      icon: <ShieldAlert className="w-3.5 h-3.5 text-purple-500" />,
+      label: 'Dark-Store Admin',
+      badgeClass: 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 border-zinc-700 dark:border-white/20 shadow-xs',
+      icon: <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />,
     },
   };
 
   const currentMeta = user?.role ? roleMeta[user.role] : roleMeta.CUSTOMER;
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-brd bg-card/75 dark:bg-card-top/75 backdrop-blur-xl transition-colors">
+    <header className="sticky top-0 z-40 w-full border-b border-brd bg-card/80 backdrop-blur-xl transition-colors">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
         {/* Brand identity */}
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-acc flex items-center justify-center text-white shadow-md shadow-acc/20 flex-shrink-0">
-            <ShieldCheck className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center shadow-sm flex-shrink-0 border border-zinc-800 dark:border-zinc-200">
+            <ShieldCheck className="w-5 h-5 text-emerald-400 dark:text-emerald-600" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-display font-extrabold text-lg text-ink tracking-tight">
+              <span className="font-display font-black text-lg text-ink tracking-tight">
                 CartPilot
               </span>
               <span
-                className={`text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded-full border ${currentMeta.badgeClass}`}
+                className={`text-[10px] font-mono uppercase font-bold px-2.5 py-0.5 rounded-full border ${currentMeta.badgeClass}`}
               >
                 {currentMeta.label}
               </span>
               {user?.role === 'CUSTOMER' && (
-                <span className="hidden sm:inline-block text-[10px] font-mono uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-1.5 py-0.5 rounded border border-emerald-500/20">
-                  Vegetarian
+                <span className="hidden sm:inline-block text-[10px] font-mono uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  100% Veg
                 </span>
               )}
             </div>
             <p className="text-[10px] text-mut font-sans hidden sm:block">
               {user?.role === 'MERCHANT'
-                ? 'Fresh Greens Organics • Inventory & Fulfillment Hub'
+                ? 'Wholesale Harvest Crates & Dark-Store Fulfillment Hub'
                 : user?.role === 'ADMIN'
-                  ? 'Deterministic Policy Engine & Tamper-Evident Ledger'
-                  : 'Zero-Trust Policy Enforced Agentic Commerce'}
+                  ? 'Patna Dark Store Facility #01 • Zero-Trust Order Ledger'
+                  : 'Fresh Groceries • Smarter, Healthier & Faster'}
             </p>
           </div>
         </div>
@@ -170,20 +169,20 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Theme toggle */}
           <button
             onClick={onToggleTheme}
-            className="p-2 rounded-lg border border-brd text-mut hover:text-ink hover:bg-paper/80 transition-all"
+            className="p-2 rounded-xl border border-brd text-mut hover:text-ink hover:bg-paper transition-all cursor-pointer shadow-2xs"
             aria-label="Toggle theme"
           >
-            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
+            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-zinc-600" />}
           </button>
 
           {/* Logout button */}
           <button
             onClick={handleSignOut}
-            className="p-2 rounded-lg border border-rose-500/20 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer"
+            className="px-3 py-1.5 rounded-xl border border-brd text-mut hover:text-rose-500 hover:bg-rose-500/10 hover:border-rose-500/30 transition-all flex items-center gap-1.5 text-xs font-semibold cursor-pointer shadow-2xs"
             title="Sign out of current workspace"
             aria-label="Sign out"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3.5 h-3.5" />
             <span className="hidden md:inline">Sign Out</span>
           </button>
         </div>

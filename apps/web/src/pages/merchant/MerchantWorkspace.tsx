@@ -35,8 +35,20 @@ export const MerchantWorkspace: React.FC = () => {
   const mainScrollRef = useRef<HTMLElement>(null);
 
   const [isDark, setIsDark] = useState<boolean>(() => {
-    return document.documentElement.classList.contains('dark') || true;
+    try {
+      const saved = localStorage.getItem('cartpilot_theme');
+      if (saved) return saved === 'dark';
+    } catch {}
+    return false; // Default = Light per user specifications
   });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDark]);
 
   // State
   const [activeTab, setActiveTab] = useState<MerchantTab>('home');
@@ -122,13 +134,13 @@ export const MerchantWorkspace: React.FC = () => {
   };
 
   const toggleTheme = () => {
-    const newDark = !isDark;
-    setIsDark(newDark);
-    if (newDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    setIsDark((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('cartpilot_theme', next ? 'dark' : 'light');
+      } catch {}
+      return next;
+    });
   };
 
   // ── Smart In-App Back Navigation & History Trap (Merchant) ─────────────────

@@ -80,8 +80,30 @@ export const AdminWorkspace: React.FC = () => {
   const navigate = useNavigate();
   const { token, authFetch, logout } = useAuth();
   const [isDark, setIsDark] = useState<boolean>(() => {
-    return document.documentElement.classList.contains('dark') || true;
+    try {
+      const saved = localStorage.getItem('cartpilot_theme');
+      if (saved) return saved === 'dark';
+    } catch {}
+    return false; // Default = Light per user specifications
   });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => {
+    setIsDark((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('cartpilot_theme', next ? 'dark' : 'light');
+      } catch {}
+      return next;
+    });
+  };
 
   const handleAdminLogout = async () => {
     await logout();
@@ -178,16 +200,6 @@ export const AdminWorkspace: React.FC = () => {
       showBanner('success', 'Cryptographic audit ledger exported successfully');
     } catch {
       showBanner('error', 'Error exporting audit ledger');
-    }
-  };
-
-  const toggleTheme = () => {
-    const newDark = !isDark;
-    setIsDark(newDark);
-    if (newDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
     }
   };
 
@@ -468,44 +480,44 @@ export const AdminWorkspace: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 relative z-10 space-y-6">
-        {/* Governance Hero Card */}
-        <div className="p-6 rounded-2xl bg-card border border-brd shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-500 flex items-center justify-center">
-              <ShieldAlert className="w-6 h-6" />
+        {/* Governance Command Center Hero Card */}
+        <div className="p-6 sm:p-7 rounded-3xl bg-card border border-brd shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center border border-zinc-800 dark:border-zinc-200 shadow-sm flex-shrink-0">
+              <ShieldAlert className="w-6 h-6 text-emerald-400 dark:text-emerald-600" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-display font-extrabold text-xl text-ink">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="font-display font-black text-xl text-ink tracking-tight">
                   Security & GRC Governance Hub
                 </h1>
-                <span className="text-[10px] font-mono uppercase bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold px-2 py-0.5 rounded-full border border-purple-500/20">
+                <span className="text-[10px] font-mono uppercase bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white font-bold px-2.5 py-0.5 rounded-full border border-zinc-300 dark:border-zinc-700">
                   Zero-Trust
                 </span>
-                <span className="text-[10px] font-mono uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                <span className="text-[10px] font-mono uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3 text-emerald-500" />
                   MFA Guard Enforced
                 </span>
               </div>
-              <p className="text-xs text-mut mt-0.5">
+              <p className="text-xs text-mut mt-1">
                 CartPilot Policy Enforcement, Cryptographic Ledger & Merchant Lifecycle Governance
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
               onClick={handleVerifyChain}
               disabled={isVerifyingChain}
-              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors text-xs font-semibold flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+              className="px-4 py-2 rounded-2xl bg-zinc-950 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-950 font-heading font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
             >
-              <ShieldCheck className={`w-4 h-4 ${isVerifyingChain ? 'animate-spin' : ''}`} />
+              <ShieldCheck className={`w-4 h-4 text-emerald-400 dark:text-emerald-600 ${isVerifyingChain ? 'animate-spin' : ''}`} />
               <span>Verify Cryptographic Chain</span>
             </button>
             <button
               onClick={fetchAdminData}
               disabled={isLoading}
-              className="p-2 rounded-xl border border-brd bg-paper hover:bg-card text-ink transition-colors"
+              className="p-2 rounded-2xl border border-brd bg-paper hover:bg-card text-ink transition-colors cursor-pointer"
               title="Refresh governance data"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -516,7 +528,7 @@ export const AdminWorkspace: React.FC = () => {
         {/* Chain Verification Result Card */}
         {chainVerification && (
           <div
-            className={`p-4 rounded-xl border flex items-center justify-between gap-4 transition-all ${
+            className={`p-4 rounded-2xl border flex items-center justify-between gap-4 transition-all ${
               chainVerification.valid
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
                 : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'
@@ -536,65 +548,65 @@ export const AdminWorkspace: React.FC = () => {
                 </span>
               </div>
             </div>
-            <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-card/60 border border-current">
+            <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-card border border-current">
               Status: {chainVerification.valid ? 'VALID' : 'INVALID'}
             </span>
           </div>
         )}
 
         {/* Governance Metrics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="p-4 rounded-xl bg-card border border-brd">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+          <div className="p-4 sm:p-5 rounded-2xl bg-card border border-brd shadow-xs hover:border-zinc-400 dark:hover:border-zinc-700 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between text-mut text-xs mb-1">
-              <span>Audit Ledger Blocks</span>
-              <Layers className="w-4 h-4 text-purple-500" />
+              <span className="font-mono text-[11px] uppercase tracking-wider">Audit Ledger Blocks</span>
+              <Layers className="w-4 h-4 text-emerald-500" />
             </div>
-            <div className="font-display font-extrabold text-xl text-ink">{auditEvents.length}</div>
-            <span className="text-[10px] text-emerald-500 font-medium">SHA-256 Linked</span>
+            <div className="font-display font-black text-2xl text-ink my-1">{auditEvents.length}</div>
+            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">SHA-256 Linked</span>
           </div>
 
-          <div className="p-4 rounded-xl bg-card border border-brd">
+          <div className="p-4 sm:p-5 rounded-2xl bg-card border border-brd shadow-xs hover:border-zinc-400 dark:hover:border-zinc-700 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between text-mut text-xs mb-1">
-              <span>Pending Approvals</span>
+              <span className="font-mono text-[11px] uppercase tracking-wider">Pending Approvals</span>
               <Lock className="w-4 h-4 text-amber-500" />
             </div>
-            <div className="font-display font-extrabold text-xl text-ink">
+            <div className="font-display font-black text-2xl text-ink my-1">
               {pendingApprovals.length}
             </div>
-            <span className="text-[10px] text-mut font-medium">Human-in-the-loop review</span>
+            <span className="text-[11px] text-mut font-medium">Human-in-the-loop review</span>
           </div>
 
-          <div className="p-4 rounded-xl bg-card border border-brd">
+          <div className="p-4 sm:p-5 rounded-2xl bg-card border border-brd shadow-xs hover:border-zinc-400 dark:hover:border-zinc-700 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between text-mut text-xs mb-1">
-              <span>Merchants Governed</span>
-              <Store className="w-4 h-4 text-blue-500" />
+              <span className="font-mono text-[11px] uppercase tracking-wider">Merchants Governed</span>
+              <Store className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
             </div>
-            <div className="font-display font-extrabold text-xl text-ink">{merchantsList.length}</div>
-            <span className="text-[10px] text-emerald-500 font-medium">
-              {merchantsList.filter((m) => m.status === 'PENDING').length} Pending
+            <div className="font-display font-black text-2xl text-ink my-1">{merchantsList.length}</div>
+            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+              {merchantsList.filter((m) => m.status === 'PENDING').length} Pending Review
             </span>
           </div>
 
-          <div className="p-4 rounded-xl bg-card border border-brd">
+          <div className="p-4 sm:p-5 rounded-2xl bg-card border border-brd shadow-xs hover:border-zinc-400 dark:hover:border-zinc-700 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between text-mut text-xs mb-1">
-              <span>Platform Health</span>
+              <span className="font-mono text-[11px] uppercase tracking-wider">Platform Health</span>
               <Activity className="w-4 h-4 text-emerald-500" />
             </div>
-            <div className="font-display font-extrabold text-xl text-ink">
+            <div className="font-display font-black text-2xl text-ink my-1">
               {systemHealth?.status === 'ok' ? 'HEALTHY' : 'ONLINE'}
             </div>
-            <span className="text-[10px] text-emerald-500 font-medium">Database Synced</span>
+            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Database Synced</span>
           </div>
         </div>
 
-        {/* Tab Selector */}
-        <div className="flex items-center gap-2 border-b border-brd pb-2 overflow-x-auto">
+        {/* Tab Selector: Premium Segmented Control */}
+        <div className="p-1.5 rounded-2xl bg-surface-2 border border-brd flex items-center gap-1.5 overflow-x-auto shadow-2xs">
           <button
             onClick={() => setActiveTab('today')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'today'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-mut hover:text-ink hover:bg-paper'
+                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-card/60'
             }`}
           >
             <LayoutDashboard className="w-4 h-4" />
@@ -603,10 +615,10 @@ export const AdminWorkspace: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'orders'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-mut hover:text-ink hover:bg-paper'
+                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-card/60'
             }`}
           >
             <ShoppingBag className="w-4 h-4" />
@@ -615,10 +627,10 @@ export const AdminWorkspace: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('fulfilment')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'fulfilment'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-mut hover:text-ink hover:bg-paper'
+                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-card/60'
             }`}
           >
             <Truck className="w-4 h-4" />
@@ -627,10 +639,10 @@ export const AdminWorkspace: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('merchants')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'merchants'
-                ? 'bg-acc text-white shadow-sm'
-                : 'text-mut hover:text-ink hover:bg-paper'
+                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-card/60'
             }`}
           >
             <Store className="w-4 h-4" />
@@ -639,10 +651,10 @@ export const AdminWorkspace: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('audit')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'audit'
-                ? 'bg-acc text-white shadow-sm'
-                : 'text-mut hover:text-ink hover:bg-paper'
+                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-card/60'
             }`}
           >
             <Layers className="w-4 h-4" />
@@ -651,10 +663,10 @@ export const AdminWorkspace: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('policy')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'policy'
-                ? 'bg-acc text-white shadow-sm'
-                : 'text-mut hover:text-ink hover:bg-paper'
+                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-card/60'
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
@@ -663,10 +675,10 @@ export const AdminWorkspace: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('approvals')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'approvals'
-                ? 'bg-acc text-white shadow-sm'
-                : 'text-mut hover:text-ink hover:bg-paper'
+                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-card/60'
             }`}
           >
             <Lock className="w-4 h-4" />
@@ -678,10 +690,10 @@ export const AdminWorkspace: React.FC = () => {
               setActiveTab('integrations');
               fetchIntegrations();
             }}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'integrations'
-                ? 'bg-acc text-white shadow-sm'
-                : 'text-mut hover:text-ink hover:bg-paper'
+                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-sm'
+                : 'text-mut hover:text-ink hover:bg-card/60'
             }`}
           >
             <Cpu className="w-4 h-4" />

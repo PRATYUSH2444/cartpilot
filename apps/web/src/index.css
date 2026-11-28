@@ -5,44 +5,44 @@
 @tailwind utilities;
 
 :root {
-  --bg: #FAFAF7;
+  --bg: #FAFAFB;
   --surface: #FFFFFF;
-  --surface-2: #F2F4F0;
-  --ink: #18231F;
-  --mut: #738078;
-  --line: #E8EAE6;
-  --brand: #08643D;
-  --brand-hover: #064E30;
-  --brand-soft: #E7F5EC;
-  --go: #08643D;
-  --ask: #C98A14;
-  --stop: #D23F36;
+  --surface-2: #F4F4F6;
+  --ink: #0A0A0C;
+  --mut: #6E7079;
+  --line: #E4E4E7;
+  --brand: #059669;
+  --brand-hover: #047857;
+  --brand-soft: #ECFDF5;
+  --go: #059669;
+  --ask: #D97706;
+  --stop: #DC2626;
 
   /* Dedicated AI Assistant single semantic token (replaces scattered purple/green drift) */
   --ai-accent: #6D28D9;
   --ai-soft: #F5F3FF;
   --ai-border: #DDD6FE;
 
-  --radius-card: 16px;
-  --radius-bubble: 16px;
-  --radius-input: 12px;
+  --radius-card: 20px;
+  --radius-bubble: 18px;
+  --radius-input: 14px;
   --radius-chip: 99px;
 
-  --shadow-card: 0 2px 12px rgba(24, 35, 31, 0.04), 0 1px 3px rgba(24, 35, 31, 0.03);
+  --shadow-card: 0 4px 20px -2px rgba(10, 10, 12, 0.05), 0 2px 6px -1px rgba(10, 10, 12, 0.03);
   --font-heading: 'Bricolage Grotesque', system-ui, sans-serif;
   --font-body: 'Instrument Sans', system-ui, sans-serif;
 }
 
 .dark {
   --bg: #09090B;
-  --surface: #121215;
-  --surface-2: #18181B;
-  --ink: #F4F4F5;
+  --surface: #111115;
+  --surface-2: #18181E;
+  --ink: #FFFFFF;
   --mut: #A1A1AA;
   --line: #27272A;
   --brand: #10B981;
   --brand-hover: #34D399;
-  --brand-soft: #064E3B;
+  --brand-soft: rgba(16, 185, 129, 0.12);
   --go: #10B981;
   --ask: #F59E0B;
   --stop: #EF4444;
@@ -50,6 +50,8 @@
   --ai-accent: #8B5CF6;
   --ai-soft: #2E1065;
   --ai-border: #4C1D95;
+
+  --shadow-card: 0 4px 24px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -1px rgba(0, 0, 0, 0.3);
 }
 
 /* ── Document Scroller Architecture (Enables native browser pull-to-refresh on mobile) ── */
