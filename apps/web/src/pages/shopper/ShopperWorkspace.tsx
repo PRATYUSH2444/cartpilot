@@ -63,7 +63,7 @@ export const ShopperWorkspace: React.FC = () => {
       const saved = localStorage.getItem('cartpilot_theme');
       if (saved) return saved === 'dark';
     } catch {}
-    return false; // Default = Light, regardless of system
+    return typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
   });
 
   const toggleTheme = useCallback(() => {
@@ -846,6 +846,12 @@ export const ShopperWorkspace: React.FC = () => {
   // ── Rollback Single Item on Network Failure with Retry ─────────────────────
   const handleRollback = useCallback(
     (productId: string, failedQty: number, errorMsg: string) => {
+      // If user intended to delete the item (failedQty <= 0), do not roll it back into the cart
+      if (failedQty <= 0) {
+        pendingQuantitiesRef.current.delete(productId);
+        return;
+      }
+
       // 1. Get confirmed item quantity from lastConfirmedCartRef
       const confirmedItem = lastConfirmedCartRef.current?.items?.find(
         (i) => i.productId === productId
@@ -906,14 +912,10 @@ export const ShopperWorkspace: React.FC = () => {
         try {
           let res: Response;
           if (desiredQty <= 0) {
-            if (isConfirmedInCart) {
-              res = await authFetch(`${API_BASE}/cart/items/${productId}`, {
-                method: 'DELETE',
-              });
-            } else {
-              pendingQuantitiesRef.current.delete(productId);
-              return;
-            }
+            // Unconditionally call DELETE to guarantee the server removes the item
+            res = await authFetch(`${API_BASE}/cart/items/${productId}`, {
+              method: 'DELETE',
+            });
           } else if (isConfirmedInCart) {
             // Update quantity via PATCH
             res = await authFetch(`${API_BASE}/cart/items/${productId}`, {
@@ -921,6 +923,14 @@ export const ShopperWorkspace: React.FC = () => {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ quantity: desiredQty }),
             });
+            // If item wasn't on server yet due to a race condition, add via POST
+            if (res.status === 404) {
+              res = await authFetch(`${API_BASE}/cart/items`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, quantity: desiredQty }),
+              });
+            }
           } else {
             // Add new item via POST
             res = await authFetch(`${API_BASE}/cart/items`, {
@@ -1012,15 +1022,40 @@ export const ShopperWorkspace: React.FC = () => {
       );
       showBanner('success', `Added ${prod?.name || 'item'} to cart`);
 
-      // 2. Debounce background synchronization (300ms)
+      // 2. Debounce background synchronization (150ms)
       const existingTimer = debounceTimersRef.current.get(productId);
       if (existingTimer) clearTimeout(existingTimer);
 
       const timer = setTimeout(() => {
         debounceTimersRef.current.delete(productId);
         executeBackgroundSync(productId);
-      }, 300);
+      }, 150);
       debounceTimersRef.current.set(productId, timer);
+    },
+    [products, cart?.items, user?.id, executeBackgroundSync]
+  );
+
+  const handleRemoveItem = useCallback(
+    (productId: string) => {
+      const prod =
+        products.find((p) => p._id === productId) ||
+        cart?.items?.find((i) => i.productId === productId);
+
+      // Cancel any pending debounce timer for this product immediately
+      const existingTimer = debounceTimersRef.current.get(productId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+        debounceTimersRef.current.delete(productId);
+      }
+
+      // 1. Synchronous optimistic removal (0ms instant UI update)
+      pendingQuantitiesRef.current.set(productId, 0);
+      setCart((prev) =>
+        updateCartOptimistically(prev, prod || { _id: productId }, 0, user?.id || 'shopper')
+      );
+
+      // 2. Immediate background synchronization with 0ms delay
+      executeBackgroundSync(productId);
     },
     [products, cart?.items, user?.id, executeBackgroundSync]
   );
@@ -1039,49 +1074,29 @@ export const ShopperWorkspace: React.FC = () => {
         showBanner('error', `Only ${stock} units available in stock`);
       }
 
+      // If user stepped down to 0, delegate immediately to instant removal
+      if (targetQty === 0) {
+        handleRemoveItem(productId);
+        return;
+      }
+
       // 1. Synchronous optimistic state update (client-side first, 0ms latency)
       pendingQuantitiesRef.current.set(productId, targetQty);
       setCart((prev) =>
         updateCartOptimistically(prev, prod || { _id: productId }, targetQty, user?.id || 'shopper')
       );
-      showBanner('success', `Added ${prod?.name || 'item'} to cart`);
 
-      // 2. Debounce background synchronization (300ms)
+      // 2. Snappy background synchronization (150ms debounce, no toast spam)
       const existingTimer = debounceTimersRef.current.get(productId);
       if (existingTimer) clearTimeout(existingTimer);
 
       const timer = setTimeout(() => {
         debounceTimersRef.current.delete(productId);
         executeBackgroundSync(productId);
-      }, 300);
+      }, 150);
       debounceTimersRef.current.set(productId, timer);
     },
-    [products, cart?.items, user?.id, executeBackgroundSync]
-  );
-
-  const handleRemoveItem = useCallback(
-    (productId: string) => {
-      const prod =
-        products.find((p) => p._id === productId) ||
-        cart?.items?.find((i) => i.productId === productId);
-
-      // 1. Synchronous optimistic removal
-      pendingQuantitiesRef.current.set(productId, 0);
-      setCart((prev) =>
-        updateCartOptimistically(prev, prod || { _id: productId }, 0, user?.id || 'shopper')
-      );
-
-      // 2. Debounce background synchronization (300ms)
-      const existingTimer = debounceTimersRef.current.get(productId);
-      if (existingTimer) clearTimeout(existingTimer);
-
-      const timer = setTimeout(() => {
-        debounceTimersRef.current.delete(productId);
-        executeBackgroundSync(productId);
-      }, 300);
-      debounceTimersRef.current.set(productId, timer);
-    },
-    [products, cart?.items, user?.id, executeBackgroundSync]
+    [products, cart?.items, user?.id, executeBackgroundSync, handleRemoveItem]
   );
 
   const handleClearCart = useCallback(async () => {
@@ -1131,18 +1146,18 @@ export const ShopperWorkspace: React.FC = () => {
     setIsLoading(true);
     try {
       const validItems = items.filter((i) => Boolean(i.productId));
-      await Promise.all(
-        validItems.map((item) =>
-          authFetch(`${API_BASE}/cart/items`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(item),
-          })
-        )
-      );
+      // Sequential addition to prevent concurrent MongoDB race conditions and duplicates
+      for (const item of validItems) {
+        await authFetch(`${API_BASE}/cart/items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(item),
+        });
+      }
       const cartRes = await authFetch(`${API_BASE}/cart`);
       if (cartRes.ok) {
         const cData = await cartRes.json();
+        lastConfirmedCartRef.current = cData.data;
         setCart(cData.data);
         await evaluatePolicy();
       }

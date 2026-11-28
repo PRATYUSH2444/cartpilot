@@ -48,6 +48,39 @@ export interface CartResponse {
 
 export class CartService {
   /**
+   * Internal helper to normalize and deduplicate cart items by productId.
+   * Merges duplicate entries and ensures strictly unique productIds.
+   */
+  private static normalizeCartItems(cart: ICart): boolean {
+    if (!cart.items || cart.items.length === 0) return false;
+
+    const mergedMap = new Map<string, { productId: mongoose.Types.ObjectId; quantity: number; addedAt: Date }>();
+    let hasDuplicates = false;
+
+    for (const item of cart.items) {
+      if (!item.productId) continue;
+      const key = item.productId.toString();
+      if (mergedMap.has(key)) {
+        hasDuplicates = true;
+        const existing = mergedMap.get(key)!;
+        existing.quantity += item.quantity;
+      } else {
+        mergedMap.set(key, {
+          productId: item.productId,
+          quantity: item.quantity,
+          addedAt: item.addedAt || new Date(),
+        });
+      }
+    }
+
+    if (hasDuplicates || cart.items.length !== mergedMap.size) {
+      cart.items = Array.from(mergedMap.values()) as any;
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Retrieves or creates an active cart for the specified user and computes authoritative pricing.
    */
   public static async getOrCreateActiveCart(userId: string): Promise<CartResponse> {
@@ -61,6 +94,12 @@ export class CartService {
         version: 1,
         status: 'ACTIVE',
       });
+    } else {
+      const wasNormalized = this.normalizeCartItems(cart);
+      if (wasNormalized) {
+        cart.version += 1;
+        await cart.save();
+      }
     }
 
     return this.buildCartResponse(cart);
@@ -93,6 +132,9 @@ export class CartService {
         status: 'ACTIVE',
       });
     }
+
+    // Deduplicate any preexisting items
+    this.normalizeCartItems(cart);
 
     // 3. Check existing quantity
     const existingIndex = cart.items.findIndex((item) => item.productId.equals(productObjectId));
@@ -146,32 +188,44 @@ export class CartService {
       throw new NotFoundError('Active cart not found');
     }
 
+    this.normalizeCartItems(cart);
+
     const itemIndex = cart.items.findIndex((item) => item.productId.equals(productObjectId));
-    if (itemIndex === -1) {
-      throw new NotFoundError('Item not found in your cart');
+
+    if (quantity <= 0) {
+      // If quantity <= 0, remove item idempotently without throwing 404
+      cart.items = cart.items.filter((item) => !item.productId.equals(productObjectId));
+      cart.version += 1;
+      await cart.save();
+      await approvalService.invalidateApprovalsForCart(cart._id.toString());
+      return this.buildCartResponse(cart);
     }
 
-    if (quantity === 0) {
-      cart.items.splice(itemIndex, 1);
-    } else {
-      const product = await ProductModel.findOne({ _id: productObjectId, isActive: true });
-      if (!product) {
-        throw new NotFoundError('Product not found or unavailable');
-      }
+    const product = await ProductModel.findOne({ _id: productObjectId, isActive: true });
+    if (!product) {
+      throw new NotFoundError('Product not found or unavailable');
+    }
 
-      if (quantity > product.availableStock) {
-        throw new AppError(
-          'INSUFFICIENT_STOCK',
-          `Requested quantity (${quantity}) exceeds available stock (${product.availableStock}) for ${product.name}`,
-          409,
-          { availableStock: product.availableStock, requestedQuantity: quantity }
-        );
-      }
+    if (quantity > product.availableStock) {
+      throw new AppError(
+        'INSUFFICIENT_STOCK',
+        `Requested quantity (${quantity}) exceeds available stock (${product.availableStock}) for ${product.name}`,
+        409,
+        { availableStock: product.availableStock, requestedQuantity: quantity }
+      );
+    }
 
+    if (itemIndex > -1) {
       const currentItem = cart.items[itemIndex];
       if (currentItem) {
         currentItem.quantity = quantity;
       }
+    } else {
+      cart.items.push({
+        productId: productObjectId,
+        quantity,
+        addedAt: new Date(),
+      });
     }
 
     cart.version += 1;
@@ -182,7 +236,7 @@ export class CartService {
   }
 
   /**
-   * Removes a specific item from the cart.
+   * Removes a specific item from the cart idempotently.
    */
   public static async removeItem(userId: string, productId: string): Promise<CartResponse> {
     const userObjectId = new mongoose.Types.ObjectId(userId);
@@ -193,12 +247,10 @@ export class CartService {
       throw new NotFoundError('Active cart not found');
     }
 
-    const initialLength = cart.items.length;
-    cart.items = cart.items.filter((item) => !item.productId.equals(productObjectId));
+    this.normalizeCartItems(cart);
 
-    if (cart.items.length === initialLength) {
-      throw new NotFoundError('Item not found in your cart');
-    }
+    // Idempotent removal: filter out all occurrences of productId
+    cart.items = cart.items.filter((item) => !item.productId.equals(productObjectId));
 
     cart.version += 1;
     await cart.save();
@@ -253,6 +305,8 @@ export class CartService {
    * Helper that populates product details and applies authoritative pure server pricing.
    */
   private static async buildCartResponse(cart: ICart): Promise<CartResponse> {
+    this.normalizeCartItems(cart);
+
     const productIds = cart.items.map((i) => i.productId);
     const products = productIds.length > 0 ? await ProductModel.find({ _id: { $in: productIds } }) : [];
 

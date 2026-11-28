@@ -66,6 +66,7 @@ export function calculateOptimisticPricing(
 /**
  * Optimistically applies an item quantity change to the CartData state
  * in the same animation frame, without waiting for the network.
+ * Guarantees zero duplicate rows and strict monotonic state consistency.
  */
 export function updateCartOptimistically(
   prevCart: CartData | null,
@@ -74,38 +75,39 @@ export function updateCartOptimistically(
   userId: string = 'shopper'
 ): CartData {
   const productId = product._id || product.productId || '';
-  const currentItems = prevCart?.items ? [...prevCart.items] : [];
-  const existingIndex = currentItems.findIndex((item) => item.productId === productId);
+  if (!productId && prevCart) return prevCart;
 
-  // Clamp target quantity against available stock (if specified)
+  // 1. Normalize and deduplicate existing items by productId
+  const itemsMap = new Map<string, PopulatedCartItem>();
+  for (const it of prevCart?.items || []) {
+    const pId = it.productId;
+    if (!pId) continue;
+    if (itemsMap.has(pId)) {
+      const existing = itemsMap.get(pId)!;
+      existing.quantity += it.quantity;
+      existing.itemTotalPaise += it.itemTotalPaise || existing.pricePaise * it.quantity;
+      existing.formattedItemTotal = formatPaise(existing.itemTotalPaise);
+    } else {
+      itemsMap.set(pId, { ...it });
+    }
+  }
+
+  // 2. Clamp target quantity against available stock (if specified)
   const stockLimit = product.availableStock ?? 999;
   const clampedQuantity = Math.max(0, Math.min(targetQuantity, stockLimit));
 
-  let updatedItems: PopulatedCartItem[];
-
+  // 3. Apply target quantity
   if (clampedQuantity <= 0) {
-    // Remove item if quantity is zero or less
-    updatedItems = currentItems.filter((item) => item.productId !== productId);
-  } else if (existingIndex > -1) {
-    // Update existing item quantity and recalculate item total
-    const existing = currentItems[existingIndex];
-    const itemTotalPaise = existing.pricePaise * clampedQuantity;
-    const updatedItem: PopulatedCartItem = {
-      ...existing,
-      quantity: clampedQuantity,
-      itemTotalPaise,
-      formattedItemTotal: formatPaise(itemTotalPaise),
-    };
-    updatedItems = [
-      ...currentItems.slice(0, existingIndex),
-      updatedItem,
-      ...currentItems.slice(existingIndex + 1),
-    ];
+    itemsMap.delete(productId);
+  } else if (itemsMap.has(productId)) {
+    const existing = itemsMap.get(productId)!;
+    existing.quantity = clampedQuantity;
+    existing.itemTotalPaise = existing.pricePaise * clampedQuantity;
+    existing.formattedItemTotal = formatPaise(existing.itemTotalPaise);
   } else {
-    // Add new item into cart
     const pricePaise = product.pricePaise ?? 0;
     const itemTotalPaise = pricePaise * clampedQuantity;
-    const newItem: PopulatedCartItem = {
+    itemsMap.set(productId, {
       productId,
       name: product.name || 'Fresh Produce',
       slug: product.slug || (product.name || 'produce').toLowerCase().replace(/\s+/g, '-'),
@@ -118,10 +120,10 @@ export function updateCartOptimistically(
       quantity: clampedQuantity,
       itemTotalPaise,
       formattedItemTotal: formatPaise(itemTotalPaise),
-    };
-    updatedItems = [...currentItems, newItem];
+    });
   }
 
+  const updatedItems = Array.from(itemsMap.values());
   const newPricing = calculateOptimisticPricing(updatedItems, prevCart?.pricing);
   const itemCount = updatedItems.reduce((acc, item) => acc + item.quantity, 0);
 

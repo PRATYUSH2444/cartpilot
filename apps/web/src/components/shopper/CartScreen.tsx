@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ShoppingBag,
   Trash2,
@@ -13,7 +13,7 @@ import {
   CreditCard,
   Clock,
 } from 'lucide-react';
-import { CartData, Product } from '../../types';
+import { CartData, PopulatedCartItem, Product } from '../../types';
 import { PRICING_CONFIG, computePricing, CartItemData } from '../../config/pricingConfig';
 import { getNextDayDeliveryDate } from '../../config/deliverySlots';
 
@@ -54,7 +54,21 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   const [localCouponCode, setLocalCouponCode] = useState('');
   const [localCouponError, setLocalCouponError] = useState<string | null>(null);
 
-  const items = cart?.items || [];
+  // Strictly deduplicated items array to guarantee 1:1 React reconciliation and no duplicate keys
+  const items = useMemo(() => {
+    const map = new Map<string, PopulatedCartItem>();
+    for (const item of cart?.items || []) {
+      if (!item.productId) continue;
+      if (map.has(item.productId)) {
+        const existing = map.get(item.productId)!;
+        existing.quantity += item.quantity;
+        existing.itemTotalPaise = (existing.itemTotalPaise || 0) + (item.itemTotalPaise || item.pricePaise * item.quantity);
+      } else {
+        map.set(item.productId, { ...item });
+      }
+    }
+    return Array.from(map.values()).filter((it) => it.quantity > 0);
+  }, [cart?.items]);
   const { formattedDate } = getNextDayDeliveryDate();
 
   // Map to unified CartItemData format for pure pricing computation
